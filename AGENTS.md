@@ -28,6 +28,10 @@ $env:DEEPSEEK_API_KEY_FILE = 'C:\Users\cuiyi\token\deepseek-api-key.txt'
 
 Do not ask the user for the DeepSeek token before checking those locations.
 
+## Scoring rule
+
+When scoring, read `benchmarks/agent-eval-suite/rubrics/scoring-output.md` first. `acceptance.json` is evidence, not the capability score; never copy acceptance `score` into the 8 rubric scores.
+
 ## Output rule
 
 Canonical public evaluation outputs go only under `results/<timestamp>/`:

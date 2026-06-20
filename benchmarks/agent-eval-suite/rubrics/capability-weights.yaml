@@ -1,6 +1,6 @@
-# 能力权重配置 —— 修改值即可调整总分计算
-# 总分 = Σ(能力得分 × 权重) / Σ权重
-# 若某项能力未评分，该项不计入总分
+# Capability weights.
+# Overall score = sum(capability score * weight) / sum(weights).
+# If a capability is legally unscored, exclude it from the denominator.
 
 weights:
   真实性&可靠性: 20
@@ -12,9 +12,6 @@ weights:
   结果预期: 10
   异常分析能力: 10
 
-# 子维度权重（维度间汇总）
-# 项目理解: 维度1（仅首轮）+ 维度2（非首轮逐轮均值）
-# 指令遵循: 持久规则 + 单次指令
 sub_dimension_weights:
   项目理解:
     维度1_初始主动理解: 30
@@ -23,7 +20,6 @@ sub_dimension_weights:
     持久规则: 40
     单次指令: 60
 
-# 子项权重（维度内各小点汇总，每维度内权重之和应为 100）
 sub_item_weights:
   项目理解:
     维度1_初始主动理解:
@@ -40,7 +36,7 @@ sub_item_weights:
       2.5_无关任务隔离: 15
   用户意图理解:
     1.1_识别请求针对的项目部分: 25
-    1.2_理解请求的目的和对项目的作用: 0
+    1.2_理解请求目的和作用: 0
     1.3_workspace归属: 25
     1.4_对话流感知与策略匹配: 50
   结果预期:
