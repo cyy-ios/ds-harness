@@ -635,7 +635,7 @@ def _run_acceptance(repo_root: Path) -> dict:
         return {
             "ran": True,
             "returncode": result.returncode,
-            "output": result.stdout,
+            "output": (result.stdout or "") + (result.stderr or ""),
         }
     except subprocess.TimeoutExpired:
         return {"error": "acceptance check timed out"}

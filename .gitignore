@@ -25,3 +25,6 @@ tmp/
 
 # generated bundles
 research.zip
+
+# local smoke runs
+internal/archive/smoke-runs/
