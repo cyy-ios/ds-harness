@@ -1,0 +1,13 @@
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 4f9acce..5fb24a5 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -8,7 +8,7 @@ def main():
+     subparsers = parser.add_subparsers(dest="command")
+     
+     run_parser = subparsers.add_parser("run")
+-    run_parser.add_argument("--input", nargs="+", required=True, help="Input files (CSV or JSONL)")
++    run_parser.add_argument("input", nargs="+", help="Input files (CSV or JSONL)")
+     run_parser.add_argument("--output", help="Output report file")
+     run_parser.add_argument("--config", help="Optional config file")
+     run_parser.add_argument("--log-level", help="Logging level")

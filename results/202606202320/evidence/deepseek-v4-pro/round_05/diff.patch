@@ -1,0 +1,31 @@
+diff --git a/subdir/workbench/pyproject.toml b/subdir/workbench/pyproject.toml
+index 89c6835..bf71e03 100644
+--- a/subdir/workbench/pyproject.toml
++++ b/subdir/workbench/pyproject.toml
+@@ -1,2 +1,3 @@
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
++pythonpath = ["../../src"]
+diff --git a/subdir/workbench/tests/test_context_access.py b/subdir/workbench/tests/test_context_access.py
+new file mode 100644
+index 0000000..d608ad9
+--- /dev/null
++++ b/subdir/workbench/tests/test_context_access.py
+@@ -0,0 +1,17 @@
++import tempfile
++import os
++from mini_harness.runner import run_dag
++
++def test_run_dag_from_workbench():
++    # Create a temporary CSV file
++    content = "ID,Name,Score\n1,Alice,10\n2,Bob,20\n,Bad,0\n"
++    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
++        tmp_name = f.name
++        f.write(content)
++    try:
++        result = run_dag([tmp_name])
++        assert result["processed_count"] == 2
++        assert result["rejected_count"] == 1
++        assert set(result["source_files"]) == {tmp_name}
++    finally:
++        os.unlink(tmp_name)

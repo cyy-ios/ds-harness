@@ -1,0 +1,1 @@
+M2_config 完成：新增 config.py 支持 JSON/YAML 配置加载；CLI 可指定 --config 使用显式文件，否则默认配置；CLI 参数覆盖配置文件值；pipeline 使用 Config 对象；现存测试通过。

@@ -1,0 +1,1 @@
+M4_long_log_debug 完成：定位并修复了 ModuleNotFoundError、CSV 注释行支持、空 id 拒绝等问题。新增 runner 模块导出 run_dag 函数，满足测试期望的 processed/rejected 计数。所有测试通过。
