@@ -1,0 +1,28 @@
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 715fa3c..3bf6430 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -10,7 +10,7 @@ def main():
+     subparsers = parser.add_subparsers(dest='command')
+ 
+     run_parser = subparsers.add_parser('run', help='Run data processing pipeline')
+-    run_parser.add_argument('files', nargs='+', help='Input files (CSV or JSONL)')
++    run_parser.add_argument('files', nargs='*', help='Input files (CSV or JSONL). If none provided, uses config input_files.')
+     run_parser.add_argument('--config', '-c', dest='config_path', default=None, help='Path to config file (JSON or YAML)')
+ 
+     args = parser.parse_args()
+@@ -20,7 +20,13 @@ def main():
+         logging.basicConfig(level=getattr(logging, log_level, logging.INFO),
+                             format='%(asctime)s %(levelname)s %(message)s')
+         max_retries = config.get('max_retries', 2)
+-        report = run_pipeline(args.files, max_retries=max_retries)
++        input_files = args.files if args.files else config.get('input_files', [])
++        if isinstance(input_files, str):
++            input_files = [input_files]
++        if not input_files:
++            print("Error: No input files specified via command line or config.", file=sys.stderr)
++            sys.exit(1)
++        report = run_pipeline(input_files, max_retries=max_retries)
+         print_report(report)
+     else:
+         parser.print_help()

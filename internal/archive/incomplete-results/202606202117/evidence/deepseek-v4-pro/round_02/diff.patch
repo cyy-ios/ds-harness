@@ -1,0 +1,92 @@
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 3eef32e..40bb476 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -1,14 +1,37 @@
+ import argparse
+ import sys
++from mini_harness.config import load_config, find_default_config, merge_config, DEFAULT_CONFIG
+ 
+ def main():
+     parser = argparse.ArgumentParser(prog='mini_harness')
+     sub = parser.add_subparsers(dest='command')
++
+     run_parser = sub.add_parser('run', help='Run the mini harness')
+-    run_parser.add_argument('--input', required=True, help='Input CSV or JSONL file')
++    run_parser.add_argument('--input', help='Input CSV or JSONL file')
++    run_parser.add_argument('--config', help='Path to config file (JSON or YAML). Default: config.yaml if present.')
++
+     args = parser.parse_args()
++
+     if args.command == 'run':
+-        print(f"Running mini harness on {args.input}")
++        # load configuration
++        config = DEFAULT_CONFIG.copy()
++        if args.config:
++            config_path = args.config
++        else:
++            config_path = find_default_config()
++        if config_path:
++            try:
++                file_config = load_config(config_path)
++                config.update(file_config)
++            except Exception as e:
++                print(f"Warning: failed to load config {config_path}: {e}")
++        # merge CLI args (override)
++        config = merge_config(args, config)
++        # if input still missing, complain
++        if 'input' not in config or not config['input']:
++            print("Error: input file not specified (use --input or config file).")
++            sys.exit(1)
++        print(f"Running mini harness on {config['input']} with config: {config}")
+     else:
+         parser.print_help()
+         sys.exit(1)
+diff --git a/src/mini_harness/config.py b/src/mini_harness/config.py
+new file mode 100644
+index 0000000..37223d8
+--- /dev/null
++++ b/src/mini_harness/config.py
+@@ -0,0 +1,42 @@
++import json
++import os
++import yaml
++
++def load_config(path):
++    """Load configuration from a JSON or YAML file."""
++    if not os.path.exists(path):
++        raise FileNotFoundError(f"Config file not found: {path}")
++    with open(path, 'r', encoding='utf-8') as f:
++        if path.endswith('.yaml') or path.endswith('.yml'):
++            return yaml.safe_load(f) or {}
++        elif path.endswith('.json'):
++            return json.load(f)
++        else:
++            raise ValueError(f"Unsupported config format: {path}. Use .json, .yaml, or .yml")
++
++def find_default_config():
++    """Look for default config.yaml or config.json in the current working directory."""
++    cwd = os.getcwd()
++    for name in ['config.yaml', 'config.yml', 'config.json']:
++        full = os.path.join(cwd, name)
++        if os.path.exists(full):
++            return full
++    return None
++
++def merge_config(cli_args, config_dict):
++    """Merge CLI arguments into config dict: CLI overrides config."""
++    # mapping from CLI arg names to config keys
++    mapping = {
++        'input': 'input',
++        # later more
++    }
++    for arg_name, config_key in mapping.items():
++        val = getattr(cli_args, arg_name, None)
++        if val is not None:
++            config_dict[config_key] = val
++    return config_dict
++
++DEFAULT_CONFIG = {
++    'retry_count': 2,
++    'stages': ['extract', 'clean', 'report']
++}

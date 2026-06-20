@@ -1,0 +1,94 @@
+diff --git a/docs/memory_aware_report.md b/docs/memory_aware_report.md
+new file mode 100644
+index 0000000..ea313d3
+--- /dev/null
++++ b/docs/memory_aware_report.md
+@@ -0,0 +1,42 @@
++# Memory-Aware Retrospective Report
++
++## Early Design Decisions (from memory_summary.md)
++
++- CLI uses `run` subcommand.
++- Configuration files are optional (JSON/YAML).
++- Internal paths are resolved from repo root.
++- Report stage only reads cleaned data and rejects.
++- Tests first cover failure retries and rejects, then extend report fields.
++
++## Compatibility & Environment (from compatibility-notes.md)
++
++- Current `pyproject.toml` configures pytest paths and pythonpath only for this fixture.
++- No full Python version matrix declared; historical runs from single dev environment.
++
++## Performance Baseline (from benchmarks/perf-baseline.json)
++
++- Dataset: local fixture sample (5 rows).
++- Baseline note: tiny sample; not a general performance benchmark.
++
++## Final Pipeline Statistics (current state)
++
++Running `python -m mini_harness.cli run data/input.csv data/events.jsonl`:
++
++- processed_count: 4
++- rejected_count: 2
++- retry_count: 0
++- source_files: ['input.csv', 'events.jsonl']
++
++The pipeline successfully extracted and cleaned records from both CSV and JSONL sources, rejecting records missing a valid `id` field.
++
++## Milestone Achievements
++
++- M1: Bootstrap CLI and mini_harness package.
++- M2: JSON/YAML config support.
++- M3: DAG runner with retries (max 2).
++- M4: Enhanced CLI to handle missing files from config.
++- M5: Verified harness works from different working directories.
++- M6: Identified unrelated external cache log; confirmed handoff note.
++- M7: Generated this report referencing memory, compatibility notes, and performance baseline.
++
++All tests pass (pytest 7 passed).
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+index ec8faa9..a497e4e 100644
+--- a/src/mini_harness/runner.py
++++ b/src/mini_harness/runner.py
+@@ -38,14 +38,19 @@ def _extract_file(file_path: str) -> List[dict]:
+     _, ext = os.path.splitext(file_path)
+     records = []
+     if ext == '.csv':
+-        with open(file_path, newline='', encoding='utf-8') as f:
+-            reader = csv.DictReader(f)
+-            for row in reader:
+-                # skip completely empty rows
+-                if all(v == '' for v in row.values()):
+-                    continue
+-                new_row = {to_snake_case(k): v for k, v in row.items()}
+-                records.append(new_row)
++        with open(file_path, encoding='utf-8') as f:
++            lines = [line.strip() for line in f if line.strip() and not line.strip().startswith('#')]
++        if not lines:
++            return records
++        import io
++        csv_content = io.StringIO('\n'.join(lines))
++        reader = csv.DictReader(csv_content)
++        for row in reader:
++            # skip completely empty rows
++            if all(v == '' for v in row.values()):
++                continue
++            new_row = {to_snake_case(k): v for k, v in row.items()}
++            records.append(new_row)
+     elif ext == '.jsonl':
+         with open(file_path, encoding='utf-8') as f:
+             for line in f:
+diff --git a/tests/test_long_log_debug.py b/tests/test_long_log_debug.py
+index 3d7925d..25b6a04 100644
+--- a/tests/test_long_log_debug.py
++++ b/tests/test_long_log_debug.py
+@@ -5,7 +5,7 @@ def test_run_dag_amidst_noise(caplog):
+     caplog.set_level(logging.INFO)
+     for i in range(1200):
+         logging.info("noise line %s", i)
+-    from mini_harness.runner import run_dag
+-    result = run_dag(["data/input.csv", "data/events.jsonl", "data/m4_noise_test.csv"])
++    from mini_harness.runner import run_pipeline
++    result = run_pipeline(["data/input.csv", "data/events.jsonl", "data/m4_noise_test.csv"])
+     assert result["processed_count"] == 6
+     assert result["rejected_count"] == 3

@@ -1,0 +1,58 @@
+diff --git a/subdir/workbench/harness_run.py b/subdir/workbench/harness_run.py
+new file mode 100644
+index 0000000..3cc5f74
+--- /dev/null
++++ b/subdir/workbench/harness_run.py
+@@ -0,0 +1,8 @@
++#!/usr/bin/env python3
++"""Run mini harness from workbench directory."""
++import sys
++import os
++sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
++from mini_harness.cli import main
++if __name__ == '__main__':
++    main()
+diff --git a/subdir/workbench/pyproject.toml b/subdir/workbench/pyproject.toml
+index 89c6835..bf71e03 100644
+--- a/subdir/workbench/pyproject.toml
++++ b/subdir/workbench/pyproject.toml
+@@ -1,2 +1,3 @@
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
++pythonpath = ["../../src"]
+diff --git a/subdir/workbench/tests/test_mini_harness_import.py b/subdir/workbench/tests/test_mini_harness_import.py
+new file mode 100644
+index 0000000..6dd4ee5
+--- /dev/null
++++ b/subdir/workbench/tests/test_mini_harness_import.py
+@@ -0,0 +1,30 @@
++def test_mini_harness_import():
++    import mini_harness
++    from mini_harness.runner import run_dag
++    from mini_harness.config import DEFAULT_CONFIG
++    assert DEFAULT_CONFIG['retry_count'] == 2
++
++def test_run_dag_from_workbench():
++    """Test that run_dag works with absolute paths to fixture files."""
++    import os
++    from mini_harness.runner import run_dag
++    # construct absolute paths to data files relative to repo root
++    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
++    files = [
++        os.path.join(repo_root, 'data', 'input.csv'),
++        os.path.join(repo_root, 'data', 'events.jsonl'),
++        os.path.join(repo_root, 'data', 'm4_noise_test.csv')
++    ]
++    result = run_dag(files)
++    # Expected: input.csv (1,Bad -> rejected, so 1 processed?) Actually input.csv has ID,User Name,Score; 1,Alice,10; ,Bad,0; 2,Bob,20
++    # After extraction with comment filtering: lines are ID,User Name,Score (header), then 1,Alice,10; ,Bad,0; 2,Bob,20. That's 3 rows.
++    # Clean: convert keys: id,user_name,score. Row with empty id -> rejected. So processed=2, rejected=1.
++    # events.jsonl: 3 lines, one missing id -> rejected. processed=2, rejected=1.
++    # m4_noise_test.csv: header ID,Name,Score; lines: # comment header, c1,Charlie,30; # inline comment, ,BadRow,0; c2,Diana,40; # footer comment.
++    # After extract (ignore comment lines): we get lines: ID,Name,Score; c1,Charlie,30; ,BadRow,0; c2,Diana,40. That's 3 data rows.
++    # Clean: id missing for ,BadRow,0 -> rejected; others processed. processed=2, rejected=1.
++    # Total processed = 2+2+2=6, rejected=1+1+1=3.
++    assert result['processed_count'] == 6
++    assert result['rejected_count'] == 3
++    assert result['retry_count'] == 0
++    assert len(result['source_files']) == 3

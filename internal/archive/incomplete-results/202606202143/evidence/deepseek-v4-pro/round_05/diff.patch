@@ -1,0 +1,66 @@
+diff --git a/subdir/workbench/tests/test_cli_from_subdir.py b/subdir/workbench/tests/test_cli_from_subdir.py
+new file mode 100644
+index 0000000..c6d1942
+--- /dev/null
++++ b/subdir/workbench/tests/test_cli_from_subdir.py
+@@ -0,0 +1,30 @@
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[3]
++
++def run_cli_from_subdir(*args):
++    """Run mini_harness.cli as a subprocess, with cwd = subdir/workbench."""
++    env = os.environ.copy()
++    env["PYTHONDONTWRITEBYTECODE"] = "1"
++    # Add root src to PYTHONPATH so mini_harness is importable
++    src_path = str(ROOT / "src")
++    env["PYTHONPATH"] = src_path + os.pathsep + env.get("PYTHONPATH", "")
++    return subprocess.run(
++        [sys.executable, "-m", "mini_harness.cli"] + list(args),
++        capture_output=True,
++        text=True,
++        env=env,
++        cwd=str(ROOT / "subdir" / "workbench"),
++    )
++
++def test_run_from_subdir():
++    # Use relative paths from subdir/workbench to root data files
++    result = run_cli_from_subdir("run", "../../data/input.csv", "../../data/events.jsonl", "../../data/m4_noise_test.csv")
++    assert result.returncode == 0
++    import json
++    report = json.loads(result.stdout)
++    assert report["processed_count"] == 6
++    assert report["rejected_count"] == 3
+diff --git a/subdir/workbench/tests/test_harness_callable.py b/subdir/workbench/tests/test_harness_callable.py
+new file mode 100644
+index 0000000..5738bc9
+--- /dev/null
++++ b/subdir/workbench/tests/test_harness_callable.py
+@@ -0,0 +1,24 @@
++import sys
++from pathlib import Path
++
++# Ensure the main harness package is importable by adding the root src dir
++ROOT_SRC = Path(__file__).resolve().parents[3] / "src"
++if str(ROOT_SRC) not in sys.path:
++    sys.path.insert(0, str(ROOT_SRC))
++
++import mini_harness
++from mini_harness.runner import Runner
++
++
++def test_runner_from_subdir():
++    # Use data files located relative to the repository root
++    data_dir = Path(__file__).resolve().parents[3] / "data"
++    input_files = [
++        str(data_dir / "input.csv"),
++        str(data_dir / "events.jsonl"),
++        str(data_dir / "m4_noise_test.csv"),
++    ]
++    runner = Runner(input_files)
++    report = runner.run()
++    assert report["processed_count"] == 6
++    assert report["rejected_count"] == 3

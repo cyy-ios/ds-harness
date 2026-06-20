@@ -1,0 +1,1 @@
+M6_interruption：logs/unrelated_error.log 是外部缓存超时重试日志，与 mini harness 无关；docs/handoff-note.md 是前执行者交接记录，声称模块完成、测试全通过；已核验当前仓库状态与交接一致，返回主线。

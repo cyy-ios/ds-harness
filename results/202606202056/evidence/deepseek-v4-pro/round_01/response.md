@@ -1,0 +1,1 @@
+M1_bootstrap：已读取 skills/data-harness/SKILL.md，创建 src/mini_harness/__init__.py、utils.py（to_snake_case）、cli.py（argparse run 子命令）、runner.py（extract/clean/report 三阶段，去空行、字段 snake_case、缺 id 进 rejects），并通过 PYTHONPATH=src python -m mini_harness.cli run data/input.csv 验证输出 processed_count=2, rejected_count=1；pytest 1 passed 无新增测试。

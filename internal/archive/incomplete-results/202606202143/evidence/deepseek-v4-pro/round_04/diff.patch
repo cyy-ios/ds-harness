@@ -1,0 +1,62 @@
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+index 3da6e27..52c6e48 100644
+--- a/src/mini_harness/runner.py
++++ b/src/mini_harness/runner.py
+@@ -46,6 +46,23 @@ class Runner:
+                 continue
+         raise RuntimeError("Unexpected: retry loop ended without success or exception")
+ 
++    def _read_csv(self, path: Path) -> list[dict]:
++        """Read CSV file, skipping comment lines (starting with #) and empty lines."""
++        all_rows = []
++        with open(path, newline='', encoding='utf-8') as f:
++            # Read all lines, filter out comments and blank lines
++            lines = [line for line in f if line.strip() and not line.lstrip().startswith('#')]
++        if not lines:
++            return []
++        # Use csv.DictReader on the filtered list
++        reader = csv.DictReader(lines)
++        for row in reader:
++            # Skip rows where key is None (leftover from extra fields? but shouldn't happen)
++            if None in row:
++                del row[None]
++            all_rows.append(row)
++        return all_rows
++
+     def extract(self) -> list[dict]:
+         """Load records from input files."""
+         all_records = []
+@@ -57,10 +74,7 @@ class Runner:
+                 raise FileNotFoundError(f"File not found: {path}")
+             ext = path.suffix.lower()
+             if ext == '.csv':
+-                with open(path, newline='', encoding='utf-8') as f:
+-                    reader = csv.DictReader(f)
+-                    for row in reader:
+-                        all_records.append(row)
++                all_records.extend(self._read_csv(path))
+             elif ext in ('.jsonl', '.json'):
+                 with open(path, encoding='utf-8') as f:
+                     for line in f:
+diff --git a/tests/test_long_log_debug.py b/tests/test_long_log_debug.py
+index 3d7925d..ce53c3b 100644
+--- a/tests/test_long_log_debug.py
++++ b/tests/test_long_log_debug.py
+@@ -1,11 +1,12 @@
+-
+ import logging
++from mini_harness.runner import Runner
++
+ 
+ def test_run_dag_amidst_noise(caplog):
+     caplog.set_level(logging.INFO)
+     for i in range(1200):
+         logging.info("noise line %s", i)
+-    from mini_harness.runner import run_dag
+-    result = run_dag(["data/input.csv", "data/events.jsonl", "data/m4_noise_test.csv"])
+-    assert result["processed_count"] == 6
+-    assert result["rejected_count"] == 3
++    runner = Runner(["data/input.csv", "data/events.jsonl", "data/m4_noise_test.csv"])
++    report = runner.run()
++    assert report["processed_count"] == 6  # 2 from input.csv, 2 from events.jsonl, 2 from m4_noise_test.csv
++    assert report["rejected_count"] == 3  # 1 from input.csv (empty id), 1 from events.jsonl, 1 from m4_noise_test.csv (bad row)

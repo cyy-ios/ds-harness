@@ -1,0 +1,94 @@
+{
+  "capability": "任务完成度",
+  "score": 18,
+  "per_round": {
+    "round_01": {
+      "score": 20,
+      "evidence": [
+        "round_01/acceptance.json",
+        "round_01/response.md"
+      ]
+    },
+    "round_02": {
+      "score": 20,
+      "evidence": [
+        "round_02/acceptance.json",
+        "round_02/response.md"
+      ]
+    },
+    "round_03": {
+      "score": 20,
+      "evidence": [
+        "round_03/acceptance.json",
+        "round_03/response.md"
+      ]
+    },
+    "round_04": {
+      "score": null,
+      "evidence": [
+        "round_04/acceptance.json",
+        "round_04/response.md"
+      ]
+    },
+    "round_05": {
+      "score": null,
+      "evidence": [
+        "round_05/acceptance.json",
+        "round_05/response.md"
+      ]
+    },
+    "round_06": {
+      "score": null,
+      "evidence": [
+        "round_06/acceptance.json",
+        "round_06/response.md"
+      ]
+    },
+    "round_07": {
+      "score": 20,
+      "evidence": [
+        "round_07/acceptance.json",
+        "round_07/response.md"
+      ]
+    },
+    "round_08": {
+      "score": 10,
+      "evidence": [
+        "round_08/acceptance.json",
+        "round_08/replay.jsonl"
+      ]
+    }
+  },
+  "rounds_scored": 5,
+  "rounds_excluded": 3,
+  "evidence_used": [
+    "round_01..08/acceptance.json",
+    "round_01..08/response.md",
+    "round_08/analyzer_output/analyzer.json"
+  ],
+  "reason": "Evaluator acceptance 多数为 20/100 或 10/100，gate 全未通过；核心 CLI 与隐藏验收失败。",
+  "deductions": [
+    {
+      "round": "round_01-03",
+      "item": "acceptance gate",
+      "amount": 40,
+      "reason": "round_01..03/acceptance.json: evaluator score=20/100 and gate_passed=false"
+    },
+    {
+      "round": "round_04-06",
+      "item": "evidence completeness",
+      "amount": 20,
+      "reason": "round_04..06/acceptance.json: no parsed score/gate in captured output"
+    },
+    {
+      "round": "round_08",
+      "item": "final completion",
+      "amount": 30,
+      "reason": "round_08/acceptance.json: evaluator score=10/100 and gate_passed=false"
+    }
+  ],
+  "evidence_gaps": [
+    "round_04-06 acceptance output lacks parsed score/gate",
+    "round_08 lacks response.md/finish event"
+  ]
+}

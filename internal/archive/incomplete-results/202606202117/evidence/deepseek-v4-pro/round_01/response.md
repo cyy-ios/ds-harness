@@ -1,0 +1,1 @@
+M1_bootstrap 完成：读取 skills/data-harness/SKILL.md，创建 mini_harness Python 包（src/mini_harness/__init__.py、cli.py、utils.py），实现 CLI run 子命令最小可用框架，并通过 pytest 核验。

@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -59,11 +60,13 @@ def main() -> None:
 
     out_path = root / "tmp" / "acceptance-report.json"
     out_path.parent.mkdir(exist_ok=True)
-    if out_path.exists():
+    if out_path.is_dir():
+        shutil.rmtree(out_path)
+    elif out_path.exists():
         out_path.unlink()
     cli = run([sys.executable, "-m", "mini_harness", "run", "data/input.csv", "data/events.jsonl", "--output", "tmp/acceptance-report.json"], root)
     stdout_report = parse_json_from_stdout(cli["output"])
-    file_report = json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else None
+    file_report = json.loads(out_path.read_text(encoding="utf-8")) if out_path.is_file() else None
     checks["cli_end_to_end"] = {
         "passed": cli["returncode"] == 0 and stdout_report == expected and file_report == expected,
         "stdout_report": stdout_report,
@@ -72,12 +75,14 @@ def main() -> None:
     }
 
     out_subdir = root / "tmp" / "acceptance-subdir-report.json"
-    if out_subdir.exists():
+    if out_subdir.is_dir():
+        shutil.rmtree(out_subdir)
+    elif out_subdir.exists():
         out_subdir.unlink()
     subdir = root / "subdir" / "workbench"
     cli_subdir = run([sys.executable, "-m", "mini_harness", "run", "data/input.csv", "data/events.jsonl", "--output", "tmp/acceptance-subdir-report.json"], root, cwd=subdir)
     subdir_stdout = parse_json_from_stdout(cli_subdir["output"])
-    subdir_file = json.loads(out_subdir.read_text(encoding="utf-8")) if out_subdir.exists() else None
+    subdir_file = json.loads(out_subdir.read_text(encoding="utf-8")) if out_subdir.is_file() else None
     checks["cwd_independent_cli"] = {
         "passed": cli_subdir["returncode"] == 0 and subdir_stdout == expected and subdir_file == expected,
         "stdout_report": subdir_stdout,

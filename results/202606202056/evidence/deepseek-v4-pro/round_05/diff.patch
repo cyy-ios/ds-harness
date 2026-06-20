@@ -1,0 +1,49 @@
+diff --git a/subdir/workbench/tests/test_harness_from_workbench.py b/subdir/workbench/tests/test_harness_from_workbench.py
+new file mode 100644
+index 0000000..7faf232
+--- /dev/null
++++ b/subdir/workbench/tests/test_harness_from_workbench.py
+@@ -0,0 +1,43 @@
++"""Test that the harness works when invoked from a different working directory."""
++import os
++import sys
++
++# Add the source directory to sys.path so that mini_harness can be imported
++# The source directory is at ../../src relative to this test file
++src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src')
++sys.path.insert(0, os.path.abspath(src_path))
++
++from mini_harness.runner import run_pipeline
++
++def test_run_pipeline_from_workbench():
++    """The pipeline should process a file specified relative to the workbench cwd."""
++    # We are in the workbench directory, so data is at ../data/input.csv
++    # Repo root is three levels up from this test file: subdir/workbench/tests -> workbench -> subdir -> root
++    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
++    test_file = os.path.join(repo_root, 'data', 'input.csv')
++    report = run_pipeline([test_file])
++    assert report['processed_count'] == 2
++    assert report['rejected_count'] == 1
++    assert report['retry_count'] == 0
++    assert report['source_files'] == ['input.csv']
++
++
++def test_cli_run_from_workbench():
++    """Test the CLI 'run' command via programmatic invocation."""
++    import io
++    import contextlib
++    from mini_harness.cli import main
++
++    # Simulate command-line arguments: run with absolute path
++    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
++    test_args = ['cli.py', 'run', os.path.join(repo_root, 'data', 'input.csv')]
++    old_argv = sys.argv
++    sys.argv = test_args
++    try:
++        with contextlib.redirect_stdout(io.StringIO()) as out:
++            main()
++        output = out.getvalue()
++        assert 'processed_count: 2' in output
++        assert 'rejected_count: 1' in output
++    finally:
++        sys.argv = old_argv

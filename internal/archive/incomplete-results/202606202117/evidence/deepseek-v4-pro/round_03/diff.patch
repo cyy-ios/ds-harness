@@ -1,0 +1,196 @@
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 40bb476..03c291f 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -1,6 +1,8 @@
+ import argparse
++import json
+ import sys
+ from mini_harness.config import load_config, find_default_config, merge_config, DEFAULT_CONFIG
++from mini_harness.runner import run
+ 
+ def main():
+     parser = argparse.ArgumentParser(prog='mini_harness')
+@@ -31,7 +33,10 @@ def main():
+         if 'input' not in config or not config['input']:
+             print("Error: input file not specified (use --input or config file).")
+             sys.exit(1)
+-        print(f"Running mini harness on {config['input']} with config: {config}")
++        # run the pipeline
++        report = run(config)
++        # output report as JSON to stdout
++        print(json.dumps(report, indent=2))
+     else:
+         parser.print_help()
+         sys.exit(1)
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+new file mode 100644
+index 0000000..0e0238b
+--- /dev/null
++++ b/src/mini_harness/runner.py
+@@ -0,0 +1,98 @@
++import csv
++import json
++import logging
++import sys
++from mini_harness.utils import to_snake_case
++
++logger = logging.getLogger(__name__)
++logging.basicConfig(level=logging.INFO, stream=sys.stderr, format='%(message)s')
++
++def structured_log_stage(attempt, stage, status, extra=None):
++    log_entry = {'attempt': attempt, 'stage': stage, 'status': status}
++    if extra:
++        log_entry.update(extra)
++    logger.info(json.dumps(log_entry))
++
++def extract(filepath, attempt):
++    """Extract records from CSV or JSONL file."""
++    records = []
++    if filepath.endswith('.csv'):
++        with open(filepath, 'r', encoding='utf-8') as f:
++            reader = csv.DictReader(f)
++            for row in reader:
++                records.append(dict(row))
++    elif filepath.endswith('.jsonl'):
++        with open(filepath, 'r', encoding='utf-8') as f:
++            for line in f:
++                line = line.strip()
++                if line:
++                    records.append(json.loads(line))
++    else:
++        raise ValueError(f"Unsupported file format: {filepath}")
++    structured_log_stage(attempt, 'extract', 'success', {'records_extracted': len(records)})
++    return records
++
++def clean(records, attempt):
++    """Clean records: remove empty records, convert keys to snake_case, reject records missing 'id'."""
++    processed = []
++    rejected = []
++    for rec in records:
++        # remove empty rows: if all values are empty string or None, skip entirely (treated as empty row)
++        if all(not v or v.isspace() if isinstance(v, str) else v is None for v in rec.values()):
++            continue
++        # convert keys to snake_case
++        new_rec = {}
++        for key, value in rec.items():
++            new_key = to_snake_case(key)
++            new_rec[new_key] = value
++        # check for 'id'
++        if 'id' not in new_rec or not new_rec['id']:
++            rejected.append(new_rec)
++        else:
++            processed.append(new_rec)
++    structured_log_stage(attempt, 'clean', 'success', {'processed': len(processed), 'rejected': len(rejected)})
++    return processed, rejected
++
++def report(processed, rejected, retry_count, source_files):
++    """Generate report dict."""
++    return {
++        'processed_count': len(processed),
++        'rejected_count': len(rejected),
++        'retry_count': retry_count,
++        'source_files': source_files
++    }
++
++def run(config):
++    input_file = config['input']
++    max_retries = config.get('retry_count', 2)
++    total_retries = 0
++    source_files = [input_file]
++
++    # extract with retry
++    records = None
++    for attempt in range(max_retries + 1):
++        try:
++            records = extract(input_file, attempt + 1)
++            break
++        except Exception as e:
++            structured_log_stage(attempt + 1, 'extract', 'error', {'error': str(e)})
++            total_retries += 1
++            if attempt == max_retries:
++                raise
++
++    # clean with retry (rarely fails but just in case)
++    processed = None
++    rejected = None
++    for attempt in range(max_retries + 1):
++        try:
++            processed, rejected = clean(records, attempt + 1)
++            break
++        except Exception as e:
++            structured_log_stage(attempt + 1, 'clean', 'error', {'error': str(e)})
++            total_retries += 1
++            if attempt == max_retries:
++                raise
++
++    # report stage no retry (just generate report)
++    structured_log_stage(1, 'report', 'success')
++    return report(processed, rejected, total_retries, source_files)
+diff --git a/tests/test_runner.py b/tests/test_runner.py
+new file mode 100644
+index 0000000..7924daa
+--- /dev/null
++++ b/tests/test_runner.py
+@@ -0,0 +1,61 @@
++import json
++import os
++import tempfile
++from mini_harness.runner import extract, clean, report
++
++def create_csv(content, dir):
++    path = os.path.join(dir, 'test.csv')
++    with open(path, 'w', encoding='utf-8') as f:
++        f.write(content)
++    return path
++
++def create_jsonl(content, dir):
++    path = os.path.join(dir, 'test.jsonl')
++    with open(path, 'w', encoding='utf-8') as f:
++        f.write(content)
++    return path
++
++def test_extract_csv():
++    with tempfile.TemporaryDirectory() as tmp:
++        csv_content = "ID,Name\n1,Alice\n2,Bob"
++        path = create_csv(csv_content, tmp)
++        records = extract(path, 1)
++        assert len(records) == 2
++        assert records[0] == {'ID': '1', 'Name': 'Alice'}
++
++def test_extract_jsonl():
++    with tempfile.TemporaryDirectory() as tmp:
++        jsonl_content = '{"ID":"1","Name":"Alice"}\n{"ID":"2","Name":"Bob"}'
++        path = create_jsonl(jsonl_content, tmp)
++        records = extract(path, 1)
++        assert len(records) == 2
++        assert records[0] == {"ID": "1", "Name": "Alice"}
++
++def test_clean_basic():
++    records = [{'ID': '1', 'User Name': 'Alice'}, {'ID': '2', 'User Name': 'Bob'}]
++    processed, rejected = clean(records, 1)
++    assert len(processed) == 2
++    assert 'id' in processed[0]
++    assert 'user_name' in processed[0]
++    assert rejected == []
++
++def test_clean_missing_id():
++    records = [{'ID': '1', 'User Name': 'Alice'}, {'User Name': 'NoId'}]
++    processed, rejected = clean(records, 1)
++    assert len(processed) == 1
++    assert len(rejected) == 1
++    assert processed[0]['id'] == '1'
++
++def test_clean_empty_rows():
++    records = [{'ID': '1', 'User Name': 'Alice'}, {'ID': '', 'User Name': ''}]
++    # empty row: all values empty
++    processed, rejected = clean(records, 1)
++    assert len(processed) == 1
++    assert rejected == []  # empty row just skipped
++
++def test_report():
++    result = report([{'id':1}], [{'id':''}], 1, ['input.csv'])
++    assert result['processed_count'] == 1
++    assert result['rejected_count'] == 1
++    assert result['retry_count'] == 1
++    assert result['source_files'] == ['input.csv']

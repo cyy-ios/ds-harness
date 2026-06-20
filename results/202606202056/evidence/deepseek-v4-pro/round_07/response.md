@@ -1,0 +1,1 @@
+M7_memory_report：生成 docs/memory_aware_report.md，引用 memory_summary、compatibility-notes、perf-baseline 和当前统计（processed=4, rejected=2, retry=0）。同时修复 M4 遗留的 test_long_log_debug.py 导入错误和 CSV 注释跳过，全量测试 5 passed。
