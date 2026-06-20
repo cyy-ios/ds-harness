@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M3_runner_retry 完成：实现了 DagRunner 类，封装 extract -> clean -> report 三阶段，支持每阶段最多 2 次重试，结构化日志包含 attempt/stage/status；修复了解包错误；测试覆盖成功、失败重试及总失败场景；CLI run 子命令通过 DagRunner 执行，报告反映真实处理结果。", "tests": "pytest (11 tests) passed; CLI run on data/input.csv produced correct report (processed=2, rejected=1, retry=0)."}

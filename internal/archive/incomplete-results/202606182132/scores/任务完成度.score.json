@@ -1,0 +1,28 @@
+{
+  "capability": "任务完成度",
+  "score": 25.0,
+  "per_round": {
+    "round_01": {"score": 25, "reason": "包创建但路径错误，CLI 参数格式不兼容，accepted gate=false"},
+    "round_02": {"score": 25, "reason": "配置解析叠加在错误的包结构上，accepted gate=false"},
+    "round_03": {"score": 25, "reason": "有 DAG/重试/日志但缺少 runner 模块和 run_dag，accepted gate=false"},
+    "round_04": {"score": 25, "reason": "修复部分 CSV 解析但 package 结构问题未解决，accepted gate=false"},
+    "round_05": {"score": 25, "reason": "仅添加 conftest 未实现跨 cwd CLI 可用，accepted gate=false"},
+    "round_06": {"score": 25, "reason": "读了文档但未产生任何代码变更，accepted gate=false"},
+    "round_07": {"score": 25, "reason": "生成了 recap 但 retry_count 统计错误，accepted gate=false"},
+    "round_08": {"score": 10, "reason": "未完成即中断，写入的测试有编码 bug 导致 public_pytest 失败"}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "全轮 acceptance.json: 8 轮全部 gate_passed=false，score 20/100（R8 降至 10/100）",
+    "全轮 diff.patch: 包在 mini_harness/ 非 src/mini_harness/，缺少 runner 模块",
+    "round_08 acceptance.json: public_pytest 失败（1/17），test_report.py 编码错误"
+  ],
+  "reason": "核心任务产品（CLI 端到端、跨 cwd、数据语义、重试统计、外部路径防护）全程未通过 oracle 验收。agent 从未意识到包结构错误。",
+  "deductions": [
+    {"round": "round_01", "item": "基础完成", "amount": 75, "reason": "包位置+CLI 参数格式双错误"},
+    {"round": "round_05", "item": "基础完成", "amount": 75, "reason": "跨 cwd 不可用"},
+    {"round": "round_08", "item": "基础完成", "amount": 90, "reason": "未完成+编码 bug"}
+  ],
+  "evidence_gaps": []
+}

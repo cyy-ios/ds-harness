@@ -1,0 +1,27 @@
+{
+  "capability": "任务规划",
+  "score": 60.0,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_02": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_03": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_04": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_05": {"score": 50, "sub_scores": {"1.1": 50, "1.2": 50}},
+    "round_06": {"score": 25, "sub_scores": {"1.1": 25, "1.2": 25}},
+    "round_07": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_08": {"score": 25, "sub_scores": {"1.1": 25, "1.2": 25}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "全轮 replay.jsonl: tool call 序列直接、无绕路。但工具选择仅限于 read_file/write_file/shell（简化协议只给了 4 种工具）",
+    "round_06 replay.jsonl: 2 次读文件 + finish，全程无代码变更，严重不足",
+    "round_08 replay.jsonl: 在 compact 摘要基础上直接写测试，未先探索当前仓库状态"
+  ],
+  "reason": "路线效率中上——agent 每轮直奔主题，无试错绕路。但 R6 只读不干，R8 跳过探索直接写代码导致测试失败。工具选择因简化协议无法评价（仅 4 工具可用）。",
+  "deductions": [
+    {"round": "round_06", "item": "1.1_路线效率", "amount": 75, "reason": "2 步 finish 无产出"},
+    {"round": "round_08", "item": "1.1_路线效率", "amount": 75, "reason": "跳探索直接写代码导致测试失败"}
+  ],
+  "evidence_gaps": ["简化工具协议只有 4 种工具，1.2 工具选择评分为估计值"]
+}

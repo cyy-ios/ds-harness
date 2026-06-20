@@ -1,0 +1,150 @@
+diff --git a/eval_deepseek_transcript.jsonl b/eval_deepseek_transcript.jsonl
+index 50a6148..02f4fed 100644
+--- a/eval_deepseek_transcript.jsonl
++++ b/eval_deepseek_transcript.jsonl
+@@ -22,3 +22,17 @@
+ {"milestone": "M1_bootstrap", "step": 10, "tool_result": {"ok": true, "returncode": 0, "output": "usage: mini_harness [-h] {run} ...\n\npositional arguments:\n  {run}\n    run       Run the data harness pipeline\n\noptions:\n  -h, --help  show this help message and exit\n"}}
+ {"milestone": "M1_bootstrap", "step": 11, "assistant": "{\"tool\": \"finish\", \"summary\": \"Created mini_harness package with CLI `run` subcommand. Initial tests pass.\", \"tests\": \"PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q (2 passed)\"}"}
+ {"milestone": "M1_bootstrap", "step": 11, "tool_result": {"ok": true, "finished": true}}
++{"milestone": "M2_config", "step": 0, "assistant": "{\"tool\":\"read_file\",\"path\":\"src/mini_harness/cli.py\"}"}
++{"milestone": "M2_config", "step": 0, "tool_result": {"ok": true, "content": "import argparse\nimport sys\nfrom pathlib import Path\n\ndef run_command(args):\n    print(f\"Running mini_harness with input: {args.input}\")\n    # Placeholder for future implementation\n\ndef main():\n    parser = argparse.ArgumentParser(prog='mini_harness')\n    subparsers = parser.add_subparsers(dest='command', required=True)\n    run_parser = subparsers.add_parser('run', help='Run the data harness pipeline')\n    run_parser.add_argument('input', help='Input file (CSV or JSONL)')\n    run_parser.set_defaults(func=run_command)\n    args = parser.parse_args()\n    args.func(args)\n\nif __name__ == '__main__':\n    main()\n"}}
++{"milestone": "M2_config", "step": 1, "assistant": "{\"tool\": \"write_file\", \"path\": \"src/mini_harness/config.py\", \"content\": \"import json\\nfrom pathlib import Path\\n\\ndef load_config(config_path: Path) -> dict:\\n    if not config_path.exists():\\n        return {}\\n    suffix = config_path.suffix.lower()\\n    if suffix in (\\\".yaml\\\", \\\".yml\\\"):\\n        # YAML not available; try JSON parse (may fail for native YAML)\\n        try:\\n            with open(config_path, \\\"r\\\") as f:\\n                return json.load(f)\\n        except json.JSONDecodeError:\\n            print(f\\\"Warning: Could not parse YAML file {config_path}, using empty config.\\\")\\n            return {}\\n    elif suffix == \\\".json\\\":\\n        with open(config_path, \\\"r\\\") as f:\\n            return json.load(f)\\n    else:\\n        print(f\\\"Warning: Unsupported config file format {suffix}, using empty config.\\\")\\n        return {}\\n\"}"}
++{"milestone": "M2_config", "step": 1, "tool_result": {"ok": true, "path": "src\\mini_harness\\config.py", "bytes": 766}}
++{"milestone": "M2_config", "step": 2, "assistant": "{\"tool\": \"write_file\", \"path\": \"src/mini_harness/cli.py\", \"content\": \"import argparse\\nimport sys\\nfrom pathlib import Path\\n\\ndef run_command(args):\\n    from .config import load_config\\n    config = load_config(args.config)\\n    print(f\\\"Running mini_harness with input: {args.input}\\\")\\n    print(f\\\"Config: {config}\\\")\\n    # Placeholder for future implementation\\n\\ndef main():\\n    parser = argparse.ArgumentParser(prog='mini_harness')\\n    subparsers = parser.add_subparsers(dest='command', required=True)\\n    run_parser = subparsers.add_parser('run', help='Run the data harness pipeline')\\n    run_parser.add_argument('input', help='Input file (CSV or JSONL)')\\n    run_parser.add_argument('--config', type=Path, default=Path('config.json'),\\n                            help='Path to configuration file (JSON)')\\n    run_parser.set_defaults(func=run_command)\\n    args = parser.parse_args()\\n    args.func(args)\\n\\nif __name__ == '__main__':\\n    main()\\n\"}"}
++{"milestone": "M2_config", "step": 2, "tool_result": {"ok": true, "path": "src\\mini_harness\\cli.py", "bytes": 891}}
++{"milestone": "M2_config", "step": 3, "assistant": "{\"tool\": \"write_file\", \"path\": \"tests/test_config.py\", \"content\": \"import sys\\nimport os\\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))\\nimport json\\nimport tempfile\\n\\nfrom mini_harness.config import load_config\\n\\ndef test_load_empty_config():\\n    result = load_config(Path(\\\"nonexistent.json\\\"))\\n    assert result == {}\\n\\ndef test_load_json_config():\\n    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:\\n        json.dump({\\\"key\\\": \\\"value\\\"}, f)\\n        temp_path = f.name\\n    result = load_config(Path(temp_path))\\n    assert result == {\\\"key\\\": \\\"value\\\"}\\n    os.unlink(temp_path)\\n\"}"}
++{"milestone": "M2_config", "step": 3, "tool_result": {"ok": true, "path": "tests\\test_config.py", "bytes": 576}}
++{"milestone": "M2_config", "step": 4, "assistant": "{\"tool\": \"shell\", \"cmd\": \"set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && set PYTHONPATH=src && python -m pytest -q\"}"}
++{"milestone": "M2_config", "step": 4, "tool_result": {"ok": false, "returncode": 1, "output": ".FF.                                                                     [100%]\n================================== FAILURES ===================================\n___________________________ test_load_empty_config ____________________________\n\n    def test_load_empty_config():\n>       result = load_config(Path(\"nonexistent.json\"))\n                             ^^^^\nE       NameError: name 'Path' is not defined\n\ntests\\test_config.py:10: NameError\n____________________________ test_load_json_config ____________________________\n\n    def test_load_json_config():\n        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:\n            json.dump({\"key\": \"value\"}, f)\n            temp_path = f.name\n>       result = load_config(Path(temp_path))\n                             ^^^^\nE       NameError: name 'Path' is not defined\n\ntests\\test_config.py:17: NameError\n=========================== short test summary info ===========================\nFAILED tests/test_config.py::test_load_empty_config - NameError: name 'Path' ...\nFAILED tests/test_config.py::test_load_json_config - NameError: name 'Path' i...\n2 failed, 2 passed in 0.10s\n"}}
++{"milestone": "M2_config", "step": 5, "assistant": "{\"tool\": \"edit\", \"path\": \"tests/test_config.py\", \"old_string\": \"from mini_harness.config import load_config\", \"new_string\": \"from pathlib import Path\\nfrom mini_harness.config import load_config\"}"}
++{"milestone": "M2_config", "step": 5, "tool_result": {"ok": true, "path": "tests\\test_config.py", "bytes": 602}}
++{"milestone": "M2_config", "step": 6, "assistant": "{\"tool\": \"shell\", \"cmd\": \"set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && set PYTHONPATH=src && python -m pytest -q\"}"}
++{"milestone": "M2_config", "step": 6, "tool_result": {"ok": true, "returncode": 0, "output": "....                                                                     [100%]\n4 passed in 0.04s\n"}}
+diff --git a/evidence/round_02/commands.log b/evidence/round_02/commands.log
+new file mode 100644
+index 0000000..7514085
+--- /dev/null
++++ b/evidence/round_02/commands.log
+@@ -0,0 +1,14 @@
++[
++  {
++    "command": "set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && set PYTHONPATH=src && python -m pytest -q",
++    "cwd": "C:\\项目\\ds-harness\\tmp\\flash-full",
++    "exit_code": 1,
++    "stdout": ".FF.                                                                     [100%]\n================================== FAILURES ===================================\n___________________________ test_load_empty_config ____________________________\n\n    def test_load_empty_config():\n>       result = load_config(Path(\"nonexistent.json\"))\n                             ^^^^\nE       NameError: name 'Path' is not defined\n\ntests\\test_config.py:10: NameError\n____________________________ test_load_json_config ____________________________\n\n    def test_load_json_config():\n        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:\n            json.dump({\"key\": \"value\"}, f)\n            temp_path = f.name\n>       result = load_config(Path(temp_path))\n                             ^^^^\nE       NameError: name 'Path' is not defined\n\ntests\\test_config.py:17: NameError\n=========================== short test summary info ===========================\nFAILED tests/test_config.py::test_load_empty_config - NameError: name 'Path' ...\nFAILED tests/test_config.py::test_load_json_config - NameError: name 'Path' i...\n2 failed, 2 passed in 0.10s\n"
++  },
++  {
++    "command": "set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && set PYTHONPATH=src && python -m pytest -q",
++    "cwd": "C:\\项目\\ds-harness\\tmp\\flash-full",
++    "exit_code": 0,
++    "stdout": "....                                                                     [100%]\n4 passed in 0.04s\n"
++  }
++]
+\ No newline at end of file
+diff --git a/evidence/round_02/replay.jsonl b/evidence/round_02/replay.jsonl
+new file mode 100644
+index 0000000..89f593c
+--- /dev/null
++++ b/evidence/round_02/replay.jsonl
+@@ -0,0 +1,16 @@
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "src/mini_harness/cli.py"}}
++{"role": "tool", "result": {"ok": true, "content": "import argparse\nimport sys\nfrom pathlib import Path\n\ndef run_command(args):\n    print(f\"Running mini_harness with input: {args.input}\")\n    # Placeholder for future implementation\n\ndef main():\n    parser = argparse.ArgumentParser(prog='mini_harness')\n    subparsers = parser.add_subparsers(dest='command', required=True)\n    run_parser = subparsers.add_parser('run', help='Run the data harness pipeline')\n    run_parser.add_argument('input', help='Input file (CSV or JSONL)')\n    run_parser.set_defaults(func=run_command)\n    args = parser.parse_args()\n    args.func(args)\n\nif __name__ == '__main__':\n    main()\n"}}
++{"role": "assistant", "tool_call": {"tool": "write_file", "path": "src/mini_harness/config.py", "content": "import json\nfrom pathlib import Path\n\ndef load_config(config_path: Path) -> dict:\n    if not config_path.exists():\n        return {}\n    suffix = config_path.suffix.lower()\n    if suffix in (\".yaml\", \".yml\"):\n        # YAML not available; try JSON parse (may fail for native YAML)\n        try:\n            with open(config_path, \"r\") as f:\n                return json.load(f)\n        except json.JSONDecodeError:\n            print(f\"Warning: Could not parse YAML file {config_path}, using empty config.\")\n            return {}\n    elif suffix == \".json\":\n        with open(config_path, \"r\") as f:\n            return json.load(f)\n    else:\n        print(f\"Warning: Unsupported config file format {suffix}, using empty config.\")\n        return {}\n"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\config.py", "bytes": 766}}
++{"role": "assistant", "tool_call": {"tool": "write_file", "path": "src/mini_harness/cli.py", "content": "import argparse\nimport sys\nfrom pathlib import Path\n\ndef run_command(args):\n    from .config import load_config\n    config = load_config(args.config)\n    print(f\"Running mini_harness with input: {args.input}\")\n    print(f\"Config: {config}\")\n    # Placeholder for future implementation\n\ndef main():\n    parser = argparse.ArgumentParser(prog='mini_harness')\n    subparsers = parser.add_subparsers(dest='command', required=True)\n    run_parser = subparsers.add_parser('run', help='Run the data harness pipeline')\n    run_parser.add_argument('input', help='Input file (CSV or JSONL)')\n    run_parser.add_argument('--config', type=Path, default=Path('config.json'),\n                            help='Path to configuration file (JSON)')\n    run_parser.set_defaults(func=run_command)\n    args = parser.parse_args()\n    args.func(args)\n\nif __name__ == '__main__':\n    main()\n"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\cli.py", "bytes": 891}}
++{"role": "assistant", "tool_call": {"tool": "write_file", "path": "tests/test_config.py", "content": "import sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))\nimport json\nimport tempfile\n\nfrom mini_harness.config import load_config\n\ndef test_load_empty_config():\n    result = load_config(Path(\"nonexistent.json\"))\n    assert result == {}\n\ndef test_load_json_config():\n    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:\n        json.dump({\"key\": \"value\"}, f)\n        temp_path = f.name\n    result = load_config(Path(temp_path))\n    assert result == {\"key\": \"value\"}\n    os.unlink(temp_path)\n"}}
++{"role": "tool", "result": {"ok": true, "path": "tests\\test_config.py", "bytes": 576}}
++{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && set PYTHONPATH=src && python -m pytest -q"}}
++{"role": "tool", "result": {"ok": false, "returncode": 1, "output": ".FF.                                                                     [100%]\n================================== FAILURES ===================================\n___________________________ test_load_empty_config ____________________________\n\n    def test_load_empty_config():\n>       result = load_config(Path(\"nonexistent.json\"))\n                             ^^^^\nE       NameError: name 'Path' is not defined\n\ntests\\test_config.py:10: NameError\n____________________________ test_load_json_config ____________________________\n\n    def test_load_json_config():\n        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:\n            json.dump({\"key\": \"value\"}, f)\n            temp_path = f.name\n>       result = load_config(Path(temp_path))\n                             ^^^^\nE       NameError: name 'Path' is not defined\n\ntests\\test_config.py:17: NameError\n=========================== short test summary info ===========================\nFAILED tests/test_config.py::test_load_empty_config - NameError: name 'Path' ...\nFAILED tests/test_config.py::test_load_json_config - NameError: name 'Path' i...\n2 failed, 2 passed in 0.10s\n"}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "tests/test_config.py", "old_string": "from mini_harness.config import load_config", "new_string": "from pathlib import Path\nfrom mini_harness.config import load_config"}}
++{"role": "tool", "result": {"ok": true, "path": "tests\\test_config.py", "bytes": 602}}
++{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && set PYTHONPATH=src && python -m pytest -q"}}
++{"role": "tool", "result": {"ok": true, "returncode": 0, "output": "....                                                                     [100%]\n4 passed in 0.04s\n"}}
++{"role": "assistant", "tool_call": {"tool": "finish", "summary": "Added JSON config parsing with `--config` CLI argument, default config.json. All 4 tests pass.", "tests": "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q (4 passed)"}}
++{"role": "tool", "result": {"ok": true, "finished": true}}
+diff --git a/evidence/round_02/response.md b/evidence/round_02/response.md
+new file mode 100644
+index 0000000..6294723
+--- /dev/null
++++ b/evidence/round_02/response.md
+@@ -0,0 +1 @@
++Added JSON config parsing with `--config` CLI argument, default config.json. All 4 tests pass.
+\ No newline at end of file
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 134550a..12f2dca 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -3,7 +3,10 @@ import sys
+ from pathlib import Path
+ 
+ def run_command(args):
++    from .config import load_config
++    config = load_config(args.config)
+     print(f"Running mini_harness with input: {args.input}")
++    print(f"Config: {config}")
+     # Placeholder for future implementation
+ 
+ def main():
+@@ -11,6 +14,8 @@ def main():
+     subparsers = parser.add_subparsers(dest='command', required=True)
+     run_parser = subparsers.add_parser('run', help='Run the data harness pipeline')
+     run_parser.add_argument('input', help='Input file (CSV or JSONL)')
++    run_parser.add_argument('--config', type=Path, default=Path('config.json'),
++                            help='Path to configuration file (JSON)')
+     run_parser.set_defaults(func=run_command)
+     args = parser.parse_args()
+     args.func(args)
+diff --git a/src/mini_harness/config.py b/src/mini_harness/config.py
+new file mode 100644
+index 0000000..c4ec8a7
+--- /dev/null
++++ b/src/mini_harness/config.py
+@@ -0,0 +1,21 @@
++import json
++from pathlib import Path
++
++def load_config(config_path: Path) -> dict:
++    if not config_path.exists():
++        return {}
++    suffix = config_path.suffix.lower()
++    if suffix in (".yaml", ".yml"):
++        # YAML not available; try JSON parse (may fail for native YAML)
++        try:
++            with open(config_path, "r") as f:
++                return json.load(f)
++        except json.JSONDecodeError:
++            print(f"Warning: Could not parse YAML file {config_path}, using empty config.")
++            return {}
++    elif suffix == ".json":
++        with open(config_path, "r") as f:
++            return json.load(f)
++    else:
++        print(f"Warning: Unsupported config file format {suffix}, using empty config.")
++        return {}
+diff --git a/tests/test_config.py b/tests/test_config.py
+new file mode 100644
+index 0000000..e91e473
+--- /dev/null
++++ b/tests/test_config.py
+@@ -0,0 +1,20 @@
++import sys
++import os
++sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
++import json
++import tempfile
++
++from pathlib import Path
++from mini_harness.config import load_config
++
++def test_load_empty_config():
++    result = load_config(Path("nonexistent.json"))
++    assert result == {}
++
++def test_load_json_config():
++    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
++        json.dump({"key": "value"}, f)
++        temp_path = f.name
++    result = load_config(Path(temp_path))
++    assert result == {"key": "value"}
++    os.unlink(temp_path)

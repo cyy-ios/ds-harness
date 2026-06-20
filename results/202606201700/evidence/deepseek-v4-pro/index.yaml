@@ -1,0 +1,12 @@
+subject: deepseek-v4-pro
+task: mini-data-harness
+timestamp: '202606201707'
+total_rounds: 2
+rounds:
+- round: round_07
+  milestone: M7_memory_report
+  prompt: 里程碑 M7_memory_report：读取 memory/memory_summary.md、docs/compatibility-notes.md
+    和 benchmarks/perf-baseline.json，生成 memory-aware 复盘报告，引用早期设计决策和当前产物的最终统计。
+- round: round_08
+  milestone: M8_compact_resume
+  prompt: 里程碑 M8_compact_resume：上下文已压缩为上方摘要。继续新增 report 模块，并确认既有能力仍可用。

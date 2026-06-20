@@ -1,0 +1,856 @@
+﻿#!/usr/bin/env python3
+"""
+Codex CLI replay runner —— 用 Codex CLI 跑 M1-M8，收集证据。
+
+用法：
+  # 1. 先创建 fixture（如果还没有）
+  python runners/setup_fixture.py /tmp/codex-fixture
+
+  # 2. 跑 M1-M8
+  python runners/run_codex_replay.py --root /tmp/codex-fixture --out /tmp/codex-evidence
+
+设计：
+  - M1-M7 通过 `codex exec resume` 维持连续 session
+  - M8 起新 session，注入 compact-summary.md 替代完整历史
+  - M5 在 subdir/workbench 执行
+  - 每个 M 后自动 git diff + acceptance 检查
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+# ---------------------------------------------------------------------------
+# Codex JSONL 解析 —— 映射 codex exec --json 的事件到标准证据格式
+# ---------------------------------------------------------------------------
+
+# Codex JSONL 中 compaction 相关的事件 type 值
+_COMPACTION_EVENT_TYPES = frozenset({
+    "context_compacted",
+    "compaction_trigger",
+    "compaction_summary",
+    "context_compaction",
+    "compacted",
+})
+
+
+def parse_codex_jsonl(text: str) -> list[dict]:
+    """解析 codex exec --json 的输出。"""
+    events = []
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+            if isinstance(ev, dict) and "type" in ev:
+                events.append(ev)
+        except json.JSONDecodeError:
+            continue
+    return events
+
+
+def detect_compaction_from_jsonl(events: list[dict]) -> dict | None:
+    """从 Codex JSONL 事件中检测 compaction 是否发生。
+
+    返回 compact_trigger 信息 dict，未检测到则返回 None。
+    """
+    for ev in events:
+        t = ev.get("type", "")
+        if t in _COMPACTION_EVENT_TYPES:
+            return {
+                "triggered": True,
+                "event_type": t,
+                "compact_summary_snippet": _extract_compact_summary(ev),
+            }
+        # item.started / item.completed 可能包裹 compaction item
+        item = ev.get("item", {})
+        if isinstance(item, dict):
+            item_type = item.get("type", "")
+            if item_type in _COMPACTION_EVENT_TYPES:
+                return {
+                    "triggered": True,
+                    "event_type": item_type,
+                    "compact_summary_snippet": _extract_compact_summary(item),
+                }
+    return None
+
+
+def _extract_compact_summary(ev: dict) -> str:
+    """从 compaction 事件中提取摘要文本片段（前 500 字符）。"""
+    # Compaction 摘要可能在 message/content/encrypted_content 字段中
+    msg = ev.get("message", "") or ev.get("content", "")
+    if isinstance(msg, str) and msg:
+        return msg[:500]
+    enc = ev.get("encrypted_content", "")
+    if isinstance(enc, str) and enc:
+        return f"[encrypted, {len(enc)} chars]"
+    return ""
+
+
+def extract_session_id(events: list[dict]) -> str | None:
+    """从 codex 事件中提取 session/thread_id，用于后续 resume。"""
+    for ev in events:
+        t = ev.get("type", "")
+        if t in ("thread.started",):
+            return ev.get("thread_id") or ev.get("id")
+        sid = ev.get("session_id") or ev.get("thread_id")
+        if sid:
+            return sid
+    return None
+
+
+def build_replay_jsonl(events: list[dict], ms_id: str) -> list[dict]:
+    """将 codex 事件转为标准 replay 记录。
+
+    Codex --json 事件格式：
+      {"type":"item.started","item":{"id":"...","type":"command_execution","command":"..."}}
+      {"type":"item.completed","item":{"id":"...","type":"command_execution",...,"aggregated_output":"...","exit_code":0}}
+      {"type":"item.completed","item":{"id":"...","type":"agent_message","text":"..."}}
+    """
+    records = []
+    step = 0
+
+    for ev in events:
+        t = ev.get("type", "")
+        item = ev.get("item", {}) if isinstance(ev.get("item"), dict) else {}
+        item_type = item.get("type", "")
+
+        # item.started —— tool call 开始
+        if t == "item.started":
+            name = item_type
+            inp = {}
+            if item_type == "command_execution":
+                inp = {"command": item.get("command", "")}
+            elif item_type in ("file_write", "file_edit"):
+                inp = {"path": item.get("path", ""), "content_length": len(str(item.get("content", "")))}
+            records.append({
+                "milestone": ms_id,
+                "step": step,
+                "tool": name,
+                "tool_input": inp,
+                "event_type": "tool_call",
+                "event_id": item.get("id", ev.get("id", "")),
+            })
+            step += 1
+
+        # item.completed —— 可能是 tool result 或 agent message
+        elif t == "item.completed":
+            if item_type == "agent_message":
+                records.append({
+                    "milestone": ms_id,
+                    "step": step,
+                    "assistant_text": item.get("text", ""),
+                    "event_type": "agent_message",
+                })
+                step += 1
+            else:
+                name = item_type
+                output = item.get("aggregated_output", "") or item.get("text", "")
+                error = (item.get("status") == "failed" or item.get("exit_code", 0) != 0)
+                records.append({
+                    "milestone": ms_id,
+                    "step": step,
+                    "tool": name,
+                    "tool_output": _normalize_tool_output(name, output),
+                    "tool_error": bool(error),
+                    "event_type": "tool_result",
+                    "event_id": item.get("id", ev.get("id", "")),
+                })
+                step += 1
+
+        # agent.message —— 旧格式兼容
+        elif t == "agent.message":
+            for block in _unwrap_content(ev.get("content", [])):
+                if block.get("type") == "text":
+                    records.append({
+                        "milestone": ms_id,
+                        "step": step,
+                        "assistant_text": block.get("text", ""),
+                        "event_type": t,
+                    })
+                    step += 1
+
+        # compaction 事件
+        elif t in _COMPACTION_EVENT_TYPES:
+            records.append({
+                "milestone": ms_id,
+                "step": step,
+                "event_type": "compaction",
+                "raw_type": t,
+                "compaction_message": _extract_compact_summary(ev),
+                "compaction_payload": ev.get("payload"),
+            })
+
+        # session 级事件
+        elif t in ("session.status_idle", "session.status_terminated",
+                   "turn.completed", "thread.started"):
+            records.append({
+                "milestone": ms_id,
+                "step": step,
+                "event_type": t,
+                "usage": ev.get("usage"),
+                "stop_reason": ev.get("stop_reason"),
+            })
+
+    return records
+
+
+def _unwrap_content(content: Any) -> list[dict]:
+    """统一处理 content: str | list[dict] | None。"""
+    if isinstance(content, str):
+        return [{"type": "text", "text": content}]
+    if isinstance(content, list):
+        return content
+    return []
+
+
+def _normalize_tool_output(tool_name: str, output: Any) -> str:
+    """标准化工具输出为字符串，shell 输出截断到合理长度。"""
+    s = json.dumps(output, ensure_ascii=False) if not isinstance(output, str) else output
+    if tool_name in ("bash", "shell", "execute_command") and len(s) > 24000:
+        s = s[:12000] + "\n...[truncated]...\n" + s[-12000:]
+    return s
+
+
+def extract_response_text(events: list[dict]) -> str:
+    """提取最终响应文本。
+
+    Codex --json 格式：agent 消息在 item.completed 事件中，
+    item.type == "agent_message"，文本在 item.text。
+    """
+    texts = []
+    for ev in events:
+        t = ev.get("type", "")
+        if t == "item.completed":
+            item = ev.get("item", {})
+            if isinstance(item, dict) and item.get("type") == "agent_message":
+                txt = item.get("text", "")
+                if txt:
+                    texts.append(str(txt))
+        elif t in ("agent.message", "assistant.message"):
+            for block in _unwrap_content(ev.get("content", [])):
+                if block.get("type") == "text":
+                    texts.append(block.get("text", ""))
+    return "\n".join(texts)
+
+
+def extract_command_log(events: list[dict]) -> str:
+    """提取 shell 命令执行记录。"""
+    lines = []
+    for record in build_replay_jsonl(events, ""):
+        if record.get("event_type") == "tool_call":
+            tool = record.get("tool", "")
+            inp = record.get("tool_input", {})
+            if tool in ("bash", "shell", "execute_command"):
+                cmd = inp.get("command", "") or inp.get("cmd", "") or json.dumps(inp)
+                lines.append(f"$ {cmd}")
+        elif record.get("event_type") == "tool_result":
+            tool = record.get("tool", "")
+            if tool in ("bash", "shell", "execute_command"):
+                lines.append(record.get("tool_output", ""))
+                lines.append(f"[error: {record.get('tool_error')}]")
+                lines.append("")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 变体定义 —— unoptimized = 官方 Codex + proxy 翻译 / optimized = ds-codex 内建适配
+# ---------------------------------------------------------------------------
+
+DS_CODEX_BIN = str(
+    Path(__file__).resolve().parents[3]
+    / "ds-codex"
+    / "codex-rs"
+    / "target"
+    / "release"
+    / "codex.exe"
+)
+
+VARIANT_BINS: dict[str, str] = {
+    "unoptimized": "codex",        # 官方 Codex CLI (PATH) + proxy 翻译 DeepSeek
+    "optimized": DS_CODEX_BIN,     # ds-codex Rust fork 内建 DeepSeekChat 适配
+    "native": "codex",             # 官方 Codex CLI (PATH) + Codex 原生模型（GPT 系列）
+}
+
+
+def resolve_codex_bin(variant: str) -> str:
+    """返回指定 variant 对应的 codex 二进制路径。"""
+    bin_path = VARIANT_BINS.get(variant)
+    if bin_path is None:
+        raise ValueError(f"Unknown variant: {variant}. Choose: {list(VARIANT_BINS)}")
+    if variant == "optimized" and not Path(bin_path).exists():
+        raise FileNotFoundError(
+            f"ds-codex binary not found at {bin_path}. "
+            f"Build it first: cd ds-codex && cargo build --bin codex"
+        )
+    return bin_path
+
+
+# ---------------------------------------------------------------------------
+# Proxy 生命周期管理（仅 unoptimized 变体需要）
+# ---------------------------------------------------------------------------
+
+PROXY_PORT = 8898
+PROXY_SCRIPT = str(
+    Path(__file__).resolve().parent / "deepseek_responses_proxy.py"
+)
+DEEPSEEK_KEY_FILE = r"<local-deepseek-api-key-file>"
+
+
+def _proxy_running() -> bool:
+    """检查 8898 端口是否有代理在监听。"""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(1)
+    try:
+        s.connect(("127.0.0.1", PROXY_PORT))
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+def _start_proxy() -> None:
+    """后台启动 DeepSeek 翻译代理。"""
+    api_key = Path(DEEPSEEK_KEY_FILE).read_text().strip()
+    env = os.environ.copy()
+    env["DEEPSEEK_API_KEY"] = api_key
+    env["NO_PROXY"] = "127.0.0.1,localhost"
+    env["no_proxy"] = "127.0.0.1,localhost"
+    subprocess.Popen(
+        [sys.executable, PROXY_SCRIPT],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    # 等代理就绪，最多等 5 秒
+    for _ in range(50):
+        time.sleep(0.1)
+        if _proxy_running():
+            return
+    raise RuntimeError(f"Proxy failed to start on port {PROXY_PORT} within 5s")
+
+
+def ensure_proxy() -> None:
+    """确保代理在跑；未运行则自动拉起。"""
+    if _proxy_running():
+        print(f"  Proxy: already running on port {PROXY_PORT}")
+        return
+    print(f"  Proxy: not running, starting...")
+    _start_proxy()
+    print(f"  Proxy: started on port {PROXY_PORT}")
+
+
+# ---------------------------------------------------------------------------
+# 证据采集
+# ---------------------------------------------------------------------------
+
+
+def run_codex(
+    prompt: str,
+    *,
+    cwd: Path | None = None,
+    session_id: str | None = None,
+    extra_context: str = "",
+    timeout: int = 900,
+    codex_config: dict[str, str] | None = None,
+    codex_bin: str = "codex",
+    variant: str = "unoptimized",
+    model: str | None = None,
+) -> tuple[list[dict], str | None, subprocess.CompletedProcess]:
+    """调用 codex exec，返回 (解析后事件, session_id, 进程结果)。
+
+    codex_config 将作为 `-c key=value` 传入，用于注入 model_instructions_file、
+    model_auto_compact_token_limit 等配置。
+    codex_bin 指定 codex 二进制路径（默认从 PATH 找）。
+    variant 为 "native" 时不传 --profile 和 --sandbox（由 fixture config.toml 管理）。
+    """
+    cmd = [codex_bin]
+    if variant == "unoptimized":
+        # unoptimized: 官方 Codex CLI → proxy(8898) → DeepSeek
+        cmd.extend(["-c", "approval_policy=never", "-c", "sandbox_mode=danger-full-access",
+                    "-c", "base_url=http://127.0.0.1:8898", "-c", "api_key=sk-proxy"])
+    elif variant == "optimized":
+        # optimized: ds-codex 直连 DeepSeek
+        cmd.extend(["-c", "approval_policy=never", "-c", "sandbox_mode=danger-full-access", "--profile", "deepseek"])
+    cmd.extend(["exec", "--json", "--skip-git-repo-check"])
+
+    if model and variant == "native":
+        cmd.extend(["-m", model])
+
+    if codex_config:
+        for key, value in codex_config.items():
+            cmd.extend(["-c", f"{key}={value}"])
+
+    if session_id:
+        cmd.extend(["resume", session_id])
+
+    # 拼接完整 prompt
+    if extra_context:
+        full_prompt = extra_context + "\n\n---\n\n" + prompt
+    else:
+        full_prompt = prompt
+
+    env = os.environ.copy()
+    # 注入 DeepSeek API key（unoptimized/optimized 变体需要）
+    if variant in ("unoptimized", "optimized"):
+        key_file = Path(DEEPSEEK_KEY_FILE)
+        if key_file.exists() and "DEEPSEEK_API_KEY" not in env:
+            env["DEEPSEEK_API_KEY"] = key_file.read_text().strip()
+    # 确保 codex 能找到 API key
+    if "CODEX_API_KEY" not in env and "OPENAI_API_KEY" not in env:
+        print("  提示: 未设置 CODEX_API_KEY 或 OPENAI_API_KEY 环境变量")
+
+    result = subprocess.run(
+        cmd,
+        input=full_prompt,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=timeout,
+        cwd=cwd or Path.cwd(),
+        env=env,
+        shell=True,
+    )
+
+    # codex 的 stdout 是 JSONL，stderr 是进度日志
+    events = parse_codex_jsonl(result.stdout)
+
+    # 如果 stdout 没解析到事件，检查 stderr（某些版本把 JSONL 打到 stderr）
+    if not events:
+        events = parse_codex_jsonl(result.stderr)
+
+    if not events:
+        print(f"  警告: 未从输出中解析到任何 codex 事件")
+        print(f"  stdout 前 500 字符: {result.stdout[:500]}")
+        print(f"  stderr 前 500 字符: {result.stderr[:500]}")
+
+    new_session_id = extract_session_id(events) or session_id
+
+    return events, new_session_id, result
+
+
+def _extract_usage_tokens(events: list[dict]) -> tuple[int, int]:
+    """从 codex JSONL 事件中提取 token 用量。"""
+    tokens_in = 0
+    tokens_out = 0
+    for ev in events:
+        usage = ev.get("usage", {})
+        if isinstance(usage, dict):
+            tokens_in += int(usage.get("input_tokens", 0) or 0)
+            tokens_out += int(usage.get("output_tokens", 0) or 0)
+        # item.completed 事件中也可能携带 usage
+        item = ev.get("item", {})
+        if isinstance(item, dict):
+            item_usage = item.get("usage", {})
+            if isinstance(item_usage, dict):
+                tokens_in += int(item_usage.get("input_tokens", 0) or 0)
+                tokens_out += int(item_usage.get("output_tokens", 0) or 0)
+    return tokens_in, tokens_out
+
+
+def collect_evidence(
+    evidence_root: Path,
+    ms_id: str,
+    step_num: int,
+    events: list[dict],
+    ms_prompt: str,
+    repo_root: Path,
+    elapsed: float = 0.0,
+    compact_trigger: dict | None = None,
+    post_compact_milestones: list[str] | None = None,
+) -> Path:
+    """为一个 milestone 收集全部 10 类证据。"""
+    step_dir = evidence_root / ms_id / f"step_{step_num:02d}"
+    step_dir.mkdir(parents=True, exist_ok=True)
+
+    # replay.jsonl —— 标准化 tool call 序列
+    replay_records = build_replay_jsonl(events, ms_id)
+    replay_path = step_dir / "replay.jsonl"
+    replay_path.write_text(
+        "\n".join(json.dumps(r, ensure_ascii=False) for r in replay_records),
+        encoding="utf-8",
+    )
+
+    # response.md —— 最终响应
+    response_path = step_dir / "response.md"
+    response_path.write_text(
+        extract_response_text(events), encoding="utf-8",
+    )
+
+    # prompt.json —— 该 milestone 的 prompt
+    (step_dir / "prompt.json").write_text(
+        json.dumps({"id": ms_id, "prompt": ms_prompt}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    # commands.log —— shell 命令执行记录
+    (step_dir / "commands.log").write_text(
+        extract_command_log(events), encoding="utf-8",
+    )
+
+    # diff.patch —— 该 milestone 对 repo 的变更（先 add -A 纳入新文件）
+    subprocess.run(
+        ["git", "add", "-A"],
+        capture_output=True, cwd=repo_root, timeout=30,
+    )
+    diff = subprocess.run(
+        ["git", "diff", "--cached", "HEAD", "--stat"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=repo_root, timeout=30,
+    )
+    full_diff = subprocess.run(
+        ["git", "diff", "--cached", "HEAD", "-p"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=repo_root, timeout=30,
+    )
+    (step_dir / "diff.patch").write_text(
+        full_diff.stdout or diff.stdout or "(no changes)", encoding="utf-8",
+    )
+
+    # acceptance.json —— 公开验收检查
+    acceptance = _run_acceptance(repo_root)
+    (step_dir / "acceptance.json").write_text(
+        json.dumps(acceptance, ensure_ascii=False, indent=2), encoding="utf-8",
+    )
+
+    # compact_trigger.json —— compaction 触发信息
+    trigger_info = compact_trigger or {"triggered": False}
+    if post_compact_milestones:
+        trigger_info["post_compact_milestones"] = post_compact_milestones
+    (step_dir / "compact_trigger.json").write_text(
+        json.dumps(trigger_info, ensure_ascii=False, indent=2), encoding="utf-8",
+    )
+
+    # artifact/ —— 产物快照
+    artifact_src = repo_root / "reports"
+    artifact_dst = step_dir / "artifact"
+    if artifact_dst.exists():
+        shutil.rmtree(artifact_dst)
+    if artifact_src.exists():
+        shutil.copytree(artifact_src, artifact_dst)
+    else:
+        artifact_dst.mkdir(exist_ok=True)
+
+    # source_snapshot —— 源码快照
+    snap_dst = step_dir / "source_snapshot"
+    if snap_dst.exists():
+        shutil.rmtree(snap_dst)
+    snap_dst.mkdir()
+    for sub in ["src", "tests", "skills"]:
+        sub_dir = repo_root / sub
+        if sub_dir.is_dir():
+            shutil.copytree(sub_dir, snap_dst / sub, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+    # cost.json —— 本轮 token / 耗时 / tool step 统计
+    tokens_in, tokens_out = _extract_usage_tokens(events)
+    tool_steps = len([r for r in replay_records if r.get("event_type") == "tool_call"])
+    (step_dir / "cost.json").write_text(
+        json.dumps({
+            "elapsed_sec": round(elapsed, 2),
+            "input_tokens": tokens_in,
+            "output_tokens": tokens_out,
+            "total_tokens": tokens_in + tokens_out,
+            "tool_steps": tool_steps,
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    # analyzer_output/analyzer.json —— 结构化分析信号
+    _run_analyzer(step_dir)
+
+    return step_dir
+
+
+def _run_analyzer(step_dir: Path) -> None:
+    """运行 analyze_replay.py，产出 analyzer_output/analyzer.json。"""
+    out_dir = step_dir / "analyzer_output"
+    out_dir.mkdir(exist_ok=True)
+    analyzer = Path(__file__).resolve().parent / "analyze_replay.py"
+    if not analyzer.exists():
+        (out_dir / "analyzer.json").write_text(
+            json.dumps({"ran": False, "error": "analyze_replay.py not found"}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return
+
+    replay_path = step_dir / "replay.jsonl"
+    response_path = step_dir / "response.md"
+    paths = []
+    if replay_path.exists():
+        paths.append(str(replay_path))
+    if response_path.exists():
+        paths.append(str(response_path))
+
+    if not paths:
+        (out_dir / "analyzer.json").write_text(
+            json.dumps({"ran": False, "error": "no replay or response to analyze"}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return
+
+    try:
+        cp = subprocess.run(
+            [sys.executable, str(analyzer)] + paths,
+            capture_output=True, text=True, timeout=30,
+        )
+        (out_dir / "analyzer.json").write_text(
+            cp.stdout if cp.returncode == 0
+            else json.dumps({"ran": False, "returncode": cp.returncode, "stderr": cp.stderr[:2000]}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        (out_dir / "analyzer.json").write_text(
+            json.dumps({"ran": False, "error": str(e)}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
+def _run_acceptance(repo_root: Path) -> dict:
+    """运行 score_mini_data_harness.py。"""
+    script = Path(__file__).parent / "score_mini_data_harness.py"
+    if not script.exists():
+        return {"error": "score_mini_data_harness.py not found", "path": str(script)}
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script), str(repo_root)],
+            capture_output=True, text=True, timeout=120,
+            cwd=repo_root,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+        return {
+            "ran": True,
+            "returncode": result.returncode,
+            "output": result.stdout,
+        }
+    except subprocess.TimeoutExpired:
+        return {"error": "acceptance check timed out"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# 主流程
+# ---------------------------------------------------------------------------
+
+
+
+
+def reject_benchmark_results_path(path: Path) -> None:
+    """Prevent recreating the deprecated benchmark-local results tree."""
+    bench_results = Path(__file__).resolve().parents[1] / "results"
+    resolved = path.resolve()
+    bench_resolved = bench_results.resolve()
+    if resolved == bench_resolved or bench_resolved in resolved.parents:
+        raise SystemExit(
+            f"Refusing deprecated output path: {resolved}. "
+            f"Write run artifacts under <ds-harness>/results/<timestamp>/ instead."
+        )
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Codex CLI replay runner — 用 Codex CLI 执行 M1-M8 并收集证据",
+    )
+    ap.add_argument("--root", required=True, help="Fixture repo 根目录")
+    ap.add_argument("--out", default=None, help="证据输出目录（默认 <root>/evidence）")
+    ap.add_argument("--start-from", type=int, default=1, help="从第几个 milestone 开始（1-8）")
+    ap.add_argument("--max-milestones", type=int, default=None, help="最多执行几个 milestone")
+    ap.add_argument("--compact-summary", default=None,
+                    help="M8 使用的 compact summary 文件路径（默认 <root>/docs/compact-summary.md）")
+    ap.add_argument("--timeout", type=int, default=900, help="每个 milestone 超时秒数")
+    ap.add_argument("--raw-out", default=None, help="保存原始 codex JSONL 的目录（调试用）")
+    ap.add_argument("--auto-compact-token-limit", type=int, default=38000,
+                    help="model_auto_compact_token_limit，确保在 M1-M8 间触发一次 compaction（默认 38000）")
+    ap.add_argument("--instructions-file", default=".codex/instructions.md",
+                    help="model_instructions_file 路径（默认 .codex/instructions.md）")
+    ap.add_argument("--variant", default="unoptimized", choices=["unoptimized", "optimized", "native"],
+                    help="Codex 变体: unoptimized=官方CLI+proxy翻译DeepSeek / optimized=ds-codex内建适配 / native=官方CLI+原生GPT模型 (默认 unoptimized)")
+    ap.add_argument("--model", default=None,
+                    help="被测模型 slug（仅 native 变体使用，如 gpt-5.5）")
+    args = ap.parse_args()
+
+    root = Path(args.root).resolve()
+    out = Path(args.out).resolve() if args.out else root / "evidence"
+    reject_benchmark_results_path(out)
+    out.mkdir(parents=True, exist_ok=True)
+
+    # 解析 codex 二进制
+    codex_bin = resolve_codex_bin(args.variant)
+    print(f"Variant: {args.variant} -> {codex_bin}")
+
+    # unoptimized 变体自动管理代理；native 不需要
+    if args.variant == "unoptimized":
+        ensure_proxy()
+    if args.variant == "native" and not args.model:
+        print("错误: native 变体需要 --model 参数", file=sys.stderr)
+        sys.exit(1)
+
+    raw_out = Path(args.raw_out) if args.raw_out else None
+    if raw_out:
+        raw_out.mkdir(parents=True, exist_ok=True)
+
+    # 加载 milestones
+    milestones_path = root / "prompts" / "milestones.json"
+    if not milestones_path.exists():
+        print(f"错误: {milestones_path} 不存在，请先运行 setup_fixture.py", file=sys.stderr)
+        sys.exit(1)
+
+    milestones = json.loads(milestones_path.read_text(encoding="utf-8"))
+
+    # 截取范围
+    start_idx = max(0, args.start_from - 1)
+    end_idx = (args.start_from - 1 + args.max_milestones) if args.max_milestones else len(milestones)
+    milestones = milestones[start_idx:end_idx]
+
+    compact_path = Path(args.compact_summary) if args.compact_summary else root / "docs" / "compact-summary.md"
+
+    # 注入持久规则 + compaction 配置（与 inject-persistent-rules.md 双保险）
+    codex_config: dict[str, str] = {}
+    instructions_path = root / args.instructions_file.lstrip("./")
+    if instructions_path.exists():
+        codex_config["model_instructions_file"] = args.instructions_file
+    codex_config["model_auto_compact_token_limit"] = str(args.auto_compact_token_limit)
+
+    session_id: str | None = None
+    results: list[dict] = []
+    # compaction 状态追踪
+    compact_triggered = False
+    compact_triggered_at: str | None = None
+    post_compact_milestones: list[str] = []
+
+    # 初始化 git repo + 初始快照，使 diff.patch 能捕获每轮变更
+    git_dir = root / ".git"
+    if not git_dir.exists():
+        subprocess.run(["git", "-C", str(root), "init"], capture_output=True, timeout=10)
+        subprocess.run(["git", "-C", str(root), "config", "user.email", "harness@eval"], capture_output=True, timeout=10)
+        subprocess.run(["git", "-C", str(root), "config", "user.name", "harness"], capture_output=True, timeout=10)
+    subprocess.run(["git", "-C", str(root), "add", "-A"], capture_output=True, timeout=10)
+    subprocess.run(
+        ["git", "-C", str(root), "commit", "--allow-empty", "-m", "fixture-snapshot"],
+        capture_output=True, timeout=10,
+    )
+
+    for i, ms in enumerate(milestones):
+        ms_id = ms["id"]
+        prompt = ms["prompt"]
+        actual_idx = start_idx + i
+
+        print(f"\n{'=' * 60}")
+        print(f"[{actual_idx + 1}/{start_idx + len(milestones)}] {ms_id}")
+        print(f"{'=' * 60}")
+
+        # ---- 确定工作目录 ----
+        cwd = root
+        if ms_id == "M5_context_change":
+            cwd = root / "subdir" / "workbench"
+            cwd.mkdir(parents=True, exist_ok=True)
+            print(f"  cwd: {cwd}")
+
+        # ---- M8 compact resume: 新 session + compact 摘要（仅当尚未触发真实 compact 时使用模拟） ----
+        extra_context = ""
+        if ms_id == "M8_compact_resume" and not compact_triggered:
+            # 若 agent 的 auto compact 尚未触发，保留模拟压缩作为兜底
+            session_id = None
+            if compact_path.exists():
+                extra_context = compact_path.read_text(encoding="utf-8")
+                print(f"  模拟压缩: {len(extra_context)} 字符 compact 摘要（auto compact 未触发，使用兜底）")
+            else:
+                print(f"  警告: {compact_path} 不存在，M8 将以空上下文运行")
+        elif ms_id == "M8_compact_resume" and compact_triggered:
+            # auto compact 已在之前触发，去掉 prompt 中的模拟压缩前缀
+            prompt = re.sub(r'^上下文已压缩为上方摘要[。.]?\s*', '', prompt)
+            print(f"  auto compact 已在 {compact_triggered_at} 触发，M8 去掉模拟压缩前缀，正常续接")
+
+        # ---- 执行 codex ----
+        t0 = time.monotonic()
+        events, session_id, proc_result = run_codex(
+            prompt,
+            cwd=cwd,
+            session_id=session_id,
+            extra_context=extra_context,
+            timeout=args.timeout,
+            codex_config=codex_config,
+            codex_bin=codex_bin,
+            variant=args.variant,
+            model=args.model,
+        )
+        elapsed = time.monotonic() - t0
+
+        print(f"  耗时: {elapsed:.0f}s")
+        print(f"  事件数: {len(events)}")
+        print(f"  退出码: {proc_result.returncode}")
+        print(f"  session_id: {session_id}")
+
+        # ---- 检测 compaction 事件 ----
+        compact_info = detect_compaction_from_jsonl(events)
+        if compact_info and not compact_triggered:
+            compact_triggered = True
+            compact_triggered_at = ms_id
+            print(f"  检测到 compaction 事件: {compact_info['event_type']}")
+        if compact_triggered:
+            post_compact_milestones.append(ms_id)
+
+        # ---- 保存原始 JSONL（调试） ----
+        if raw_out:
+            suffix = f"{ms_id}_stdout.jsonl"
+            (raw_out / suffix).write_text(proc_result.stdout, encoding="utf-8")
+            (raw_out / f"{ms_id}_stderr.log").write_text(proc_result.stderr, encoding="utf-8")
+
+        # ---- 收集证据 ----
+        step_compact = {
+            "triggered": compact_triggered,
+            "triggered_at": compact_triggered_at,
+            "post_compact_milestones": list(post_compact_milestones),
+            **(compact_info or {}),
+        }
+        step_dir = collect_evidence(out, ms_id, 1, events, prompt, root,
+                                    elapsed=elapsed,
+                                    compact_trigger=step_compact,
+                                    post_compact_milestones=list(post_compact_milestones))
+        print(f"  证据目录: {step_dir}")
+
+        results.append({
+            "milestone": ms_id,
+            "elapsed_s": round(elapsed, 1),
+            "event_count": len(events),
+            "exit_code": proc_result.returncode,
+            "session_id": session_id,
+            "compact_triggered": compact_triggered,
+            "evidence_dir": str(step_dir.relative_to(out)),
+        })
+
+        # 里程碑间短暂间隔
+        time.sleep(0.3)
+
+    # ---- 汇总 ----
+    print(f"\n{'=' * 60}")
+    print(f"完成 {len(results)} 个 milestone")
+    print(f"证据根目录: {out}/")
+    print(f"{'=' * 60}")
+
+    summary = {
+        "runner": "codex_cli",
+        "variant": args.variant,
+        "codex_bin": codex_bin,
+        "root": str(root),
+        "evidence_root": str(out),
+        "milestones_completed": len(results),
+        "results": results,
+    }
+    (out / "run_summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8",
+    )
+
+    print(f"证据已输出到 {out}")
+
+
+if __name__ == "__main__":
+    main()

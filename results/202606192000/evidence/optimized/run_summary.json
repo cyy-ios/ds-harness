@@ -1,0 +1,82 @@
+{
+  "runner": "codex_cli",
+  "variant": "optimized",
+  "codex_bin": "C:\\项目\\ds-harness\\ds-codex\\codex-rs\\target\\release\\codex.exe",
+  "root": "C:\\项目\\ds-harness\\tmp\\full-optimized",
+  "evidence_root": "C:\\项目\\ds-harness\\tmp\\full-optimized\\evidence",
+  "milestones_completed": 8,
+  "results": [
+    {
+      "milestone": "M1_bootstrap",
+      "elapsed_s": 505.6,
+      "event_count": 155,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M1_bootstrap\\step_01"
+    },
+    {
+      "milestone": "M2_config",
+      "elapsed_s": 268.5,
+      "event_count": 108,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M2_config\\step_01"
+    },
+    {
+      "milestone": "M3_runner_retry",
+      "elapsed_s": 526.9,
+      "event_count": 210,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M3_runner_retry\\step_01"
+    },
+    {
+      "milestone": "M4_long_log_debug",
+      "elapsed_s": 412.4,
+      "event_count": 175,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M4_long_log_debug\\step_01"
+    },
+    {
+      "milestone": "M5_context_change",
+      "elapsed_s": 37.1,
+      "event_count": 26,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M5_context_change\\step_01"
+    },
+    {
+      "milestone": "M6_interruption",
+      "elapsed_s": 19.1,
+      "event_count": 8,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M6_interruption\\step_01"
+    },
+    {
+      "milestone": "M7_memory_report",
+      "elapsed_s": 46.8,
+      "event_count": 21,
+      "exit_code": 0,
+      "session_id": "019edfe3-5605-7223-89a4-379e0e190914",
+      "compact_triggered": false,
+      "evidence_dir": "M7_memory_report\\step_01"
+    },
+    {
+      "milestone": "M8_compact_resume",
+      "elapsed_s": 145.5,
+      "event_count": 66,
+      "exit_code": 0,
+      "session_id": "019edfff-3f4c-7f81-9b1f-1e3acb05dd47",
+      "compact_triggered": false,
+      "evidence_dir": "M8_compact_resume\\step_01"
+    }
+  ]
+}

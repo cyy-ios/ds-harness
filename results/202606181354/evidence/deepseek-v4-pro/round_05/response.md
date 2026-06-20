@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M5_context_change 完成：添加 tests/conftest.py 将 src 加入 Python 路径，修改 test_long_log_debug 使用临时文件，修复 test_cli 使其指定绝对 PYTHONPATH，新增 test_context_change 验证从 workbench 目录运行 harness.py 命令。所有 11 个测试通过。", "tests": "11 passed"}

@@ -1,0 +1,1 @@
+M5: Subdir workbench tests pass with root src. Updated pyproject.toml, added tests from subdir. All 5 root tests + 3 subdir tests pass.

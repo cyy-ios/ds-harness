@@ -1,0 +1,143 @@
+{
+  "capability": "项目理解",
+  "score": 88.5,
+  "per_round": {
+    "round_01": {
+      "score": 87.1,
+      "dimension_1": {
+        "score": 70.0,
+        "sub_scores": {
+          "1.1_主动探索": 100,
+          "1.2_目的理解": 50,
+          "1.3_子项目识别": 100,
+          "1.4_核心文件": 50,
+          "1.5_完成度判断": 50,
+          "1.6_项目类型": 0
+        }
+      },
+      "dimension_2": {
+        "score": 96.2,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": null
+        }
+      }
+    },
+    "round_02": {
+      "score": 96.2,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 96.2,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": null
+        }
+      }
+    },
+    "round_03": {
+      "score": 96.2,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 96.2,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": null
+        }
+      }
+    },
+    "round_04": {
+      "score": 97.1,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 97.1,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": 100,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": null
+        }
+      }
+    },
+    "round_05": {
+      "score": 96.9,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 96.9,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": 100
+        }
+      }
+    },
+    "round_06": {
+      "score": 96.9,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 96.9,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": 100
+        }
+      }
+    },
+    "round_07": {
+      "score": 96.2,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 96.2,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": null
+        }
+      }
+    },
+    "round_08": {
+      "score": 96.2,
+      "dimension_1": null,
+      "dimension_2": {
+        "score": 96.2,
+        "sub_scores": {
+          "2.1_环节追踪": 90,
+          "2.2_主支线识别": 100,
+          "2.3_废弃方向识别": null,
+          "2.4_完成研究中区分": 100,
+          "2.5_无关任务隔离": null
+        }
+      }
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap/step_01/replay.jsonl:L2-L5 Read SKILL.md + Glob",
+    "M1_bootstrap/step_01/response.md:L1-L35 implementation summary",
+    "M4_long_log_debug/step_01/replay.jsonl: _gen.py legacy identification",
+    "M5_context_change/step_01/replay.jsonl: brief 26 events",
+    "M6_interruption/step_01/replay.jsonl: 8 events, returned to main line"
+  ],
+  "reason": "维度1首轮70分（主动探索全面但缺目的描述和项目类型判断）；维度2均值96.4分（环节追踪优秀，主支线区分清晰，废弃方向识别正确，完成/研究中区分好）。",
+  "deductions": [
+    {"round": "round_01", "item": "1.2_目的理解", "amount": 50, "reason": "response.md 首轮未描述项目要解决的问题和要达成的效果"},
+    {"round": "round_01", "item": "1.6_项目类型", "amount": 5, "reason": "response.md 无项目类型判断"}
+  ],
+  "evidence_gaps": []
+}

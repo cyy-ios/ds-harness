@@ -1,0 +1,82 @@
+{
+  "capability": "结果预期",
+  "score": 75.6,
+  "per_round": {
+    "round_01": {
+      "score": 71.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 50,
+        "1.2_执行完整性与自检": 85
+      }
+    },
+    "round_02": {
+      "score": 60.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 75,
+        "1.2_执行完整性与自检": 50
+      }
+    },
+    "round_03": {
+      "score": 81.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 75,
+        "1.2_执行完整性与自检": 85
+      }
+    },
+    "round_04": {
+      "score": 90.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 75,
+        "1.2_执行完整性与自检": 100
+      }
+    },
+    "round_05": {
+      "score": 71.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 50,
+        "1.2_执行完整性与自检": 85
+      }
+    },
+    "round_06": {
+      "score": 90.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 75,
+        "1.2_执行完整性与自检": 100
+      }
+    },
+    "round_07": {
+      "score": 71.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 50,
+        "1.2_执行完整性与自检": 85
+      }
+    },
+    "round_08": {
+      "score": 71.0,
+      "sub_scores": {
+        "1.1_产出可消费性": 50,
+        "1.2_执行完整性与自检": 85
+      }
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap/step_01/acceptance.json: score 10, CLI fails, pyproject.toml invalid",
+    "M2_config/step_01/acceptance.json: score 10",
+    "M3_runner_retry/step_01/acceptance.json: score 20, pytest passes but CLI fails",
+    "M4_long_log_debug/step_01/replay.jsonl: extensive self-check steps",
+    "M5_context_change/step_01/acceptance.json: score 20",
+    "M7_memory_report/step_01/acceptance.json: memory_aware_report found: []",
+    "M8_compact_resume/step_01/acceptance.json: score 20"
+  ],
+  "reason": "全程关键问题是__main__.py缺失导致CLI端到端始终失败，多数轮产出虽代码正确但对下游/验收不可用（1.1扣分主因）。M4自检最充分（100），M2自检最弱（50）。",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_产出可消费性", "amount": 45, "reason": "acceptance.json CLI fails, pyproject.toml invalid"},
+    {"round": "round_02", "item": "1.2_执行完整性与自检", "amount": 40, "reason": "commands.log empty, 无自检证据"},
+    {"round": "round_05", "item": "1.1_产出可消费性", "amount": 40, "reason": "无代码产物交付，仅verify"},
+    {"round": "round_07", "item": "1.1_产出可消费性", "amount": 35, "reason": "acceptance.json memory_aware_report found:[]"},
+    {"round": "round_08", "item": "1.1_产出可消费性", "amount": 35, "reason": "acceptance.json CLI和acceptance_pytest仍失败"}
+  ],
+  "evidence_gaps": []
+}

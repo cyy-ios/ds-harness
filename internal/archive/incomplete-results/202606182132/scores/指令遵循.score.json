@@ -1,0 +1,32 @@
+{
+  "capability": "指令遵循",
+  "score": 42.5,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_02": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_03": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_04": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_05": {"score": 25, "sub_scores": {"持久规则": 50, "单次指令": 0}},
+    "round_06": {"score": 25, "sub_scores": {"持久规则": 50, "单次指令": 0}},
+    "round_07": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_08": {"score": 25, "sub_scores": {"持久规则": 50, "单次指令": 0}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "全轮 replay.jsonl: 未使用要求的 PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 环境变量（Windows cmd 不支持内联 env，但 agent 也未改用 set 方式）",
+    "全轮 diff.patch: 包放在 mini_harness/ 而非 src/mini_harness/，忽略 pyproject.toml 的 pythonpath 配置",
+    "round_05 response.md: 声称从 subdir 验证但 CLI 跨 cwd 失败，未满足'保持主线功能在不同工作目录下可用'",
+    "round_06 acceptance.json: tests 字段为空，未按要求验证后回到主线",
+    "round_08 response.md: 未调用 finish，M8 任务未完成"
+  ],
+  "reason": "agent 创建了错误的包位置和 CLI 参数格式，后续轮次持续在错误基础上叠加，从未自检修复。R5 未实现跨 cwd CLI 可用。R6 处理中断后未验证就回到主线。R8 未完成。",
+  "deductions": [
+    {"round": "round_01", "item": "单次指令", "amount": 75, "reason": "包路径错误（root/mini_harness 非 src/mini_harness）"},
+    {"round": "round_05", "item": "持久规则", "amount": 25, "reason": "PYTHONDONTWRITEBYTECODE 被 Windows 拒绝后放弃而非改用 set"},
+    {"round": "round_05", "item": "单次指令", "amount": 100, "reason": "CLI 从 subdir 不可用，主线功能跨 cwd 失败"},
+    {"round": "round_06", "item": "单次指令", "amount": 100, "reason": "仅读文件未执行验证，未'回到主线继续'"},
+    {"round": "round_08", "item": "单次指令", "amount": 100, "reason": "未完成即中断，未调用 finish"}
+  ],
+  "evidence_gaps": ["未注入 --rules 文件，cosplay/concise 持久规则未激活，该子项 N/A"]
+}

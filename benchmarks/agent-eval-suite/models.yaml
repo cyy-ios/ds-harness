@@ -1,0 +1,26 @@
+# 被测模型注册表
+# 主导 agent 从此文件读取可用模型，按 key 选择对应 model_id 传给 --model。
+# 新增被测模型时在此文件追加条目即可，无需改代码。
+
+deepseek-v4-pro:
+  model_id: deepseek-v4-pro
+  provider: deepseek
+deepseek-v4-flash:
+  model_id: deepseek-v4-flash
+  provider: deepseek
+gpt-5.5:
+  model_id: gpt-5.5
+  provider: openai
+  reasoning_effort: high
+gpt-5.5-medium:
+  model_id: gpt-5.5
+  provider: openai
+  reasoning_effort: medium
+gpt-5.5-low:
+  model_id: gpt-5.5
+  provider: openai
+  reasoning_effort: low
+gpt-5.5-xhigh:
+  model_id: gpt-5.5
+  provider: openai
+  reasoning_effort: xhigh

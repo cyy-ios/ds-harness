@@ -1,0 +1,84 @@
+[
+  {
+    "timestamp": "2026-06-08T15:06:23.712689700+00:00",
+    "thread_id": "019ea7c4-bf47-73f0-afb9-ce2d2d265b21",
+    "turn_id": "019ea7c5-2e87-7c30-8f8a-61020a60173a",
+    "stage": "history",
+    "action": "append",
+    "source": {
+      "file": "core\\src\\session\\mod.rs",
+      "line": 3244,
+      "column": 14
+    },
+    "payload": {
+      "truncation_policy": "Tokens(10000)",
+      "items": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "hook也起一个追加的作用吗？追加到一起输入给模型？"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-06-08T15:06:23.733069900+00:00",
+    "thread_id": "019ea7c4-bf47-73f0-afb9-ce2d2d265b21",
+    "turn_id": "019ea7c5-2e87-7c30-8f8a-61020a60173a",
+    "stage": "history",
+    "action": "append",
+    "source": {
+      "file": "core\\src\\hook_runtime.rs",
+      "line": 594,
+      "column": 10
+    },
+    "payload": {
+      "truncation_policy": "Tokens(10000)",
+      "items": [
+        {
+          "type": "message",
+          "role": "developer",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "concise: 先结论；1-2句；禁计划/禁tool旁白/禁Why-How清单。"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-06-08T15:06:30.404812900+00:00",
+    "thread_id": "019ea7c4-bf47-73f0-afb9-ce2d2d265b21",
+    "turn_id": "019ea7c5-2e87-7c30-8f8a-61020a60173a",
+    "stage": "history",
+    "action": "append",
+    "source": {
+      "file": "core\\src\\stream_events_utils.rs",
+      "line": 211,
+      "column": 10
+    },
+    "payload": {
+      "truncation_policy": "Tokens(10000)",
+      "items": [
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "是的，hook 通常可以理解为在某个阶段把额外内容“插入/追加”到上下文或流程里，但不一定只是简单拼接到用户输入后面。\n\n更准确说：hook 可能追加系统提示、工具结果、策略约束、上下文片段，最终这些内容会以不同角色或结构一起进入模型请求，而不是都混成一段普通用户文本。"
+            }
+          ],
+          "phase": "final_answer"
+        }
+      ]
+    }
+  }
+]

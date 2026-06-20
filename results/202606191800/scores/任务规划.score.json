@@ -1,0 +1,23 @@
+{
+  "capability": "任务规划",
+  "score": 62.0,
+  "per_round": {
+    "round_01": {"score": 65, "sub_scores": {"1.1_路线效率": 65, "1.2_工具选择": 65}},
+    "round_02": {"score": 60, "sub_scores": {"1.1_路线效率": 60, "1.2_工具选择": 60}},
+    "round_03": {"score": 60, "sub_scores": {"1.1_路线效率": 60, "1.2_工具选择": 60}},
+    "round_04": {"score": 60, "sub_scores": {"1.1_路线效率": 55, "1.2_工具选择": 65}},
+    "round_05": {"score": 65, "sub_scores": {"1.1_路线效率": 65, "1.2_工具选择": 65}},
+    "round_06": {"score": 65, "sub_scores": {"1.1_路线效率": 65, "1.2_工具选择": 65}},
+    "round_07": {"score": 60, "sub_scores": {"1.1_路线效率": 60, "1.2_工具选择": 60}},
+    "round_08": {"score": 60, "sub_scores": {"1.1_路线效率": 60, "1.2_工具选择": 60}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["全部 round/replay.jsonl", "全部 round/diff.patch", "全部 round/commands.log"],
+  "reason": "总体路线合理：读 skill → 实现 → 测试 → 修复。M4 debug 有绕路。工具选择正确但偶有冗余操作",
+  "deductions": [
+    {"round": "round_04", "item": "1.1_路线效率", "amount": 15, "reason": "debug 时多轮试错而非系统性定位"},
+    {"round": "round_02", "item": "1.1_路线效率", "amount": 10, "reason": "配置解析实现后未立即验证端到端"}
+  ],
+  "evidence_gaps": []
+}

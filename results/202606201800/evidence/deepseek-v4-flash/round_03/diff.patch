@@ -1,0 +1,28 @@
+diff --git a/evidence/round_03/commands.log b/evidence/round_03/commands.log
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/evidence/round_03/commands.log
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/evidence/round_03/replay.jsonl b/evidence/round_03/replay.jsonl
+new file mode 100644
+index 0000000..8666f98
+--- /dev/null
++++ b/evidence/round_03/replay.jsonl
+@@ -0,0 +1,6 @@
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "data/input.csv"}}
++{"role": "tool", "result": {"ok": true, "content": "ID,User Name,Score\n1,Alice,10\n,Bad,0\n2,Bob,20\n"}}
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "data/events.jsonl"}}
++{"role": "tool", "result": {"ok": true, "content": "{\"id\":\"e1\",\"eventType\":\"click\"}\n{\"eventType\":\"missing\"}\n{\"id\":\"e2\",\"eventType\":\"view\"}\n"}}
++{"role": "assistant", "tool_call": {"tool": "finish", "summary": "invalid json: Invalid control character at: line 1 column 84 (char 83)", "tests": "unknown"}}
++{"role": "tool", "result": {"ok": true, "finished": true}}
+diff --git a/evidence/round_03/response.md b/evidence/round_03/response.md
+new file mode 100644
+index 0000000..eff7ee8
+--- /dev/null
++++ b/evidence/round_03/response.md
+@@ -0,0 +1 @@
++invalid json: Invalid control character at: line 1 column 84 (char 83)
+\ No newline at end of file

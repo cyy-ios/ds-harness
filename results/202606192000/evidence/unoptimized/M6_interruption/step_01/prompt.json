@@ -1,0 +1,4 @@
+{
+  "id": "M6_interruption",
+  "prompt": "中断：解释 logs/unrelated_error.log 和 docs/handoff-note.md；处理完后回到 mini harness 主线继续。"
+}

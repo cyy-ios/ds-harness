@@ -1,0 +1,47 @@
+diff --git a/eval_deepseek_transcript.jsonl b/eval_deepseek_transcript.jsonl
+index abd167e..89d27f8 100644
+--- a/eval_deepseek_transcript.jsonl
++++ b/eval_deepseek_transcript.jsonl
+@@ -112,3 +112,7 @@
+ {"milestone": "M5_context_change", "step": 16, "tool_result": {"ok": false, "returncode": 4, "output": "\nno tests ran in 0.01s\nERROR: file or directory not found: ;\n\n"}}
+ {"milestone": "M5_context_change", "step": 17, "assistant": "{\n  \"tool\": \"shell\",\n  \"cmd\": \"cd subdir\\\\workbench && set PYTHONPATH=..\\\\..\\\\src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q\",\n  \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\pro-full\"\n}"}
+ {"milestone": "M5_context_change", "step": 17, "tool_result": {"ok": true, "returncode": 0, "output": ".                                                                        [100%]\n1 passed in 0.01s\n"}}
++{"milestone": "M6_interruption", "step": 0, "assistant": "{\"tool\": \"read_file\", \"path\": \"logs/unrelated_error.log\"}"}
++{"milestone": "M6_interruption", "step": 0, "tool_result": {"ok": true, "content": "ERROR external cache timeout: request 17 failed\nWARN retry scheduled: request 17\nINFO retry completed: request 17\nINFO final status: recovered; no mini harness component involved\n"}}
++{"milestone": "M6_interruption", "step": 1, "assistant": "{\"tool\": \"shell\", \"cmd\": \"set PYTHONPATH=src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q\"}"}
++{"milestone": "M6_interruption", "step": 1, "tool_result": {"ok": true, "returncode": 0, "output": "...........                                                              [100%]\n11 passed in 0.08s\n"}}
+diff --git a/evidence/round_06/commands.log b/evidence/round_06/commands.log
+new file mode 100644
+index 0000000..d5fdc95
+--- /dev/null
++++ b/evidence/round_06/commands.log
+@@ -0,0 +1,8 @@
++[
++  {
++    "command": "set PYTHONPATH=src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q",
++    "cwd": "C:\\项目\\ds-harness\\tmp\\pro-full",
++    "exit_code": 0,
++    "stdout": "...........                                                              [100%]\n11 passed in 0.08s\n"
++  }
++]
+\ No newline at end of file
+diff --git a/evidence/round_06/replay.jsonl b/evidence/round_06/replay.jsonl
+new file mode 100644
+index 0000000..80ce310
+--- /dev/null
++++ b/evidence/round_06/replay.jsonl
+@@ -0,0 +1,6 @@
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "logs/unrelated_error.log"}}
++{"role": "tool", "result": {"ok": true, "content": "ERROR external cache timeout: request 17 failed\nWARN retry scheduled: request 17\nINFO retry completed: request 17\nINFO final status: recovered; no mini harness component involved\n"}}
++{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "set PYTHONPATH=src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q"}}
++{"role": "tool", "result": {"ok": true, "returncode": 0, "output": "...........                                                              [100%]\n11 passed in 0.08s\n"}}
++{"role": "assistant", "tool_call": {"tool": "finish", "summary": "Explained logs/unrelated_error.log: an external cache timeout recovery, unrelated to mini harness. docs/handoff-note.md summarizes previous completion claims. Returned to harness: all 11 tests pass; mainline functional.", "tests": "11 passed"}}
++{"role": "tool", "result": {"ok": true, "finished": true}}
+diff --git a/evidence/round_06/response.md b/evidence/round_06/response.md
+new file mode 100644
+index 0000000..5e16fcf
+--- /dev/null
++++ b/evidence/round_06/response.md
+@@ -0,0 +1 @@
++{"tool": "finish", "summary": "Explained logs/unrelated_error.log: an external cache timeout recovery, unrelated to mini harness. docs/handoff-note.md summarizes previous completion claims. Returned to harness: all 11 tests pass; mainline functional.", "tests": "11 passed"}
+\ No newline at end of file

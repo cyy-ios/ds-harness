@@ -1,0 +1,25 @@
+{
+  "capability": "任务规划",
+  "score": 58.8,
+  "per_round": {
+    "round_01": {"score": 87, "sub_scores": {"1.1_路线效率": 75, "1.2_工具选择": 100}},
+    "round_02": {"score": 87, "sub_scores": {"1.1_路线效率": 75, "1.2_工具选择": 100}},
+    "round_03": {"score": 37, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 25}},
+    "round_04": {"score": 62, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 75}},
+    "round_05": {"score": 87, "sub_scores": {"1.1_路线效率": 75, "1.2_工具选择": 100}},
+    "round_06": {"score": 62, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 75}},
+    "round_07": {"score": 75, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 100}},
+    "round_08": {"score": 62, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 75}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/replay.jsonl 12 tool_calls 含mkdir(shell代替mkdir)扣分", "round_03/replay.jsonl L1-L5 仅2次Read无Glob/Grep直接finish", "round_04/replay.jsonl L1 shell pytest首步绕过专用工具", "round_08/replay.jsonl L2-L4 3次Glob连续操作路径不含prompt关键词"],
+  "reason": "多数轮次工具选择正确(用Read>cat,Write>echo)，但R03仅2次Read后放弃、多轮Glob操作绕路",
+  "deductions": [
+    {"round": "round_03", "item": "1.1_路线效率", "amount": 10, "reason": "replay.jsonl:L1-L5 仅读data文件无runner实现，有效占比<30%"},
+    {"round": "round_03", "item": "1.2_工具选择", "amount": 15, "reason": "replay.jsonl:L1-L5 仅2次Read操作，无Glob/Grep等探索工具"},
+    {"round": "round_04", "item": "1.1_路线效率", "amount": 10, "reason": "replay.jsonl:L1 shell操作路径不含prompt关键词，≥3次绕路"},
+    {"round": "round_08", "item": "1.1_路线效率", "amount": 10, "reason": "replay.jsonl:L5-L7 连续3次Glob操作路径不含prompt关键词"}
+  ],
+  "evidence_gaps": []
+}

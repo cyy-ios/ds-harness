@@ -1,0 +1,84 @@
+[
+  {
+    "timestamp": "2026-06-08T15:06:44.612067600+00:00",
+    "thread_id": "019ea7c4-bf47-73f0-afb9-ce2d2d265b21",
+    "turn_id": "019ea7c5-80b6-7342-88c3-2279402d8dcf",
+    "stage": "history",
+    "action": "append",
+    "source": {
+      "file": "core\\src\\session\\mod.rs",
+      "line": 3244,
+      "column": 14
+    },
+    "payload": {
+      "truncation_policy": "Tokens(10000)",
+      "items": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "他们会塞在一个请求里发给模型？"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-06-08T15:06:44.632482500+00:00",
+    "thread_id": "019ea7c4-bf47-73f0-afb9-ce2d2d265b21",
+    "turn_id": "019ea7c5-80b6-7342-88c3-2279402d8dcf",
+    "stage": "history",
+    "action": "append",
+    "source": {
+      "file": "core\\src\\hook_runtime.rs",
+      "line": 594,
+      "column": 10
+    },
+    "payload": {
+      "truncation_policy": "Tokens(10000)",
+      "items": [
+        {
+          "type": "message",
+          "role": "developer",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "concise: 先结论；1-2句；禁计划/禁tool旁白/禁Why-How清单。"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-06-08T15:06:50.676724700+00:00",
+    "thread_id": "019ea7c4-bf47-73f0-afb9-ce2d2d265b21",
+    "turn_id": "019ea7c5-80b6-7342-88c3-2279402d8dcf",
+    "stage": "history",
+    "action": "append",
+    "source": {
+      "file": "core\\src\\stream_events_utils.rs",
+      "line": 211,
+      "column": 10
+    },
+    "payload": {
+      "truncation_policy": "Tokens(10000)",
+      "items": [
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "是的，最终通常会组装成一次模型请求发送，但不是简单合并成一个字符串。\n\n它会按角色和结构放进去，比如 system/developer/user/tool/context 等消息或字段，模型看到的是一个有层级、有优先级的请求上下文。"
+            }
+          ],
+          "phase": "final_answer"
+        }
+      ]
+    }
+  }
+]

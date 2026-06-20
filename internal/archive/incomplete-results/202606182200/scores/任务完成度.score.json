@@ -1,0 +1,30 @@
+{
+  "capability": "任务完成度",
+  "score": 46.3,
+  "per_round": {
+    "round_01": {"score": 25, "reason": "包创建但缺 __main__.py，CLI 不可用"},
+    "round_02": {"score": 50, "reason": "配置解析可用但引入 PyYAML 违规"},
+    "round_03": {"score": 75, "reason": "DAG/重试/日志完整实现"},
+    "round_04": {"score": 75, "reason": "长日志修复正确，创建 runner.py 解决测试失败"},
+    "round_05": {"score": 25, "reason": "跨 cwd CLI 实际不可用"},
+    "round_06": {"score": 50, "reason": "读了文件回归主线但无实质代码产出"},
+    "round_07": {"score": 50, "reason": "报告生成但统计 bug"},
+    "round_08": {"score": 10, "reason": "未完成"}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "全轮 acceptance.json: gate_passed=false，score 20/100",
+    "R4 replay: 修复后 test_long_log_debug 通过，2 passed",
+    "R3 pipeline.py: PipelineRunner 类含完整 extract/clean/report 及重试逻辑",
+    "R7: final_report.md 统计为 0/0/0（output/report.json 不存在）"
+  ],
+  "reason": "R3/R4 完成质量较高。R1/R5 核心入口不可用拉低整体。R8 未完成。整体代码量远超 flash 但验收仍未通过。",
+  "deductions": [
+    {"round": "round_01", "item": "基础完成", "amount": 75, "reason": "缺 __main__.py，python -m mini_harness 失败"},
+    {"round": "round_05", "item": "基础完成", "amount": 75, "reason": "跨 cwd 不可用"},
+    {"round": "round_07", "item": "基础完成", "amount": 50, "reason": "报告数据错误"},
+    {"round": "round_08", "item": "基础完成", "amount": 90, "reason": "未完成"}
+  ],
+  "evidence_gaps": []
+}

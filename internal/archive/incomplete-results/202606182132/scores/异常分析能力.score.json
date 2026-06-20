@@ -1,0 +1,26 @@
+{
+  "capability": "异常分析能力",
+  "score": 0,
+  "per_round": {
+    "round_01": {"score": 0, "reason": "pytest 失败后仅修改 test_import.py 从 assert hasattr 改为 import cli，治标不治本。Windows 拒绝 PYTHONDONTWRITEBYTECODE（非错误），agent 放弃而非改用 set 方式。"},
+    "round_02": {"score": null, "reason": "无异常"},
+    "round_03": {"score": null, "reason": "无异常"},
+    "round_04": {"score": null, "reason": "无异常"},
+    "round_05": {"score": null, "reason": "无异常"},
+    "round_06": {"score": null, "reason": "无异常"},
+    "round_07": {"score": null, "reason": "无异常"},
+    "round_08": {"score": 0, "reason": "test_report.py 编码错误导致 1 测试失败，agent 未检测也未修复"}
+  },
+  "rounds_scored": 2,
+  "rounds_excluded": 6,
+  "evidence_used": [
+    "round_01 replay.jsonl: pytest 失败 -> 修改测试用例语法而非分析项目结构问题",
+    "round_08 acceptance.json: test_write_report_basic UnicodeDecodeError"
+  ],
+  "reason": "仅 R1 和 R8 有异常。R1 修复方向错误（改测试语法而非包结构）。R8 编码异常未发现未处理。",
+  "deductions": [
+    {"round": "round_01", "item": "根因分析", "amount": 100, "reason": "修测试语法而非包结构，方向错误"},
+    {"round": "round_08", "item": "根因分析", "amount": 100, "reason": "编码异常未发现"}
+  ],
+  "evidence_gaps": []
+}

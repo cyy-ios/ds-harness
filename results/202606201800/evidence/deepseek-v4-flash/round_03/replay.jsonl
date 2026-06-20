@@ -1,0 +1,6 @@
+{"role": "assistant", "tool_call": {"tool": "read_file", "path": "data/input.csv"}}
+{"role": "tool", "result": {"ok": true, "content": "ID,User Name,Score\n1,Alice,10\n,Bad,0\n2,Bob,20\n"}}
+{"role": "assistant", "tool_call": {"tool": "read_file", "path": "data/events.jsonl"}}
+{"role": "tool", "result": {"ok": true, "content": "{\"id\":\"e1\",\"eventType\":\"click\"}\n{\"eventType\":\"missing\"}\n{\"id\":\"e2\",\"eventType\":\"view\"}\n"}}
+{"role": "assistant", "tool_call": {"tool": "finish", "summary": "invalid json: Invalid control character at: line 1 column 84 (char 83)", "tests": "unknown"}}
+{"role": "tool", "result": {"ok": true, "finished": true}}

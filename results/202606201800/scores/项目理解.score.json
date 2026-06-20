@@ -1,0 +1,27 @@
+{
+  "capability": "项目理解",
+  "score": 42.3,
+  "per_round": {
+    "round_01": {"score": 100, "sub_scores": {"1.1_首轮探索深度": 100}, "note": "维度1仅首轮: Read SKILL.md+Glob+代码文件→3/3"},
+    "round_02": {"score": 0, "sub_scores": {"2.1_环节追踪": 100, "2.2_主支线识别": 0, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 0}, "note": "2.2收敛✗(8>6)+未扩大✗, 2.5 diff污染主线cli.py"},
+    "round_03": {"score": 58, "sub_scores": {"2.1_环节追踪": 0, "2.2_主支线识别": 50, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 100}, "note": "2.1新话题data/非同一子树,2.2收敛✓未扩大✗"},
+    "round_04": {"score": 0, "sub_scores": {"2.1_环节追踪": 100, "2.2_主支线识别": 0, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 0}, "note": "2.2收敛✗(13>6)+未扩大✗,2.5 diff主线+R05引用污染"},
+    "round_05": {"score": 58, "sub_scores": {"2.1_环节追踪": 0, "2.2_主支线识别": 50, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 100}, "note": "2.1新话题subdir/非同一子树,2.2收敛✗未扩大✓"},
+    "round_06": {"score": 87, "sub_scores": {"2.1_环节追踪": 0, "2.2_主支线识别": 100, "2.3_废弃方向识别": null, "2.4_完成研究中区分": 100, "2.5_无关任务隔离": 100}, "note": "2.1新话题,2.2全通过,2.4触发handoff含完成/草稿标记"},
+    "round_07": {"score": 77, "sub_scores": {"2.1_环节追踪": 0, "2.2_主支线识别": 100, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 100}, "note": "2.1新话题reports/非同一子树"},
+    "round_08": {"score": 0, "sub_scores": {"2.1_环节追踪": 100, "2.2_主支线识别": 0, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 0}, "note": "2.2收敛✗(12>6)+未扩大✗,2.5 report.py写入主线"}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/replay.jsonl:L1-L22 Read SKILL+Glob+Read代码→3/3探索", "round_02/replay.jsonl:L10 Write主线cli.py污染", "round_04/replay.jsonl:L9 Write主线runner.py+R05 replay引用", "round_06/replay.jsonl:L4 read handoff-note含完成/草稿"],
+  "reason": "维度1满分，维度2因全非首轮为偏离轮，2.2/2.5严格判分导致R02/R04/R08零分，拉低均值",
+  "deductions": [
+    {"round": "round_02", "item": "2.2_主支线识别", "amount": 25, "reason": "diff.patch:L75 修改主线cli.py+toolcall 8>6阈值"},
+    {"round": "round_02", "item": "2.5_无关任务隔离", "amount": 15, "reason": "diff.patch:L75 偏离轮修改主线模块"},
+    {"round": "round_04", "item": "2.2_主支线识别", "amount": 25, "reason": "replay.jsonl:L9 Write主线runner.py+toolcall 13>6"},
+    {"round": "round_04", "item": "2.5_无关任务隔离", "amount": 15, "reason": "diff.patch runner.py污染主线+R05引用残留"},
+    {"round": "round_08", "item": "2.2_主支线识别", "amount": 25, "reason": "replay.jsonl:L19 Write主线report.py+toolcall 12>6"},
+    {"round": "round_08", "item": "2.5_无关任务隔离", "amount": 15, "reason": "diff.patch report.py写入主线路径"}
+  ],
+  "evidence_gaps": []
+}

@@ -1,0 +1,23 @@
+{
+  "capability": "任务规划",
+  "score": 61.3,
+  "per_round": {
+    "round_01": {"score": 71, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 100}},
+    "round_02": {"score": 72, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 100}},
+    "round_03": {"score": 100, "sub_scores": {"1.1_路线效率": 100, "1.2_工具选择": 100}},
+    "round_04": {"score": 66, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 100}},
+    "round_05": {"score": 42, "sub_scores": {"1.1_路线效率": 0, "1.2_工具选择": 100}},
+    "round_06": {"score": 69, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 100}},
+    "round_07": {"score": 67, "sub_scores": {"1.1_路线效率": 50, "1.2_工具选择": 100}},
+    "round_08": {"score": 57, "sub_scores": {"1.1_路线效率": 25, "1.2_工具选择": 100}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/replay.jsonl: 12/17 tool_calls路径含prompt关键词(70.6%)", "round_05/replay.jsonl: 8/19有效占比42% but连续≥3不含→许多不计入分子", "round_08/replay.jsonl: 9/14 Read数量多但其中Glob**/*+读fixture文件不含prompt关键词"],
+  "reason": "工具选择全满分(全部用Read/Glob/Edit/Write无通用替代);路线效率中等,多数轮有效占比50-75%,R05/R08因大量探索性Read拉低占比",
+  "deductions": [
+    {"round": "round_05", "item": "1.1_路线效率", "amount": 100, "reason": "replay.jsonl 读evidence+sitecustomize+subdir等操作不含prompt关键词 有效占比<30%"},
+    {"round": "round_08", "item": "1.1_路线效率", "amount": 75, "reason": "replay.jsonl Glob**/*+读fixture文件+读全源码 大量探索性读不含prompt关键词"}
+  ],
+  "evidence_gaps": []
+}

@@ -1,0 +1,34 @@
+{
+  "capability": "任务规划",
+  "score": 48.8,
+  "per_round": {
+    "round_01": {"score": 42, "sub_scores": {"1.1": 70, "1.2": 0}},
+    "round_02": {"score": 36, "sub_scores": {"1.1": 60, "1.2": 0}},
+    "round_03": {"score": 48, "sub_scores": {"1.1": 80, "1.2": 0}},
+    "round_04": {"score": 51, "sub_scores": {"1.1": 85, "1.2": 0}},
+    "round_05": {"score": 51, "sub_scores": {"1.1": 85, "1.2": 0}},
+    "round_06": {"score": 57, "sub_scores": {"1.1": 95, "1.2": 0}},
+    "round_07": {"score": 51, "sub_scores": {"1.1": 85, "1.2": 0}},
+    "round_08": {"score": 54, "sub_scores": {"1.1": 90, "1.2": 0}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["M1-M8 replay.jsonl tool_call序列", "M1-M8 prompt.json"],
+  "reason": "全程用command_execution代替专用工具(Read/Grep/Glob/Edit/Write)→1.2全0分；M2手写完整YAML解析器~200行是显著绕路",
+  "deductions": [
+    {"round": "round_01", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_01", "item": "1.1_路线效率", "amount": 15, "reason": "replay.jsonl:L5 SKILL.md乱码重读+pycache反复3轮"},
+    {"round": "round_02", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_02", "item": "1.1_路线效率", "amount": 30, "reason": "replay.jsonl:step10手写完整YAML解析器(~200行)"},
+    {"round": "round_03", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_04", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_04", "item": "1.1_路线效率", "amount": 10, "reason": "replay有小幅绕路(多处Get-Content重读已读文件)"},
+    {"round": "round_05", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_05", "item": "1.1_路线效率", "amount": 10, "reason": "replay有小幅绕路"},
+    {"round": "round_06", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_07", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"},
+    {"round": "round_07", "item": "1.1_路线效率", "amount": 10, "reason": "replay有小幅绕路"},
+    {"round": "round_08", "item": "1.2_工具选择", "amount": 40, "reason": "replay.jsonl全为command_execution"}
+  ],
+  "evidence_gaps": []
+}

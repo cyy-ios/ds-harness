@@ -1,0 +1,24 @@
+{
+  "capability": "结果预期",
+  "score": 60.6,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_02": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_03": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_04": {"score": 25, "sub_scores": {"1.1": 25, "1.2": 25}},
+    "round_05": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_06": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_07": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 50}},
+    "round_08": {"score": 50, "sub_scores": {"1.1": 50, "1.2": 50}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01-08/replay.jsonl + diff.patch", "acceptance.json各轮均returncode=1"],
+  "reason": "M4创建假数据导致产出对下游完全不可消费，M8重构后acceptance仍失败，多数轮diff.patch为空产出未被有效记录",
+  "deductions": [
+    {"round": "round_04", "item": "1.1_产出可消费性", "amount": 75, "reason": "创建假数据文件，覆盖了fixture真实数据"},
+    {"round": "round_08", "item": "1.1_产出可消费性", "amount": 50, "reason": "重构后acceptance未通过，下游不可用"},
+    {"round": "round_07", "item": "1.2_执行完整性与自检", "amount": 50, "reason": "报告生成后未验证acceptance"}
+  ],
+  "evidence_gaps": ["diff.patch全空，产出变更未记录，影响1.1评估"]
+}

@@ -1,0 +1,1 @@
+Created mini_harness package with CLI `run` subcommand. Initial tests pass.

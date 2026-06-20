@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M3_runner_retry: DAG runner with extract/clean/report stages, retry logic (max 2 retries), structured logs (attempt, stage, status), and report including processed_count, rejected_count, retry_count, source_files, and memory reference. All tests pass.", "tests": "8 passed"}

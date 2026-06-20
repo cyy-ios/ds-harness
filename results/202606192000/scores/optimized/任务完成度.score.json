@@ -1,0 +1,49 @@
+{
+  "capability": "任务完成度",
+  "score": 84.4,
+  "per_round": {
+    "round_01": {
+      "score": 50
+    },
+    "round_02": {
+      "score": 50
+    },
+    "round_03": {
+      "score": 75
+    },
+    "round_04": {
+      "score": 100
+    },
+    "round_05": {
+      "score": 100
+    },
+    "round_06": {
+      "score": 100
+    },
+    "round_07": {
+      "score": 100
+    },
+    "round_08": {
+      "score": 100
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap/step_01/acceptance.json: score 10, pyproject.toml invalid",
+    "M2_config/step_01/acceptance.json: score 10",
+    "M3_runner_retry/step_01/acceptance.json: score 20, 12 passed",
+    "M4_long_log_debug/step_01/acceptance.json: score 20, stdout/stderr fix verified",
+    "M5_context_change/step_01/replay.jsonl: 跨目录验证完成",
+    "M6_interruption/step_01/response.md: 两文件正确解释",
+    "M7_memory_report/step_01/response.md: 复盘报告生成",
+    "M8_compact_resume/step_01/acceptance.json: 15 passed"
+  ],
+  "reason": "M1-M2因heredoc/编码问题导致pyproject.toml损坏，验收不过（50分）；M3需多次尝试但最终修复bug（75分）；M4-M8全部达到prompt要求（100分）。",
+  "deductions": [
+    {"round": "round_01", "item": "任务完成度", "amount": 50, "reason": "acceptance.json pyproject.toml invalid, CLI fails"},
+    {"round": "round_02", "item": "任务完成度", "amount": 50, "reason": "acceptance.json score 10, 未修复M1遗留问题"},
+    {"round": "round_03", "item": "任务完成度", "amount": 25, "reason": "acceptance.json CLI end_to_end仍失败(__main__缺失)"}
+  ],
+  "evidence_gaps": []
+}

@@ -1,0 +1,32 @@
+subject: DeepSeek v4 Pro
+task: mini-data-harness
+timestamp: '202606181852'
+total_rounds: 8
+rounds:
+- round: round_01
+  milestone: M1_bootstrap
+  prompt: 里程碑 M1_bootstrap：读取 skills/data-harness/SKILL.md，创建 mini_harness Python
+    包、CLI run 子命令和最小可用实现；完成后用仓库内命令核验当前改动。
+- round: round_02
+  milestone: M2_config
+  prompt: 里程碑 M2_config：增加 JSON/YAML 配置解析；保留早期 CLI run 子命令决策；支持配置缺省和显式路径。
+- round: round_03
+  milestone: M3_runner_retry
+  prompt: 里程碑 M3_runner_retry：实现 extract/clean/report DAG runner、最多 2 次重试、结构化日志，并让输出报告反映真实处理结果。
+- round: round_04
+  milestone: M4_long_log_debug
+  prompt: 里程碑 M4_long_log_debug：当前测试套件在调试输出较多的场景下仍有问题；运行相关验证，定位并修复。
+- round: round_05
+  milestone: M5_context_change
+  prompt: 里程碑 M5_context_change：现在从 subdir/workbench 继续开发，当前环境含若干项目相关变量；保持主线功能在不同工作目录下可用。
+- round: round_06
+  milestone: M6_interruption
+  prompt: 里程碑 M6_interruption：中断：解释 logs/unrelated_error.log 和 docs/handoff-note.md；处理完后回到
+    mini harness 主线继续。
+- round: round_07
+  milestone: M7_memory_report
+  prompt: 里程碑 M7_memory_report：读取 memory/memory_summary.md、docs/compatibility-notes.md
+    和 benchmarks/perf-baseline.json，生成 memory-aware 复盘报告，引用早期设计决策和当前产物的最终统计。
+- round: round_08
+  milestone: M8_compact_resume
+  prompt: 里程碑 M8_compact_resume：上下文已压缩为上方摘要。继续新增 report 模块，并确认既有能力仍可用。

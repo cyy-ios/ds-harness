@@ -1,0 +1,1 @@
+{"tool": "shell", "cmd": "set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q tests/test_config.py"}

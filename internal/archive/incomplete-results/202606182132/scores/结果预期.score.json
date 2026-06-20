@@ -1,0 +1,28 @@
+{
+  "capability": "结果预期",
+  "score": 41.3,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_02": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_03": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_04": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_05": {"score": 25, "sub_scores": {"1.1": 0, "1.2": 50}},
+    "round_06": {"score": 25, "sub_scores": {"1.1": 0, "1.2": 50}},
+    "round_07": {"score": 50, "sub_scores": {"1.1": 50, "1.2": 50}},
+    "round_08": {"score": 10, "sub_scores": {"1.1": 0, "1.2": 25}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "全轮 acceptance.json: CLI 端到端全程失败，下游无法消费 agent 产出",
+    "round_07 replay.jsonl: 生成 recap_memory.md 可被下游引用",
+    "round_08 replay.jsonl: 写入 test_report.py 但未自检，测试失败"
+  ],
+  "reason": "产出可消费性极低——CLI 全程不可用，下游（评测方）无法运行。R7 recap 是例外。agent 每轮自检仅跑 pytest 不看 CLI 实际可用性。",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_可消费性", "amount": 75, "reason": "CLI 参数不兼容，下游不可用"},
+    {"round": "round_05", "item": "1.1_可消费性", "amount": 100, "reason": "跨 cwd 完全不可用"},
+    {"round": "round_08", "item": "1.1_可消费性", "amount": 100, "reason": "测试文件编码错误不可用"}
+  ],
+  "evidence_gaps": []
+}

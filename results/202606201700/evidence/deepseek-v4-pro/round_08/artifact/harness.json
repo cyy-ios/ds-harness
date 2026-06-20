@@ -1,0 +1,4 @@
+{
+  "retry_attempts": 2,
+  "report_output": "report.json"
+}

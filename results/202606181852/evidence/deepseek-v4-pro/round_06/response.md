@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M6_interruption 完成：审查 logs/unrelated_error.log 为外部缓存超时，与 mini harness 无关；docs/handoff-note.md 确认先前里程碑完成；继续主线，全量测试通过。", "tests": "pytest (12 tests) passed after M5 context change fixes."}

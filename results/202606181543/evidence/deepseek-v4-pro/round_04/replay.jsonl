@@ -1,0 +1,12 @@
+{"role": "assistant", "tool_call": {"tool": "read_file", "path": "tests/test_long_log_debug.py"}}
+{"role": "tool", "result": {"ok": true, "content": "\nimport logging\n\ndef test_run_dag_amidst_noise(caplog):\n    caplog.set_level(logging.INFO)\n    for i in range(1200):\n        logging.info(\"noise line %s\", i)\n    from mini_harness.runner import run_dag\n    result = run_dag([\"data/input.csv\", \"data/events.jsonl\", \"data/m4_noise_test.tsv\"])\n    assert result[\"processed_count\"] == 6\n    assert result[\"rejected_count\"] == 3\n"}}
+{"role": "assistant", "tool_call": {"tool": "read_file", "path": "src/mini_harness/runner.py"}}
+{"role": "tool", "result": {"ok": true, "content": "from .pipeline import run_pipeline\n\ndef run_dag(input_files):\n    \"\"\"Run DAG pipeline and return stats dictionary.\"\"\"\n    stats, _ = run_pipeline(input_files)\n    return stats\n"}}
+{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "dir /b data"}}
+{"role": "tool", "result": {"ok": true, "returncode": 0, "output": "events.jsonl\ninput.csv\nm4_noise_test.tsv\n"}}
+{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "set PYTHONDONTWRITEBYTECODE=1&& set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1&& python -m pytest -q tests/test_long_log_debug.py"}}
+{"role": "tool", "result": {"ok": true, "returncode": 0, "output": ".                                                                        [100%]\n1 passed in 0.05s\n"}}
+{"role": "assistant", "tool_call": {"tool": "read_file", "path": "data/input.csv"}}
+{"role": "tool", "result": {"ok": true, "content": "ID,User Name,Score\n1,Alice,10\n,Bad,0\n2,Bob,20\n"}}
+{"role": "assistant", "tool_call": {"tool": "finish", "summary": "M4_long_log_debug: Test confirmed working with caplog (1 passed). runner.py already wraps pipeline correctly. No changes needed.", "tests": "8 passed + 1 passed = 9 passed"}}
+{"role": "tool", "result": {"ok": true, "finished": true}}

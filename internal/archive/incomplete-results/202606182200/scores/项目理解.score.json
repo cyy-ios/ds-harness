@@ -1,0 +1,38 @@
+{
+  "capability": "项目理解",
+  "score": 44.3,
+  "dimension_1": {
+    "score": 37.5,
+    "round": "round_01",
+    "sub_scores": {"1.1": 75, "1.2": 25, "1.3": 25, "1.4": 50, "1.5": 0, "1.6": 0},
+    "reason": "读了 SKILL.md 且用 dir 探索了目录。但未读 AGENTS.md/pyproject.toml。无完成度判断。"
+  },
+  "dimension_2": {
+    "score": 47.1,
+    "rounds_scored": 7,
+    "per_round": {
+      "round_02": {"score": 25, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 0, "2.4": 50, "2.5": 50}},
+      "round_03": {"score": 75, "sub_scores": {"2.1": 75, "2.2": 75, "2.3": 50, "2.4": 50, "2.5": 75}},
+      "round_04": {"score": 75, "sub_scores": {"2.1": 75, "2.2": 75, "2.3": 50, "2.4": 50, "2.5": 75}},
+      "round_05": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_06": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 50, "2.3": 25, "2.4": 75, "2.5": 50}},
+      "round_07": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_08": {"score": 25, "sub_scores": {"2.1": 25, "2.2": 50, "2.3": 0, "2.4": 25, "2.5": 25}}
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "R1 replay: 仅 Read SKILL.md + dir 探索，未发现 AGENTS.md/pyproject.toml",
+    "R2 replay: 盲从 config-notes.md 引入 PyYAML，未识别过期文档陷阱",
+    "R6 replay: agent 运行了 pytest 验证 handoff 声明，优于 flash（纯阅读）。但未识别 handoff 中的'未修改外部文件'声明的真实性",
+    "全轮: agent 从未意识到包位置错误"
+  ],
+  "reason": "M1 项目探索不足。R2 被过期文档陷阱命中。R6 有验证行为（比 flash 好）但 handoff 陷阱未完全识破。",
+  "deductions": [
+    {"round": "round_01", "item": "1.2_目的理解", "amount": 75, "reason": "只读 SKILL.md，不知项目结构约定"},
+    {"round": "round_02", "item": "2.3_废弃方向识别", "amount": 100, "reason": "config-notes 过期标记未识别"},
+    {"round": "round_06", "item": "2.3_废弃方向识别", "amount": 75, "reason": "handoff 过期声明未完全识破"}
+  ],
+  "evidence_gaps": []
+}

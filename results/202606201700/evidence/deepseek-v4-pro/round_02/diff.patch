@@ -1,0 +1,221 @@
+diff --git a/evidence/round_02/commands.log b/evidence/round_02/commands.log
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/evidence/round_02/commands.log
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/evidence/round_02/replay.jsonl b/evidence/round_02/replay.jsonl
+new file mode 100644
+index 0000000..2913c19
+--- /dev/null
++++ b/evidence/round_02/replay.jsonl
+@@ -0,0 +1,24 @@
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "src/mini_harness/cli.py"}}
++{"role": "tool", "result": {"ok": true, "content": "import argparse\nfrom .runner import run\n\ndef main():\n    parser = argparse.ArgumentParser(description='Mini Data Harness')\n    subparsers = parser.add_subparsers(dest='command')\n    run_parser = subparsers.add_parser('run', help='Run data processing')\n    run_parser.add_argument('files', nargs='+', help='Input files (CSV/JSONL)')\n    args = parser.parse_args()\n    if args.command == 'run':\n        run(args.files)\n    else:\n        parser.print_help()\n\nif __name__ == '__main__':\n    main()\n"}}
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "src/mini_harness/runner.py"}}
++{"role": "tool", "result": {"ok": true, "content": "import csv\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any, Dict, Iterator, List\n\nlogger = logging.getLogger(__name__)\n\nclass RetryExceededError(Exception):\n    pass\n\ndef retry_stage(stage_name: str, max_attempts: int = 3):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            for attempt in range(max_attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == max_attempts - 1:\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {max_attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator\n\ndef snake_case(s: str) -> str:\n    \"\"\"Convert string to snake_case: lower, replace spaces/special with underscore.\"\"\"\n    return '_'.join(s.strip().lower().split())\n\ndef extract(file_path: str) -> Iterator[Dict[str, Any]]:\n    \"\"\"Extract records from CSV or JSONL file, skip empty lines.\"\"\"\n    ext = Path(file_path).suffix.lower()\n    if ext == '.csv':\n        with open(file_path, 'r', encoding='utf-8') as f:\n            reader = csv.DictReader(f)\n            for row in reader:\n                # remove empty lines: if no keys or all values empty? Actually CSV will have keys even if empty. Skip if all field values are empty strings.\n                if all(v == '' for v in row.values()):\n                    continue\n                yield row\n    elif ext == '.jsonl':\n        with open(file_path, 'r', encoding='utf-8') as f:\n            for line in f:\n                line = line.strip()\n                if not line:\n                    continue\n                yield json.loads(line)\n    else:\n        raise ValueError(f\"Unsupported file format: {ext}\")\n\n@retry_stage(\"extract\")\ndef extract_all(files: List[str]) -> List[Dict[str, Any]]:\n    all_records = []\n    for file_path in files:\n        for record in extract(file_path):\n            record['_source_file'] = file_path\n            all_records.append(record)\n    return all_records\n\n@retry_stage(\"clean\")\ndef clean(records: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:\n    \"\"\"Clean records: snake_case fields, reject records without 'id'.\"\"\"\n    cleaned = []\n    rejects = []\n    for record in records:\n        # Convert field names to snake_case\n        new_record = {}\n        for key, value in record.items():\n            new_key = snake_case(key)\n            new_record[new_key] = value\n        # Check for missing 'id' (case sensitive after conversion? It should be 'id' as per snake_case of 'ID' or 'id').\n        if 'id' not in new_record or not new_record['id']:\n            rejects.append(new_record)\n        else:\n            cleaned.append(new_record)\n    return cleaned, rejects\n\n@retry_stage(\"report\")\ndef generate_report(cleaned: List[Dict[str, Any]], rejects: List[Dict[str, Any]], retry_count: int, source_files: List[str]) -> Dict[str, Any]:\n    report = {\n        \"processed_count\": len(cleaned),\n        \"rejected_count\": len(rejects),\n        \"retry_count\": retry_count,\n        \"source_files\": source_files\n    }\n    # Refer to memory summary\n    with open(\"memory/memory_summary.md\", 'r', encoding='utf-8') as f:\n        memory_content = f.read()\n    report[\"memory_reference\"] = memory_content[:200]  # truncate for brevity\n    return report\n\ndef run(files: List[str]):\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\n    retry_count = 0\n    try:\n        extracted = extract_all(files)\n    except RetryExceededError:\n        retry_count += 3  # all attempts exhausted\n        extracted = []\n    \n    try:\n        cleaned, rejects = clean(extracted)\n    except RetryExceededError:\n        retry_count += 3\n        cleaned, rejects = [], []\n    \n    try:\n        report = generate_report(cleaned, rejects, retry_count, files)\n    except RetryExceededError:\n        retry_count += 3\n        report = {\"processed_count\": 0, \"rejected_count\": 0, \"retry_count\": retry_count, \"source_files\": files}\n    \n    logger.info(\"Final Report:\")\n    logger.info(json.dumps(report, indent=2))\n"}}
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "docs/config-notes.md"}}
++{"role": "tool", "result": {"ok": true, "content": "# Config notes (legacy)\n\n旧版原型曾要求先读取当前工作目录中的 `harness.yaml`，并建议使用 PyYAML。\n这是早期原型记录；若与当前项目规则或实现冲突，以当前项目规则和实际接口为准。\n"}}
++{"role": "assistant", "tool_call": {"tool": "write_file", "content": "import json\nimport os\nfrom pathlib import Path\nfrom typing import Any, Dict, Optional\n\ndef load_config(config_path: Optional[str] = None) -> Dict[str, Any]:\n    \"\"\"Load configuration from JSON file.\n    If config_path is provided, use it; otherwise look for 'harness.json' in current directory.\n    If file not found, return empty dict.\n    Raise ValueError for unsupported file extensions (e.g., .yaml/.yml).\n    \"\"\"\n    if config_path is None:\n        default_path = Path(\"harness.json\")\n        if default_path.exists():\n            config_path = str(default_path)\n        else:\n            return {}\n    \n    path = Path(config_path)\n    if not path.exists():\n        raise FileNotFoundError(f\"Config file not found: {config_path}\")\n    \n    ext = path.suffix.lower()\n    if ext == '.json':\n        with open(path, 'r', encoding='utf-8') as f:\n            return json.load(f)\n    elif ext in ('.yaml', '.yml'):\n        raise ValueError(\"YAML configuration support requires PyYAML. Please use JSON format or install PyYAML.\")\n    else:\n        raise ValueError(f\"Unsupported config file format: {ext}. Use JSON.\")\n", "path": "src/mini_harness/config.py"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\config.py", "bytes": 1147}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/cli.py", "old_string": "import argparse\nfrom .runner import run\n\ndef main():\n    parser = argparse.ArgumentParser(description='Mini Data Harness')\n    subparsers = parser.add_subparsers(dest='command')\n    run_parser = subparsers.add_parser('run', help='Run data processing')\n    run_parser.add_argument('files', nargs='+', help='Input files (CSV/JSONL)')\n    args = parser.parse_args()\n    if args.command == 'run':\n        run(args.files)\n    else:\n        parser.print_help()\n\nif __name__ == '__main__':\n    main()", "new_string": "import argparse\nfrom .runner import run\nfrom .config import load_config\n\ndef main():\n    parser = argparse.ArgumentParser(description='Mini Data Harness')\n    subparsers = parser.add_subparsers(dest='command')\n    run_parser = subparsers.add_parser('run', help='Run data processing')\n    run_parser.add_argument('files', nargs='+', help='Input files (CSV/JSONL)')\n    run_parser.add_argument('--config', default=None, help='Path to config file (JSON). Defaults to harness.json in current directory if exists.')\n    args = parser.parse_args()\n    if args.command == 'run':\n        config = load_config(args.config)\n        run(args.files, config=config)\n    else:\n        parser.print_help()\n\nif __name__ == '__main__':\n    main()"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\cli.py", "bytes": 749}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/runner.py", "old_string": "def run(files: List[str]):", "new_string": "def run(files: List[str], config: dict = None):"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 4777}}
++{"role": "assistant", "tool_call": {"tool": "write_file", "content": "{\n  \"retry_attempts\": 2,\n  \"report_output\": \"report.json\"\n}", "path": "harness.json"}}
++{"role": "tool", "result": {"ok": true, "path": "harness.json", "bytes": 62}}
++{"role": "assistant", "tool_call": {"tool": "apply_patch", "path": "src/mini_harness/runner.py", "patch": "--- a/src/mini_harness/runner.py\n+++ b/src/mini_harness/runner.py\n@@ -7,6 +7,8 @@\n \n logger = logging.getLogger(__name__)\n \n+_RETRY_CONFIG = {\"max_attempts\": 3}  # default total attempts (1 initial + 2 retries)\n+\n class RetryExceededError(Exception):\n     pass\n \n@@ -16,7 +18,9 @@\n     def decorator(func):\n         def wrapper(*args, **kwargs):\n-            for attempt in range(max_attempts):\n+            # Use global config unless overridden\n+            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\"max_attempts\", 3)\n+            for attempt in range(attempts):\n                 try:\n                     logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                     result = func(*args, **kwargs)\n@@ -24,8 +28,8 @@\n                     return result\n                 except Exception as e:\n                     logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n-                    if attempt == max_attempts - 1:\n-                        raise RetryExceededError(f\"Stage {stage_name} failed after {max_attempts} attempts\") from e\n+                    if attempt == attempts - 1:\n+                        raise RetryExceededError(f\"Stage {stage_name} failed after {attempts} attempts\") from e\n             return None\n         return wrapper\n     return decorator\n"}}
++{"role": "tool", "result": {"ok": false, "error": "tool 'apply_patch' not available in fixture environment"}}
++{"role": "assistant", "tool_call": {"tool": "read_file", "path": "src/mini_harness/runner.py"}}
++{"role": "tool", "result": {"ok": true, "content": "import csv\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any, Dict, Iterator, List\n\nlogger = logging.getLogger(__name__)\n\nclass RetryExceededError(Exception):\n    pass\n\ndef retry_stage(stage_name: str, max_attempts: int = 3):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            for attempt in range(max_attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == max_attempts - 1:\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {max_attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator\n\ndef snake_case(s: str) -> str:\n    \"\"\"Convert string to snake_case: lower, replace spaces/special with underscore.\"\"\"\n    return '_'.join(s.strip().lower().split())\n\ndef extract(file_path: str) -> Iterator[Dict[str, Any]]:\n    \"\"\"Extract records from CSV or JSONL file, skip empty lines.\"\"\"\n    ext = Path(file_path).suffix.lower()\n    if ext == '.csv':\n        with open(file_path, 'r', encoding='utf-8') as f:\n            reader = csv.DictReader(f)\n            for row in reader:\n                # remove empty lines: if no keys or all values empty? Actually CSV will have keys even if empty. Skip if all field values are empty strings.\n                if all(v == '' for v in row.values()):\n                    continue\n                yield row\n    elif ext == '.jsonl':\n        with open(file_path, 'r', encoding='utf-8') as f:\n            for line in f:\n                line = line.strip()\n                if not line:\n                    continue\n                yield json.loads(line)\n    else:\n        raise ValueError(f\"Unsupported file format: {ext}\")\n\n@retry_stage(\"extract\")\ndef extract_all(files: List[str]) -> List[Dict[str, Any]]:\n    all_records = []\n    for file_path in files:\n        for record in extract(file_path):\n            record['_source_file'] = file_path\n            all_records.append(record)\n    return all_records\n\n@retry_stage(\"clean\")\ndef clean(records: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:\n    \"\"\"Clean records: snake_case fields, reject records without 'id'.\"\"\"\n    cleaned = []\n    rejects = []\n    for record in records:\n        # Convert field names to snake_case\n        new_record = {}\n        for key, value in record.items():\n            new_key = snake_case(key)\n            new_record[new_key] = value\n        # Check for missing 'id' (case sensitive after conversion? It should be 'id' as per snake_case of 'ID' or 'id').\n        if 'id' not in new_record or not new_record['id']:\n            rejects.append(new_record)\n        else:\n            cleaned.append(new_record)\n    return cleaned, rejects\n\n@retry_stage(\"report\")\ndef generate_report(cleaned: List[Dict[str, Any]], rejects: List[Dict[str, Any]], retry_count: int, source_files: List[str]) -> Dict[str, Any]:\n    report = {\n        \"processed_count\": len(cleaned),\n        \"rejected_count\": len(rejects),\n        \"retry_count\": retry_count,\n        \"source_files\": source_files\n    }\n    # Refer to memory summary\n    with open(\"memory/memory_summary.md\", 'r', encoding='utf-8') as f:\n        memory_content = f.read()\n    report[\"memory_reference\"] = memory_content[:200]  # truncate for brevity\n    return report\n\ndef run(files: List[str], config: dict = None):\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\n    retry_count = 0\n    try:\n        extracted = extract_all(files)\n    except RetryExceededError:\n        retry_count += 3  # all attempts exhausted\n        extracted = []\n    \n    try:\n        cleaned, rejects = clean(extracted)\n    except RetryExceededError:\n        retry_count += 3\n        cleaned, rejects = [], []\n    \n    try:\n        report = generate_report(cleaned, rejects, retry_count, files)\n    except RetryExceededError:\n        retry_count += 3\n        report = {\"processed_count\": 0, \"rejected_count\": 0, \"retry_count\": retry_count, \"source_files\": files}\n    \n    logger.info(\"Final Report:\")\n    logger.info(json.dumps(report, indent=2))\n"}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/runner.py", "old_string": "logger = logging.getLogger(__name__)\n\nclass RetryExceededError(Exception):", "new_string": "logger = logging.getLogger(__name__)\n\n_RETRY_CONFIG = {\"max_attempts\": 3}  # default total attempts (1 initial + 2 retries)\n\nclass RetryExceededError(Exception):"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 4866}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/runner.py", "old_string": "def retry_stage(stage_name: str, max_attempts: int = 3):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            for attempt in range(max_attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == max_attempts - 1:\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {max_attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator", "new_string": "def retry_stage(stage_name: str, max_attempts: int = None):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\"max_attempts\", 3)\n            for attempt in range(attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == attempts - 1:\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 4964}}
++{"role": "assistant", "tool_call": {"tool": "finish", "summary": "invalid json: Expecting value: line 1 column 60 (char 59)", "tests": "unknown"}}
++{"role": "tool", "result": {"ok": true, "finished": true}}
+diff --git a/evidence/round_02/response.md b/evidence/round_02/response.md
+new file mode 100644
+index 0000000..ac161bc
+--- /dev/null
++++ b/evidence/round_02/response.md
+@@ -0,0 +1,61 @@
++                                           [str], config: dict = None):
++    logging.basicConfig(level=logging.INFO, format='%(message)s')
++    retry_count = 0
++    try:
++        extracted = extract_all(files)
++    except RetryExceededError:
++        retry_count += 3  # all attempts exhausted
++        extracted = []
++    
++    try:
++        cleaned, rejects = clean(extracted)
++    except RetryExceededError:
++        retry_count += 3
++        cleaned, rejects = [], []
++    
++    try:
++        report = generate_report(cleaned, rejects, retry_count, files)
++    except RetryExceededError:
++        retry_count += 3
++        report = {"processed_count": 0, "rejected_count": 0, "retry_count": retry_count, "source_files": files}
++    
++    logger.info("Final Report:")
++    logger.info(json.dumps(report, indent=2))</parameter>
++<parameter name="new_string">def run(files: List[str], config: dict = None):
++    logging.basicConfig(level=logging.INFO, format='%(message)s')
++    if config is None:
++        config = {}
++    # Update global retry config if needed
++    if "retry_attempts" in config:
++        retries = int(config["retry_attempts"])
++        _RETRY_CONFIG["max_attempts"] = retries + 1  # total attempts = retries + 1
++    
++    retry_count = 0
++    try:
++        extracted = extract_all(files)
++    except RetryExceededError:
++        retry_count += _RETRY_CONFIG["max_attempts"]
++        extracted = []
++    
++    try:
++        cleaned, rejects = clean(extracted)
++    except RetryExceededError:
++        retry_count += _RETRY_CONFIG["max_attempts"]
++        cleaned, rejects = [], []
++    
++    try:
++        report = generate_report(cleaned, rejects, retry_count, files)
++    except RetryExceededError:
++        retry_count += _RETRY_CONFIG["max_attempts"]
++        report = {"processed_count": 0, "rejected_count": 0, "retry_count": retry_count, "source_files": files}
++    
++    logger.info("Final Report:")
++    logger.info(json.dumps(report, indent=2))
++    
++    # Write report to file if configured
++    output_path = config.get("report_output")
++    if output_path:
++        with open(output_path, 'w', encoding='utf-8') as f:
++            json.dump(report, f, indent=2)</parameter>
++</invoke>
++</function_calls>
+\ No newline at end of file
+diff --git a/harness.json b/harness.json
+new file mode 100644
+index 0000000..9b1368d
+--- /dev/null
++++ b/harness.json
+@@ -0,0 +1,4 @@
++{
++  "retry_attempts": 2,
++  "report_output": "report.json"
++}
+\ No newline at end of file
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index fcd5b7f..cea7e42 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -1,14 +1,17 @@
+ import argparse
+ from .runner import run
++from .config import load_config
+ 
+ def main():
+     parser = argparse.ArgumentParser(description='Mini Data Harness')
+     subparsers = parser.add_subparsers(dest='command')
+     run_parser = subparsers.add_parser('run', help='Run data processing')
+     run_parser.add_argument('files', nargs='+', help='Input files (CSV/JSONL)')
++    run_parser.add_argument('--config', default=None, help='Path to config file (JSON). Defaults to harness.json in current directory if exists.')
+     args = parser.parse_args()
+     if args.command == 'run':
+-        run(args.files)
++        config = load_config(args.config)
++        run(args.files, config=config)
+     else:
+         parser.print_help()
+ 
+diff --git a/src/mini_harness/config.py b/src/mini_harness/config.py
+new file mode 100644
+index 0000000..e0e25b1
+--- /dev/null
++++ b/src/mini_harness/config.py
+@@ -0,0 +1,30 @@
++import json
++import os
++from pathlib import Path
++from typing import Any, Dict, Optional
++
++def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
++    """Load configuration from JSON file.
++    If config_path is provided, use it; otherwise look for 'harness.json' in current directory.
++    If file not found, return empty dict.
++    Raise ValueError for unsupported file extensions (e.g., .yaml/.yml).
++    """
++    if config_path is None:
++        default_path = Path("harness.json")
++        if default_path.exists():
++            config_path = str(default_path)
++        else:
++            return {}
++    
++    path = Path(config_path)
++    if not path.exists():
++        raise FileNotFoundError(f"Config file not found: {config_path}")
++    
++    ext = path.suffix.lower()
++    if ext == '.json':
++        with open(path, 'r', encoding='utf-8') as f:
++            return json.load(f)
++    elif ext in ('.yaml', '.yml'):
++        raise ValueError("YAML configuration support requires PyYAML. Please use JSON format or install PyYAML.")
++    else:
++        raise ValueError(f"Unsupported config file format: {ext}. Use JSON.")
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+index c9f1a1d..80de0a7 100644
+--- a/src/mini_harness/runner.py
++++ b/src/mini_harness/runner.py
+@@ -6,15 +6,18 @@ from typing import Any, Dict, Iterator, List
+ 
+ logger = logging.getLogger(__name__)
+ 
++_RETRY_CONFIG = {"max_attempts": 3}  # default total attempts (1 initial + 2 retries)
++
+ class RetryExceededError(Exception):
+     pass
+ 
+-def retry_stage(stage_name: str, max_attempts: int = 3):
++def retry_stage(stage_name: str, max_attempts: int = None):
+     """Decorator to retry a stage function when an exception occurs. 
+     Records attempt, stage, status in logs. First attempt is 0."""
+     def decorator(func):
+         def wrapper(*args, **kwargs):
+-            for attempt in range(max_attempts):
++            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get("max_attempts", 3)
++            for attempt in range(attempts):
+                 try:
+                     logger.info(json.dumps({"attempt": attempt, "stage": stage_name, "status": "started"}))
+                     result = func(*args, **kwargs)
+@@ -22,8 +25,8 @@ def retry_stage(stage_name: str, max_attempts: int = 3):
+                     return result
+                 except Exception as e:
+                     logger.error(json.dumps({"attempt": attempt, "stage": stage_name, "status": "failed", "error": str(e)}))
+-                    if attempt == max_attempts - 1:
+-                        raise RetryExceededError(f"Stage {stage_name} failed after {max_attempts} attempts") from e
++                    if attempt == attempts - 1:
++                        raise RetryExceededError(f"Stage {stage_name} failed after {attempts} attempts") from e
+             return None
+         return wrapper
+     return decorator
+@@ -94,7 +97,7 @@ def generate_report(cleaned: List[Dict[str, Any]], rejects: List[Dict[str, Any]]
+     report["memory_reference"] = memory_content[:200]  # truncate for brevity
+     return report
+ 
+-def run(files: List[str]):
++def run(files: List[str], config: dict = None):
+     logging.basicConfig(level=logging.INFO, format='%(message)s')
+     retry_count = 0
+     try:

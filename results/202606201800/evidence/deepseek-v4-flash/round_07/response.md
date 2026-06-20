@@ -1,0 +1,1 @@
+M7: Created reports/retrospective_report.md referencing memory_summary.md, compatibility-notes.md, and perf-baseline.json. All 5 tests pass.

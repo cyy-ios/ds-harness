@@ -1,0 +1,4 @@
+{
+  "id": "M1_bootstrap",
+  "prompt": "读取 skills/data-harness/SKILL.md，创建 mini_harness Python 包、CLI run 子命令和最小可用实现；完成后用仓库内命令核验当前改动。"
+}

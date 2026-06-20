@@ -1,0 +1,24 @@
+{
+  "capability": "用户意图理解",
+  "score": 75.6,
+  "per_round": {
+    "round_01": {"score": 95, "sub_scores": {"1.1": 100, "1.2": 75, "1.3": 100, "1.4": 100, "1.5": 100}},
+    "round_02": {"score": 80, "sub_scores": {"1.1": 100, "1.2": 75, "1.3": 100, "1.4": 75, "1.5": 50}},
+    "round_03": {"score": 80, "sub_scores": {"1.1": 100, "1.2": 75, "1.3": 100, "1.4": 75, "1.5": 50}},
+    "round_04": {"score": 60, "sub_scores": {"1.1": 75, "1.2": 50, "1.3": 100, "1.4": 75, "1.5": 25}},
+    "round_05": {"score": 75, "sub_scores": {"1.1": 100, "1.2": 75, "1.3": 75, "1.4": 75, "1.5": 50}},
+    "round_06": {"score": 100, "sub_scores": {"1.1": 100, "1.2": 100, "1.3": 100, "1.4": 100, "1.5": 100}},
+    "round_07": {"score": 90, "sub_scores": {"1.1": 100, "1.2": 100, "1.3": 100, "1.4": 75, "1.5": 75}},
+    "round_08": {"score": 80, "sub_scores": {"1.1": 75, "1.2": 75, "1.3": 100, "1.4": 75, "1.5": 75}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01-08/replay.jsonl + response.md + prompt.json"],
+  "reason": "M6中断处理满分，M4误将数据匹配断言而非修复代码导致1.5仅25分，多数轮response为JSON tool call缺乏自然语言表述",
+  "deductions": [
+    {"round": "round_04", "item": "1.5_策略匹配", "amount": 75, "reason": "创建假数据匹配错误断言，未修复测试"},
+    {"round": "round_02", "item": "1.5_策略匹配", "amount": 50, "reason": "重建文件而非在M1基础上叠加"},
+    {"round": "round_03", "item": "1.5_策略匹配", "amount": 50, "reason": "未体现对对话位置的认知"}
+  ],
+  "evidence_gaps": ["response.md为JSON tool call格式，非自然语言，影响1.2和1.4评估"]
+}

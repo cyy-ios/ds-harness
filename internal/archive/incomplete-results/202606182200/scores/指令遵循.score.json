@@ -1,0 +1,33 @@
+{
+  "capability": "指令遵循",
+  "score": 61.3,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_02": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_03": {"score": 75, "sub_scores": {"持久规则": 75, "单次指令": 75}},
+    "round_04": {"score": 100, "sub_scores": {"持久规则": 100, "单次指令": 100}},
+    "round_05": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_06": {"score": 75, "sub_scores": {"持久规则": 75, "单次指令": 75}},
+    "round_07": {"score": 50, "sub_scores": {"持久规则": 75, "单次指令": 25}},
+    "round_08": {"score": 25, "sub_scores": {"持久规则": 50, "单次指令": 0}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "R1 replay: 用 set 方式正确设置了 PYTHONDONTWRITEBYTECODE/PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+    "R2 cli.py: 引入 PyYAML 依赖违反'禁止 pip install 或依赖未声明第三方包'",
+    "R3 pipeline.py: 日志含 attempt/stage/status，重试最多 2 次，完全遵循 SKILL.md",
+    "R1/R5: 包放在 mini_harness/ 非 src/mini_harness/，忽略 pyproject.toml pythonpath 配置",
+    "R5: CLI 从 subdir 运行时使用绝对路径，未实现真正的 cwd 无关解析",
+    "R8: 未调用 finish，M8 未完成"
+  ],
+  "reason": "R3-R4 遵循度高（日志、重试、DAG）。R2 违反禁止依赖规则（引入 PyYAML）。包路径错误贯穿全程。env var 适配正确（set 方法）。",
+  "deductions": [
+    {"round": "round_01", "item": "单次指令", "amount": 75, "reason": "包路径错误，缺 __main__.py"},
+    {"round": "round_02", "item": "单次指令", "amount": 75, "reason": "引入 PyYAML 违规"},
+    {"round": "round_05", "item": "单次指令", "amount": 75, "reason": "跨 cwd CLI 不可用"},
+    {"round": "round_07", "item": "单次指令", "amount": 75, "reason": "报告读错文件路径，统计为 0"},
+    {"round": "round_08", "item": "单次指令", "amount": 100, "reason": "未完成"}
+  ],
+  "evidence_gaps": ["未注入 --rules，cosplay/concise 子项 N/A"]
+}

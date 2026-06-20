@@ -1,0 +1,37 @@
+{
+  "capability": "项目理解",
+  "score": 42.3,
+  "dimension_1": {
+    "score": 37.5,
+    "round": "round_01",
+    "sub_scores": {"1.1": 75, "1.2": 25, "1.3": 25, "1.4": 50, "1.5": 0, "1.6": 0},
+    "reason": "读了 SKILL.md 但未读 AGENTS.md/pyproject.toml/README.md。知道要做什么但不知道项目结构约定。无完成度判断。"
+  },
+  "dimension_2": {
+    "score": 44.3,
+    "rounds_scored": 7,
+    "per_round": {
+      "round_02": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_03": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_04": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_05": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_06": {"score": 25, "sub_scores": {"2.1": 25, "2.2": 25, "2.3": 0, "2.4": 50, "2.5": 50}},
+      "round_07": {"score": 50, "sub_scores": {"2.1": 50, "2.2": 75, "2.3": 25, "2.4": 50, "2.5": 50}},
+      "round_08": {"score": 25, "sub_scores": {"2.1": 25, "2.2": 50, "2.3": 0, "2.4": 25, "2.5": 25}}
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "round_01 replay.jsonl: 仅 Read SKILL.md 一个文件，无 Glob/Grep/Read 其他项目文档",
+    "round_06 replay.jsonl: 读了 docs/handoff-note.md 但未识别其过期声明标记，未验证即采信",
+    "全轮 replay.jsonl: agent 从未发现包结构错误（mini_harness/ vs src/mini_harness/），无废弃方向识别"
+  ],
+  "reason": "M1 仅读 SKILL.md，无主动项目探索。全流程未发现 doc 陷阱（config-notes 过期、handoff 过期）。R6 盲信 handoff。R8 compact 后未核验摘要。",
+  "deductions": [
+    {"round": "round_01", "item": "1.2_目的理解", "amount": 75, "reason": "只读了 SKILL 不知道项目全貌"},
+    {"round": "round_01", "item": "1.3_子项目识别", "amount": 75, "reason": "未 Glob/Read 任何子目录"},
+    {"round": "round_06", "item": "2.3_废弃方向识别", "amount": 100, "reason": "handoff 含过期声明未识别"}
+  ],
+  "evidence_gaps": []
+}

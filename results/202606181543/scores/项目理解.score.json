@@ -1,0 +1,27 @@
+{
+  "capability": "项目理解",
+  "score": 69.0,
+  "per_round": {
+    "round_01": {"score": 40.0, "sub_scores": {"维度1": 40, "维度2": null}, "note": "维度1仅首轮，response.md空导致多项0分"},
+    "round_02": {"score": 85.0, "sub_scores": {"维度2_1": 85, "维度2_2": 90, "维度2_3": 75, "维度2_4": 85, "维度2_5": 90}},
+    "round_03": {"score": 81.75, "sub_scores": {"维度2_1": 75, "维度2_2": 90, "维度2_3": 75, "维度2_4": 80, "维度2_5": 90}},
+    "round_04": {"score": 83.75, "sub_scores": {"维度2_1": 80, "维度2_2": 90, "维度2_3": 75, "维度2_4": 85, "维度2_5": 90}},
+    "round_05": {"score": 85.0, "sub_scores": {"维度2_1": 85, "维度2_2": 90, "维度2_3": 75, "维度2_4": 85, "维度2_5": 90}},
+    "round_06": {"score": 87.0, "sub_scores": {"维度2_1": 85, "维度2_2": 95, "维度2_3": 75, "维度2_4": 85, "维度2_5": 95}},
+    "round_07": {"score": 85.0, "sub_scores": {"维度2_1": 85, "维度2_2": 90, "维度2_3": 75, "维度2_4": 85, "维度2_5": 90}},
+    "round_08": {"score": 83.75, "sub_scores": {"维度2_1": 80, "维度2_2": 90, "维度2_3": 75, "维度2_4": 85, "维度2_5": 90}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "round_01/response.md: 0 bytes, empty",
+    "round_01/replay.jsonl: Read SKILL.md + code files + dir explorations",
+    "all/prompt.json + response.md: 环节追踪证据"
+  ],
+  "reason": "维度1因response为空仅得40分；维度2整体表现出色，环节追踪和主支线识别良好",
+  "deductions": [
+    {"round": "round_01", "item": "维度1_目的理解/子项目/完成度/类型", "amount": 60, "reason": "response.md空，无任何项目理解表述"},
+    {"round": "round_03", "item": "维度2_环节追踪", "amount": 10, "reason": "未识别M3代码已预置，无主动认知"}
+  ],
+  "evidence_gaps": ["round_01 response.md empty, 维度1多项依赖response内容"]
+}

@@ -1,0 +1,29 @@
+{
+  "capability": "结果预期",
+  "score": 51.3,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_02": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_03": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_04": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_05": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_06": {"score": 50, "sub_scores": {"1.1": 50, "1.2": 50}},
+    "round_07": {"score": 25, "sub_scores": {"1.1": 0, "1.2": 50}},
+    "round_08": {"score": 25, "sub_scores": {"1.1": 0, "1.2": 50}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "R3 pipeline.py: PipelineRunner.run() 返回 dict 供下游使用",
+    "R4 runner.py: run_dag() 创建，下游 test_long_log_debug 复用",
+    "R7: generate_report.py 读取 output/report.json 但文件不存在，产出不可消费",
+    "R1: CLI 缺 __main__.py，下游 python -m mini_harness 不可用"
+  ],
+  "reason": "R3/R4 产出被下游消费（runner 模块被 test_long_log_debug 复用）。R7 产出因文件路径 bug 不可消费。R1 基础入口不可用。",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_可消费性", "amount": 75, "reason": "缺 __main__.py"},
+    {"round": "round_07", "item": "1.1_可消费性", "amount": 100, "reason": "report.json 路径错误统计全零"},
+    {"round": "round_08", "item": "1.1_可消费性", "amount": 100, "reason": "report 模块未完成"}
+  ],
+  "evidence_gaps": []
+}

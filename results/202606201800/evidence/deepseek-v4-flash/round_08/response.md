@@ -1,0 +1,1 @@
+已新增 src/mini_harness/report.py 包含 generate_report 和 generate_review_report，支持引用 memory_summary.md。所有 5 个既有测试通过，既有能力可用。

@@ -1,0 +1,26 @@
+{
+  "capability": "指令遵循",
+  "score": 42.5,
+  "per_round": {
+    "round_01": {"score": 65, "sub_scores": {"持久规则": 50, "单次指令": 75}},
+    "round_02": {"score": 65, "sub_scores": {"持久规则": 50, "单次指令": 75}},
+    "round_03": {"score": 45, "sub_scores": {"持久规则": 37.5, "单次指令": 50}},
+    "round_04": {"score": 80, "sub_scores": {"持久规则": 50, "单次指令": 100}},
+    "round_05": {"score": 80, "sub_scores": {"持久规则": 50, "单次指令": 100}},
+    "round_06": {"score": 50, "sub_scores": {"持久规则": 50, "单次指令": 50}},
+    "round_07": {"score": 80, "sub_scores": {"持久规则": 50, "单次指令": 100}},
+    "round_08": {"score": 80, "sub_scores": {"持久规则": 50, "单次指令": 100}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/response.md L1 无cosplay格式", "round_02/response.md L1 无cosplay", "round_03/response.md L1 error无cosplay", "round_08/response.md L1 中文简洁无cosplay"],
+  "reason": "cosplay全0(所有response缺少臣某谨奏/叩请圣裁)，concise优秀；单次指令R01最小可用实现未达标,R02 YAML未实现,R03零完成,R06未回到主线",
+  "deductions": [
+    {"round": "round_01", "item": "cosplay", "amount": 50, "reason": "response.md:L1 缺少臣某谨奏和叩请圣裁包装格式"},
+    {"round": "round_01", "item": "单次指令", "amount": 15, "reason": "prompt.json:L2 最小可用实现仅placeholder，#Placeholder for future"},
+    {"round": "round_02", "item": "单次指令", "amount": 15, "reason": "prompt.json:L2 YAML配置解析未实现，仅JSON"},
+    {"round": "round_03", "item": "cosplay", "amount": 13, "reason": "response.md:L1 error message无cosplay格式"},
+    {"round": "round_03", "item": "单次指令", "amount": 30, "reason": "replay.jsonl:L5 finish,0/4子步骤覆盖,无任何实现"}
+  ],
+  "evidence_gaps": []
+}

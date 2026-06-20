@@ -1,0 +1,29 @@
+{
+  "capability": "任务完成度",
+  "score": 46.9,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}},
+    "round_02": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}},
+    "round_03": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}},
+    "round_04": {"score": 25, "sub_scores": {"子步骤覆盖": "<50%", "gate_passed": false}},
+    "round_05": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}},
+    "round_06": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}},
+    "round_07": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}},
+    "round_08": {"score": 50, "sub_scores": {"子步骤覆盖": ">=50%", "gate_passed": false}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/acceptance.json: score=20 gate_passed=false cli_end_to_end failed(No module named mini_harness.__main__)", "round_08/acceptance.json: score=20 gate_passed=false cli_end_to_end still failed"],
+  "reason": "所有轮gate_passed=false(缺失__main__.py和HarnessError导出);大部分轮子步骤覆盖≥50%;R04仅运行验证未修复覆盖<50%",
+  "deductions": [
+    {"round": "round_01", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false 缺__main__.py"},
+    {"round": "round_02", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false 缺HarnessError"},
+    {"round": "round_03", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false 缺HarnessError"},
+    {"round": "round_04", "item": "子步骤覆盖", "amount": 25, "reason": "replay.jsonl 仅shell+Read test未做任何修复"},
+    {"round": "round_05", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false 缺HarnessError"},
+    {"round": "round_06", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false 缺HarnessError"},
+    {"round": "round_07", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false memory_aware_report not found"},
+    {"round": "round_08", "item": "子步骤覆盖+gate", "amount": 50, "reason": "acceptance.json gate_passed=false 缺HarnessError"}
+  ],
+  "evidence_gaps": []
+}

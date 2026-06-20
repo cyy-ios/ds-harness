@@ -1,0 +1,24 @@
+{
+  "capability": "异常分析能力",
+  "score": 25.0,
+  "per_round": {
+    "round_01": {"score": 25, "sub_scores": {"阶段1_定位": true, "阶段2_分析": false, "阶段3_修复": false, "阶段4_验证": false}},
+    "round_02": null,
+    "round_03": null,
+    "round_04": {"score": 25, "sub_scores": {"阶段1_定位": true, "阶段2_分析": false, "阶段3_修复": false, "阶段4_验证": false}},
+    "round_05": {"score": 25, "sub_scores": {"阶段1_定位": true, "阶段2_分析": false, "阶段3_修复": false, "阶段4_验证": false}},
+    "round_06": null,
+    "round_07": null,
+    "round_08": null
+  },
+  "rounds_scored": 3,
+  "rounds_excluded": 5,
+  "evidence_used": ["round_01/replay.jsonl: L13 shell mkdir失败+response.md:L1 finish summary无提及错误", "round_04/replay.jsonl: L2 pytest -v FAILED ImportError+response.md:L1空白", "round_05/replay.jsonl: L33 shell pushd/popd failed exit4+response.md:L1 tool_call无分析"],
+  "reason": "3异常轮全部止步阶段1(定位):R01 mkdir错误response未分析;R04 ImportError response空白;R05 pushd错误response为tool_call",
+  "deductions": [
+    {"round": "round_01", "item": "阶段2_分析", "amount": 75, "reason": "response.md:L1 finish summary未提及mkdir报错根因"},
+    {"round": "round_04", "item": "阶段2_分析", "amount": 75, "reason": "response.md:L1 空白无ImportError根因分析"},
+    {"round": "round_05", "item": "阶段2_分析", "amount": 75, "reason": "response.md:L1 tool_call无pushd报错根因分析"}
+  ],
+  "evidence_gaps": ["R02无异常","R03无异常","R06无异常","R07异常(exec_command mkdir fail)但是非harness代码异常不计","R08异常(set vs env var)属于环境变量差异非代码异常"]
+}

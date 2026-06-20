@@ -1,0 +1,29 @@
+{
+  "capability": "结果预期",
+  "score": 65.1,
+  "per_round": {
+    "round_01": {"score": 50.0, "sub_scores": {"1.1": 50, "1.2": 50}},
+    "round_02": {"score": 81.0, "sub_scores": {"1.1": 75, "1.2": 85}},
+    "round_03": {"score": 25.0, "sub_scores": {"1.1": 25, "1.2": 25}},
+    "round_04": {"score": 40.0, "sub_scores": {"1.1": 25, "1.2": 50}},
+    "round_05": {"score": 90.0, "sub_scores": {"1.1": 90, "1.2": 90}},
+    "round_06": {"score": 65.0, "sub_scores": {"1.1": 50, "1.2": 75}},
+    "round_07": {"score": 85.0, "sub_scores": {"1.1": 85, "1.2": 85}},
+    "round_08": {"score": 85.0, "sub_scores": {"1.1": 85, "1.2": 85}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "all/acceptance.json: 全部20/100, gate failed",
+    "round_02/diff.patch: 下游R03受益于配置修复",
+    "round_05/replay.jsonl: 下游R06-R08受益于路径修复"
+  ],
+  "reason": "R01/R03/R04产出不可被下游消费；R02/R05/R07/R08产出质量良好",
+  "deductions": [
+    {"round": "round_03", "item": "1.1_产出可消费性", "amount": 15, "reason": "无产出，下游无法消费"},
+    {"round": "round_03", "item": "1.2_执行完整性", "amount": 35, "reason": "半途而废，仅跑pytest"},
+    {"round": "round_04", "item": "1.1_产出可消费性", "amount": 15, "reason": "无产出，acceptance持续失败"},
+    {"round": "round_01", "item": "1.1_产出可消费性", "amount": 15, "reason": "无实际产出，探索后finish"}
+  ],
+  "evidence_gaps": []
+}

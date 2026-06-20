@@ -1,0 +1,23 @@
+{
+  "capability": "任务规划",
+  "score": 72.5,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_02": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_03": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_04": {"score": 50, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_05": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_06": {"score": 100, "sub_scores": {"1.1": 100, "1.2": 100}},
+    "round_07": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_08": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01-08/replay.jsonl"],
+  "reason": "M4路线严重绕路-创建假数据而非修复代码；M2重建文件有不必要探索；M6直接高效",
+  "deductions": [
+    {"round": "round_04", "item": "1.1_路线效率", "amount": 75, "reason": "创建数据文件+runner.py绕过了真正的问题"},
+    {"round": "round_02", "item": "1.1_路线效率", "amount": 25, "reason": "重建已有文件，重复探索"}
+  ],
+  "evidence_gaps": []
+}

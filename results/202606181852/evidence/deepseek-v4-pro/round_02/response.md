@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M2_config 完成：增加了 JSON/YAML 配置解析功能，支持通过 --config 显式指定或自动检测仓库根目录下的 harness_config.json(yaml/yml) 缺省配置。CLI run 子命令保留，现在可以混合使用配置文件指定输入文件和 max_retries。测试全部通过。", "tests": "pytest (6 tests) passed; CLI run with --config and default config both work."}

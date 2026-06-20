@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-06-19T12:37:24.829493+00:00",
+  "processed_count": 5,
+  "rejected_count": 2,
+  "retry_count": 3,
+  "source_files": [
+    "a.csv"
+  ],
+  "memory_reference": "memory/memory_summary.md"
+}

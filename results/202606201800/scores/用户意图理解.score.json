@@ -1,0 +1,25 @@
+{
+  "capability": "用户意图理解",
+  "score": 41.3,
+  "per_round": {
+    "round_01": {"score": 100, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 100}},
+    "round_02": {"score": 100, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 100}},
+    "round_03": {"score": 50, "sub_scores": {"1.1_识别请求针对的项目部分": 50, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 0}},
+    "round_04": {"score": 50, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 0}},
+    "round_05": {"score": 100, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 100}},
+    "round_06": {"score": 62.5, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 0}},
+    "round_07": {"score": 100, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 100}},
+    "round_08": {"score": 100, "sub_scores": {"1.1_识别请求针对的项目部分": 100, "1.3_workspace归属": 100, "1.4_对话流感知与策略匹配": 100}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/replay.jsonl:L2 Read SKILL.md 首步准确", "round_03/replay.jsonl:L1-L5 仅读2个data文件后finish，未触及prompt主线", "round_04/replay.jsonl:L1 shell首步非Read，纠正型需Edit/Write首步", "round_06/replay.jsonl:L1-L5 读error.log后直接finish，未回到主线"],
+  "reason": "R03零产出+首步未命中关键路径，R04首步shell非纠正预期，R06读完中断文件未回归主线，拉低均值",
+  "deductions": [
+    {"round": "round_03", "item": "1.1_识别请求针对的项目部分", "amount": 25, "reason": "replay.jsonl:L1 Read data/input.csv 未含prompt runner关键词，命中率<50%"},
+    {"round": "round_03", "item": "1.4_对话流感知与策略匹配", "amount": 50, "reason": "replay.jsonl:L5 finish无任何实现，新话题仅Read后应继续深入"},
+    {"round": "round_04", "item": "1.4_对话流感知与策略匹配", "amount": 50, "reason": "replay.jsonl:L1 shell pytest首步，非纠正型(修固定位)预期Edit/Write"},
+    {"round": "round_06", "item": "1.4_对话流感知与策略匹配", "amount": 50, "reason": "replay.jsonl:L5 finish无主线动作，中断处理后应回到mini harness操作"}
+  ],
+  "evidence_gaps": []
+}

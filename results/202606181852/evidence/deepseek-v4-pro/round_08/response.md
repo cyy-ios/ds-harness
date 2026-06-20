@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M8完成：新增 src/mini_harness/report.py 模块，提供 generate_report() 函数返回符合规范的报告字典。现有测试全部通过 (12 passed)，确认既有能力保持可用。", "tests": "12 passed in 0.15s"}

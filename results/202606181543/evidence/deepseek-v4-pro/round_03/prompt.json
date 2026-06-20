@@ -1,0 +1,4 @@
+{
+  "round": "round_03",
+  "prompt": "里程碑 M3_runner_retry：实现 extract/clean/report DAG runner、最多 2 次重试、结构化日志，并让输出报告反映真实处理结果。"
+}

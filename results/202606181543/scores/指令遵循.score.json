@@ -1,0 +1,28 @@
+{
+  "capability": "指令遵循",
+  "score": 77.2,
+  "per_round": {
+    "round_01": {"score": 77.0, "sub_scores": {"持久规则": 80, "单次指令": 75}},
+    "round_02": {"score": 83.0, "sub_scores": {"持久规则": 80, "单次指令": 85}},
+    "round_03": {"score": 62.0, "sub_scores": {"持久规则": 80, "单次指令": 50}},
+    "round_04": {"score": 62.0, "sub_scores": {"持久规则": 80, "单次指令": 50}},
+    "round_05": {"score": 86.0, "sub_scores": {"持久规则": 80, "单次指令": 90}},
+    "round_06": {"score": 89.0, "sub_scores": {"持久规则": 80, "单次指令": 95}},
+    "round_07": {"score": 86.0, "sub_scores": {"持久规则": 80, "单次指令": 90}},
+    "round_08": {"score": 83.0, "sub_scores": {"持久规则": 80, "单次指令": 85}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "all/response.md: concise check, cosplay NA (system requires JSON)",
+    "round_01/prompt.json: 创建包指令",
+    "round_03/prompt.json: 实现DAG runner指令未执行",
+    "round_04/prompt.json: 定位修复指令未实质执行"
+  ],
+  "reason": "持久规则concise保持在80分；单次指令R03/R04严重未执行导致拉低均值",
+  "deductions": [
+    {"round": "round_03", "item": "单次指令", "amount": 10, "reason": "未实现DAG runner/重试/结构化日志"},
+    {"round": "round_04", "item": "单次指令", "amount": 10, "reason": "未定位修复实际问题，仅跑测试"}
+  ],
+  "evidence_gaps": []
+}

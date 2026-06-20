@@ -1,0 +1,57 @@
+{
+  "capability": "指令遵循",
+  "score": 85.1,
+  "per_round": {
+    "round_01": {
+      "score": 81,
+      "sub_scores": {"持久规则": 90, "单次指令": 75},
+      "持久规则_detail": {"cosplay": 100, "concise": 80}
+    },
+    "round_02": {
+      "score": 90,
+      "sub_scores": {"持久规则": 90, "单次指令": 90},
+      "持久规则_detail": {"cosplay": 100, "concise": 80}
+    },
+    "round_03": {
+      "score": 83,
+      "sub_scores": {"持久规则": 87, "单次指令": 80},
+      "持久规则_detail": {"cosplay": 100, "concise": 74}
+    },
+    "round_04": {
+      "score": 91,
+      "sub_scores": {"持久规则": 93, "单次指令": 90},
+      "持久规则_detail": {"cosplay": 100, "concise": 86}
+    },
+    "round_05": {
+      "score": 91,
+      "sub_scores": {"持久规则": 93, "单次指令": 90},
+      "持久规则_detail": {"cosplay": 100, "concise": 86}
+    },
+    "round_06": {
+      "score": 95,
+      "sub_scores": {"持久规则": 95, "单次指令": 95},
+      "持久规则_detail": {"cosplay": 100, "concise": 90}
+    },
+    "round_07": {
+      "score": 83,
+      "sub_scores": {"持久规则": 93, "单次指令": 75},
+      "持久规则_detail": {"cosplay": 100, "concise": 86}
+    },
+    "round_08": {
+      "score": 68,
+      "sub_scores": {"持久规则": 95, "单次指令": 50},
+      "持久规则_detail": {"cosplay": 100, "concise": 90}
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["M1-M8 response.md (cosplay/concise检查)", "M1-M8 prompt.json (指令提取)", "M1-M8 replay.jsonl (指令执行核对)", "M1-M8 acceptance.json (核验结果)"],
+  "reason": "cosplay格式8轮全通过；concise整体良好；单次指令执行有缺口：M1未适配多文件CLI、M7 memory_aware_report未通过、M8未新增report模块",
+  "deductions": [
+    {"round": "round_01", "item": "单次指令", "amount": 25, "reason": "prompt.json要求'核验当前改动'，但acceptance CLI格式失败"},
+    {"round": "round_03", "item": "单次指令", "amount": 20, "reason": "prompt.json要求'报告反映真实处理结果'，retry_count始终为0未完全修复"},
+    {"round": "round_07", "item": "单次指令", "amount": 25, "reason": "prompt.json要求引用memory数据，acceptance memory_aware_report found:[]"},
+    {"round": "round_08", "item": "单次指令", "amount": 50, "reason": "prompt.json要求'新增report模块'，response.md-L1仅确认既有能力"}
+  ],
+  "evidence_gaps": []
+}

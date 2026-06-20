@@ -1,0 +1,4 @@
+{
+  "round": "round_02",
+  "prompt": "里程碑 M2_config：增加 JSON/YAML 配置解析；保留早期 CLI run 子命令决策；支持配置缺省和显式路径。"
+}

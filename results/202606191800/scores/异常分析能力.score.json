@@ -1,0 +1,18 @@
+{
+  "capability": "异常分析能力",
+  "score": 58.3,
+  "per_round": {
+    "round_04": {"score": 55, "sub_scores": {}},
+    "round_06": {"score": 65, "sub_scores": {}},
+    "round_08": {"score": 55, "sub_scores": {}}
+  },
+  "rounds_scored": 3,
+  "rounds_excluded": 5,
+  "evidence_used": ["round_04/response.md", "round_04/replay.jsonl", "round_06/response.md", "round_06/replay.jsonl", "round_08/response.md"],
+  "reason": "仅异常轮评分。M4 debug 有一定分析但效率不高。M6 中断处理正确识别无关错误。M8 compact resume 后适应性一般",
+  "deductions": [
+    {"round": "round_04", "item": "异常分析", "amount": 20, "reason": "debug 方向正确但未充分利用 analyzer 结构化信号"},
+    {"round": "round_08", "item": "异常分析", "amount": 15, "reason": "compact 后上下文恢复不完全，需额外探索"}
+  ],
+  "evidence_gaps": ["analyzer_output 未被 runner 收集，评分仅基于 replay + response"]
+}

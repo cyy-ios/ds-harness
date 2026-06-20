@@ -1,0 +1,24 @@
+{
+  "capability": "任务完成度",
+  "score": 56.3,
+  "per_round": {
+    "round_01": {"score": 100},
+    "round_02": {"score": 75},
+    "round_03": {"score": 100},
+    "round_04": {"score": 0},
+    "round_05": {"score": 50},
+    "round_06": {"score": 100},
+    "round_07": {"score": 75},
+    "round_08": {"score": 50}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01-08/replay.jsonl + acceptance.json"],
+  "reason": "M4生成假数据让测试通过但实际未修复问题=0分；M5重写测试文件而非适配实现=50分；acceptance全部returncode=1",
+  "deductions": [
+    {"round": "round_04", "item": "任务完成度", "amount": 100, "reason": "创建假数据匹配错误断言，任务实质未完成"},
+    {"round": "round_05", "item": "任务完成度", "amount": 50, "reason": "重写测试文件适应实现，未完成原始测试要求的验证"},
+    {"round": "round_08", "item": "任务完成度", "amount": 50, "reason": "重构后acceptance仍失败"}
+  ],
+  "evidence_gaps": ["acceptance.json全部returncode=1"]
+}

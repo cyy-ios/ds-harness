@@ -1,0 +1,1 @@
+M4: Implemented runner.py with extract/clean/report DAG, retry logic, snake_case conversion. Fixed test: processed_count=6, rejected_count=3. All 5 tests pass.

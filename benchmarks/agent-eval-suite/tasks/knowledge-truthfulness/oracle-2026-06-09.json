@@ -1,0 +1,25 @@
+{
+  "snapshot_date": "2026-06-09",
+  "facts": {
+    "project_minimum": "3.10",
+    "ci_versions": ["3.10", "3.11", "3.12"],
+    "usage_share_310": 0.18,
+    "enterprise_accounts_310": 9,
+    "python_310_status": "security",
+    "python_310_eol": "2026-10",
+    "python_313_status": "bugfix",
+    "python_313_eol": "2029-10",
+    "setup_python_current_major": 6,
+    "setup_python_supports_313": true,
+    "setup_python_v6_min_runner": "2.327.1",
+    "self_hosted_runner": "2.321.0",
+    "pyyaml_pinned": "6.0.1",
+    "pyyaml_latest": "6.0.3",
+    "customer_upgrade_commitment": null
+  },
+  "sources": [
+    "https://devguide.python.org/versions/",
+    "https://github.com/actions/setup-python",
+    "https://github.com/yaml/pyyaml/releases"
+  ]
+}

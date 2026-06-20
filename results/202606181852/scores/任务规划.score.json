@@ -1,0 +1,28 @@
+{
+  "capability": "任务规划",
+  "score": 68.8,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_02": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_03": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_04": {"score": 100, "sub_scores": {"1.1": 100, "1.2": 100}},
+    "round_05": {"score": 50, "sub_scores": {"1.1": 50, "1.2": 50}},
+    "round_06": {"score": 75, "sub_scores": {"1.1": 75, "1.2": 75}},
+    "round_07": {"score": 50, "sub_scores": {"1.1": 50, "1.2": 50}},
+    "round_08": {"score": 25, "sub_scores": {"1.1": 25, "1.2": 25}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "R4 replay: 先读测试代码→读 test_long_log_debug.py→读 pipeline.py→读数据文件→精确修改，路线高效",
+    "R6 replay: 先读 logs→再读 handoff→运行 pytest 验证→确认后 finish，逻辑清晰",
+    "R7 replay: 读 memory→读 compat→读 perf→跑 CLI 生成数据→写 generate_report.py→跑报告，但未检查 output 目录是否存在",
+    "R8 replay: 仅一次 write_file 即结束（无探索/read），路线不完整"
+  ],
+  "reason": "R4 完美（读→定位→修复→验证）。R6 有验证步骤。R7 有生成链路但漏了确认产出。R8 跳过探索直接写代码。整体路线效率中上。",
+  "deductions": [
+    {"round": "round_07", "item": "1.1_路线效率", "amount": 50, "reason": "未检查 output/report.json 是否存在就读取"},
+    {"round": "round_08", "item": "1.1_路线效率", "amount": 75, "reason": "跳探索直接写代码"}
+  ],
+  "evidence_gaps": ["简化工具协议仅 4 种工具，1.2 工具选择为估计值"]
+}

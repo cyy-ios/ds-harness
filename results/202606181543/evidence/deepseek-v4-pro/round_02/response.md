@@ -1,0 +1,1 @@
+{"tool":"finish", "summary": "M2_config: config.py added with JSON/YAML config parsing, fallback to defaults; tests pass (8 passed).", "tests": "8 passed"}

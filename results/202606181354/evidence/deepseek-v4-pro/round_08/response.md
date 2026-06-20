@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "Added a separate report module (src/mini_harness/report.py) with functions write_report and write_memory_summary. Refactored Pipeline.report() to use these functions, improving modularity. All existing tests pass (11 passed). The report module produces the same output as before, no functional change.", "tests": "11 passed"}

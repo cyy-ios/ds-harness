@@ -1,0 +1,23 @@
+{
+  "capability": "指令遵循",
+  "score": 72.5,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 70, "单次指令": 75}},
+    "round_02": {"score": 75, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 70, "单次指令": 75}},
+    "round_03": {"score": 70, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 65, "单次指令": 70}},
+    "round_04": {"score": 70, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 65, "单次指令": 70}},
+    "round_05": {"score": 75, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 70, "单次指令": 75}},
+    "round_06": {"score": 75, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 70, "单次指令": 75}},
+    "round_07": {"score": 70, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 65, "单次指令": 70}},
+    "round_08": {"score": 70, "sub_scores": {"持久规则_cosplay": 80, "持久规则_concise": 65, "单次指令": 70}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["全部 round/response.md", "全部 round/replay.jsonl", "fixture/.codex/instructions.md"],
+  "reason": "cosplay 格式一致执行，concise 部分轮次有冗余铺垫。fixture 规则（无 pip install、相对路径、std lib）基本遵循",
+  "deductions": [
+    {"round": "round_03", "item": "持久规则_concise", "amount": 10, "reason": "response 含多行列举已完成事项"},
+    {"round": "round_07", "item": "持久规则_concise", "amount": 10, "reason": "report 生成回复偏长，有复述 prompt 内容"}
+  ],
+  "evidence_gaps": []
+}

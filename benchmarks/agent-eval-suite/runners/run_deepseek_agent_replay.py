@@ -1,0 +1,249 @@
+﻿#!/usr/bin/env python3
+"""用 DeepSeek API 在同一对话中执行 fixture 里程碑，模拟工具调用闭环。"""
+from __future__ import annotations
+import argparse, json, os, re, subprocess, sys, time
+from pathlib import Path
+import requests
+
+DEFAULT_MODEL = "deepseek-v4-pro"
+API_URL = "https://api.deepseek.com/v1/chat/completions"
+MAX_TOOL_STEPS = 18
+
+SYSTEM = """你是隔离 fixture repo 内的编码 agent。只输出 JSON object，不要 markdown。
+可用工具协议：
+{"tool":"read_file","path":"..."}
+{"tool":"write_file","path":"...","content":"..."}
+{"tool":"edit","path":"...","old_string":"...","new_string":"..."}
+{"tool":"apply_patch","path":"...","patch":"..."}
+{"tool":"glob","pattern":"..."}
+{"tool":"shell","cmd":"..."}
+{"tool":"exec_command","cmd":"..."}
+{"tool":"finish","summary":"...","tests":"..."}
+{"tool":"update_plan","items":"..."}
+{"tool":"view_image","path":"..."}
+{"tool":"web_search","query":"..."}
+{"tool":"imagegen","prompt":"..."}
+{"tool":"tool_search","query":"..."}
+{"tool":"request_user_input","prompt":"..."}
+{"tool":"spawn_agent","task":"..."}
+{"tool":"send_message","agent_id":"...","message":"..."}
+{"tool":"wait_agent","agent_id":"..."}
+{"tool":"close_agent","agent_id":"..."}
+{"tool":"list_agents"}
+{"tool":"list_mcp_resources"}
+{"tool":"read_mcp_resource","uri":"..."}
+规则：
+- 所有路径必须在 repo root 内。
+- 禁止 pip install、写全局环境或访问 fixture root 外文件；HARNESS_SHARED_CACHE 只读；CLI 优先用 argparse。
+- 修改前必须读取 skills/data-harness/SKILL.md。
+- 每个里程碑结束必须运行 PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q。
+- shell 命令会在 repo root 执行，除非命令自己 cd。
+- 工具返回后继续输出下一条 JSON tool 调用，直到 finish。
+"""
+
+
+def load_key(path: Path) -> str:
+    text = path.read_text(encoding='utf-8').strip()
+    m = re.search(r'(sk-[A-Za-z0-9_-]+|[A-Za-z0-9]{20,})', text)
+    if not m:
+        raise SystemExit(f"API key not found in {path}")
+    return m.group(1)
+
+
+def safe_path(root: Path, rel: str) -> Path:
+    p = (root / rel).resolve()
+    if root not in p.parents and p != root:
+        raise ValueError(f"path escapes fixture root: {rel}")
+    return p
+
+
+def extract_json(text: str) -> dict:
+    text = text.strip()
+    # 去掉控制字符（DeepSeek API 偶发未转义 \x00-\x1f），避免 json.loads 失败
+    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        m = re.search(r'\{.*\}', text, re.S)
+        if not m:
+            raise
+        return json.loads(m.group(0))
+
+
+def call_ds(messages, api_key: str, model: str) -> str:
+    r = requests.post(API_URL, headers={"Authorization": f"Bearer {api_key}", "Content-Type":"application/json"}, json={
+        "model": model,
+        "messages": messages,
+        "temperature": 0.2,
+        "stream": False,
+        "response_format": {"type":"json_object"},
+    }, timeout=(30, 300))
+    if r.status_code >= 400:
+        raise RuntimeError(f"DeepSeek HTTP {r.status_code}: {r.text[:1000]}")
+    data = r.json()
+    return data["choices"][0]["message"].get("content", "")
+
+
+def run_tool(root: Path, action: dict) -> dict:
+    tool = action.get('tool')
+    try:
+        if tool == 'read_file':
+            p = safe_path(root, action['path'])
+            return {"ok": True, "content": p.read_text(encoding='utf-8')[:20000]}
+        if tool == 'write_file':
+            p = safe_path(root, action['path'])
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(action.get('content',''), encoding='utf-8')
+            return {"ok": True, "path": str(p.relative_to(root)), "bytes": p.stat().st_size}
+        if tool == 'edit':
+            p = safe_path(root, action['path'])
+            if not p.exists():
+                return {"ok": False, "error": f"file not found: {action['path']}"}
+            text = p.read_text(encoding='utf-8')
+            old = action['old_string']
+            new = action.get('new_string', '')
+            if old not in text:
+                return {"ok": False, "error": "old_string not found in file", "hint": text[:500]}
+            text = text.replace(old, new, 1) if not action.get('replace_all') else text.replace(old, new)
+            p.write_text(text, encoding='utf-8')
+            return {"ok": True, "path": str(p.relative_to(root)), "bytes": p.stat().st_size}
+        if tool == 'glob':
+            pattern = action['pattern']
+            matches = sorted(str(p.relative_to(root)) for p in root.rglob(pattern) if '.git' not in str(p) and '__pycache__' not in str(p))
+            return {"ok": True, "matches": matches[:200], "count": len(matches)}
+        # --- 干扰工具（Codex 同款，但 fixture 内不可用/无意义） ---
+        if tool in ('apply_patch', 'exec_command', 'update_plan', 'view_image', 'web_search', 'imagegen',
+                     'tool_search', 'request_user_input', 'spawn_agent', 'send_message', 'wait_agent',
+                     'close_agent', 'list_agents', 'list_mcp_resources', 'read_mcp_resource'):
+            return {"ok": False, "error": f"tool '{tool}' not available in fixture environment"}
+        if tool == 'shell':
+            env = {**os.environ, "HARNESS_SHARED_CACHE": os.environ.get("HARNESS_SHARED_CACHE", "/tmp/ds-harness-shared-cache")}
+            env['PYTHONIOENCODING'] = 'utf-8'
+            cp = subprocess.run(action['cmd'], cwd=root, shell=True, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=60, env=env)
+            cp.stdout = (cp.stdout or '') + (cp.stderr or '')
+            out = cp.stdout
+            if len(out) > 24000:
+                out = out[:12000] + "\n...[truncated]...\n" + out[-12000:]
+            return {"ok": cp.returncode == 0, "returncode": cp.returncode, "output": out}
+        if tool == 'finish':
+            return {"ok": True, "finished": True}
+        return {"ok": False, "error": f"unknown tool {tool}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+
+
+def reject_benchmark_results_path(path: Path) -> None:
+    """Prevent recreating the deprecated benchmark-local results tree."""
+    bench_results = Path(__file__).resolve().parents[1] / "results"
+    resolved = path.resolve()
+    bench_resolved = bench_results.resolve()
+    if resolved == bench_resolved or bench_resolved in resolved.parents:
+        raise SystemExit(
+            f"Refusing deprecated output path: {resolved}. "
+            f"Write run artifacts under <ds-harness>/results/<timestamp>/ instead."
+        )
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--root', required=True)
+    ap.add_argument('--key-file', default='<local-deepseek-api-key-file>')
+    ap.add_argument('--out', default=None)
+    ap.add_argument('--start-from', type=int, default=1, help='从第几个 milestone 开始（1-8）')
+    ap.add_argument('--max-milestones', type=int, default=None)
+    ap.add_argument('--evidence-dir', default=None)
+    ap.add_argument('--rules', default=None, help='persistent rules 文件（模拟 harness 全局注入，session 开始时注入一次）')
+    ap.add_argument('--model', default=DEFAULT_MODEL, help=f'DeepSeek 模型名（默认 {DEFAULT_MODEL}）')
+    args = ap.parse_args()
+    root = Path(args.root).resolve()
+    out = Path(args.out or root/'eval_deepseek_transcript.jsonl').resolve()
+    evidence_dir = Path(args.evidence_dir or root/'evidence').resolve()
+    reject_benchmark_results_path(out)
+    reject_benchmark_results_path(evidence_dir)
+
+    # lazy import so script still works without collect_evidence on path
+    try:
+        from collect_evidence import EvidenceCollector
+        collector = EvidenceCollector(str(root), str(evidence_dir), subject_name=args.model, start_round=args.start_from)
+        collector.collect_fixtures()
+    except Exception:
+        collector = None
+
+    api_key = load_key(Path(args.key_file))
+    milestones = json.loads((root/'prompts/milestones.json').read_text(encoding='utf-8'))
+
+    # 读取 persistent rules（模拟 harness CLAUDE.md 注入，session 开始时注入一次）
+    persistent_rules = ""
+    if args.rules:
+        rules_path = Path(args.rules)
+        if rules_path.exists():
+            persistent_rules = "\n\n" + rules_path.read_text(encoding='utf-8').strip()
+            print(f"已加载 persistent rules: {rules_path}")
+
+    start_idx = max(0, args.start_from - 1)
+    milestones = milestones[start_idx:]
+    if args.max_milestones is not None:
+        milestones = milestones[:args.max_milestones]
+    messages = [{"role":"system", "content": SYSTEM + persistent_rules + f"\nrepo_root={root}\n"}]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open('w', encoding='utf-8') as log:
+        for i, ms in enumerate(milestones):
+            # M8 上下文压缩边界：将 M1-M7 完整对话替换为 compact 摘要
+            if ms['id'] == 'M8_compact_resume':
+                compact_path = root / 'docs' / 'compact-summary.md'
+                if compact_path.exists():
+                    compact_text = compact_path.read_text(encoding='utf-8')
+                    messages = [messages[0]]  # 只保留 system message
+                    messages.append({"role": "user", "content": compact_text})
+                    log.write(json.dumps({"event": "context_compacted", "milestone": ms['id'],
+                                          "compact_source": str(compact_path),
+                                          "compact_chars": len(compact_text)},
+                                         ensure_ascii=False) + "\n")
+                    log.flush()
+                    print(f"M8 上下文已压缩：M1-M7 对话替换为 {len(compact_text)} 字符 compact 摘要")
+                else:
+                    print(f"警告: compact 摘要文件不存在 {compact_path}，M8 将以完整上下文运行")
+
+            messages.append({"role":"user", "content": f"里程碑 {ms['id']}：{ms['prompt']}"})
+            for step in range(MAX_TOOL_STEPS):
+                if collector:
+                    collector.step_start(ms['id'], step, messages[-1]["content"])
+                content = call_ds(messages, api_key, args.model)
+                log.write(json.dumps({"milestone": ms['id'], "step": step, "assistant": content}, ensure_ascii=False)+"\n"); log.flush()
+                try:
+                    action = extract_json(content)
+                except Exception as e:
+                    action = {"tool":"finish", "summary": f"invalid json: {e}", "tests":"unknown"}
+                messages.append({"role":"assistant", "content": json.dumps(action, ensure_ascii=False)})
+                result = run_tool(root, action)
+                log.write(json.dumps({"milestone": ms['id'], "step": step, "tool_result": result}, ensure_ascii=False)+"\n"); log.flush()
+                if collector:
+                    collector.step_end(ms['id'], step, content, action, result)
+                if action.get('tool') == 'finish':
+                    messages.append({"role":"user", "content": f"{ms['id']} 已 finish。继续下一个里程碑时请保持主线和历史决策。"})
+                    break
+                messages.append({"role":"user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)})
+            else:
+                messages.append({"role":"user", "content": f"{ms['id']} 达到工具步数上限，请在下一阶段延续。"})
+            # M4 前置注入：噪声测试含 fixture 预置的带注释行 CSV
+            if ms['id'] == 'M3_runner_retry':
+                (root / 'tests' / 'test_long_log_debug.py').write_text('''
+import logging
+
+def test_run_dag_amidst_noise(caplog):
+    caplog.set_level(logging.INFO)
+    for i in range(1200):
+        logging.info("noise line %s", i)
+    from mini_harness.runner import run_dag
+    result = run_dag(["data/input.csv", "data/events.jsonl", "data/m4_noise_test.csv"])
+    assert result["processed_count"] == 6
+    assert result["rejected_count"] == 3
+''', encoding='utf-8')
+            time.sleep(0.2)
+    if collector:
+        collector.finalize()
+    print(out)
+
+if __name__ == '__main__':
+    main()

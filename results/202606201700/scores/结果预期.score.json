@@ -1,0 +1,24 @@
+{
+  "capability": "结果预期",
+  "score": 60.6,
+  "per_round": {
+    "round_01": {"score": 45, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 60}},
+    "round_02": {"score": 65, "sub_scores": {"1.1_产出可消费性": 50, "1.2_执行完整性与自检": 60}},
+    "round_03": {"score": 75, "sub_scores": {"1.1_产出可消费性": 75, "1.2_执行完整性与自检": 80}},
+    "round_04": {"score": 0, "sub_scores": {"1.1_产出可消费性": 0, "1.2_执行完整性与自检": 0}},
+    "round_05": {"score": 80, "sub_scores": {"1.1_产出可消费性": 75, "1.2_执行完整性与自检": 80}},
+    "round_06": {"score": 50, "sub_scores": {"1.1_产出可消费性": 50, "1.2_执行完整性与自检": 40}},
+    "round_07": {"score": 65, "sub_scores": {"1.1_产出可消费性": 50, "1.2_执行完整性与自检": 60}},
+    "round_08": {"score": 65, "sub_scores": {"1.1_产出可消费性": 75, "1.2_执行完整性与自检": 60}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_02/diff.patch: L119-L140 cli.py下游R03修改(修正比例≈18.8%)", "round_03/diff.patch: L57-L93 runner.py retries_used+run_dag", "round_04/acceptance.json: gate_passed=false 无产出0分", "round_05/diff.patch: runner.py重写+test_fix 下游R06 Read 0修改"],
+  "reason": "R01产出被R02/R03大幅修改;R04零产出0分;R05产出被R06直接消费无修改;R07产出(报告)未被下游引用;R06/R02产出存在修正",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_产出可消费性", "amount": 75, "reason": "diff.patch cli.py 16L→R02修至20L, runner.py 119L→R02修, 最大修正比例>50%"},
+    {"round": "round_04", "item": "1.1_产出可消费性", "amount": 100, "reason": "diff.patch 无功能变更 produce 0行"},
+    {"round": "round_04", "item": "1.2_执行完整性与自检", "amount": 100, "reason": "prompt要求定位+修复但仅运行pytest未做任何修改"}
+  ],
+  "evidence_gaps": []
+}

@@ -1,0 +1,29 @@
+{
+  "capability": "任务完成度",
+  "score": 63.1,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {}},
+    "round_02": {"score": 75, "sub_scores": {}},
+    "round_03": {"score": 25, "sub_scores": {}},
+    "round_04": {"score": 25, "sub_scores": {}},
+    "round_05": {"score": 85, "sub_scores": {}},
+    "round_06": {"score": 75, "sub_scores": {}},
+    "round_07": {"score": 85, "sub_scores": {}},
+    "round_08": {"score": 85, "sub_scores": {}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "all/acceptance.json: 全部20/100 gate failed",
+    "round_01/replay.jsonl: 代码预置，agent仅探索",
+    "round_03/replay.jsonl: 2 tool steps，无代码变更",
+    "round_04/replay.jsonl: 6 tool steps，无代码变更"
+  ],
+  "reason": "R01/R03/R04未达到预期结果；R02/R05/R06/R07/R08完成质量中等偏上",
+  "deductions": [
+    {"round": "round_01", "item": "任务完成度", "amount": 50, "reason": "代码预置，agent仅探索未创建"},
+    {"round": "round_03", "item": "任务完成度", "amount": 75, "reason": "无代码变更，仅跑pytest"},
+    {"round": "round_04", "item": "任务完成度", "amount": 75, "reason": "未定位也未修复任何问题"}
+  ],
+  "evidence_gaps": []
+}

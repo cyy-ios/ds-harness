@@ -1,0 +1,29 @@
+{
+  "capability": "任务完成度",
+  "score": 57.3,
+  "per_round": {
+    "round_01": {"score": 65, "sub_scores": {}},
+    "round_02": {"score": 65, "sub_scores": {}},
+    "round_03": {"score": 65, "sub_scores": {}},
+    "round_04": {"score": 60, "sub_scores": {}},
+    "round_05": {"score": 60, "sub_scores": {}},
+    "round_06": {"score": 50, "sub_scores": {}},
+    "round_07": {"score": 50, "sub_scores": {}},
+    "round_08": {"score": 25, "sub_scores": {}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["M1-M8 replay.jsonl", "M1-M8 acceptance.json", "M1-M8 compact_trigger.json"],
+  "reason": "各轮agent自检自纠完成基本功能，但acceptance.json反映均未达到evaluator验收标准(CLI端到端失败/缺mini_harness.runner/缺memory_aware_report)；M6仅回复解释无工程产出，M8仅确认现有能力未新增",
+  "deductions": [
+    {"round": "round_01", "item": "任务完成度", "amount": 35, "reason": "acceptance.json score=20, cli_end_to_end与cwd_independent均失败"},
+    {"round": "round_02", "item": "任务完成度", "amount": 35, "reason": "acceptance.json score=20，相同CLI失败"},
+    {"round": "round_03", "item": "任务完成度", "amount": 35, "reason": "acceptance.json score=20"},
+    {"round": "round_04", "item": "任务完成度", "amount": 40, "reason": "acceptance.json score=20，未解决CLI多文件支持"},
+    {"round": "round_05", "item": "任务完成度", "amount": 40, "reason": "acceptance.json score=20"},
+    {"round": "round_06", "item": "任务完成度", "amount": 50, "reason": "replay.jsonl无任何代码变更/工程产出，仅产出分析文字"},
+    {"round": "round_07", "item": "任务完成度", "amount": 50, "reason": "acceptance.json memory_aware_report passed=false(found:[])"},
+    {"round": "round_08", "item": "任务完成度", "amount": 75, "reason": "response.md-L1仅确认现有能力，未新增report模块或功能"}
+  ],
+  "evidence_gaps": ["diff.patch全为(no changes)，无法核验实际文件变更"]
+}

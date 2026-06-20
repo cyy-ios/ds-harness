@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "Implemented DAG runner retry mechanism with up to 2 retries (max_attempts=3). Retry decorator tracks retries_used and success. Runner uses configurable retry_attempts from JSON config. Structured logs record attempt, stage, status. Report reflects real retry_count. All 10 tests pass.", "tests": "10 passed"}

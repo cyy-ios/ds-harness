@@ -1,0 +1,23 @@
+{
+  "capability": "结果预期",
+  "score": 58.0,
+  "per_round": {
+    "round_01": {"score": 55, "sub_scores": {"1.1_产出可消费性": 60, "1.2_执行完整性与自检": 50}},
+    "round_02": {"score": 55, "sub_scores": {"1.1_产出可消费性": 60, "1.2_执行完整性与自检": 50}},
+    "round_03": {"score": 60, "sub_scores": {"1.1_产出可消费性": 65, "1.2_执行完整性与自检": 55}},
+    "round_04": {"score": 55, "sub_scores": {"1.1_产出可消费性": 60, "1.2_执行完整性与自检": 50}},
+    "round_05": {"score": 60, "sub_scores": {"1.1_产出可消费性": 65, "1.2_执行完整性与自检": 55}},
+    "round_06": {"score": 60, "sub_scores": {"1.1_产出可消费性": 60, "1.2_执行完整性与自检": 60}},
+    "round_07": {"score": 60, "sub_scores": {"1.1_产出可消费性": 65, "1.2_执行完整性与自检": 55}},
+    "round_08": {"score": 60, "sub_scores": {"1.1_产出可消费性": 60, "1.2_执行完整性与自检": 60}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["全部 round/response.md", "全部 round/acceptance.json", "全部 round/replay.jsonl", "全部 round/artifact/"],
+  "reason": "agent 完成验证后用仓库内命令核验，但自检覆盖不完整——声称测试通过但 acceptance 未过",
+  "deductions": [
+    {"round": "round_01", "item": "1.2_执行完整性与自检", "amount": 20, "reason": "自检仅跑 pytest 未用 acceptance 同等标准核验"},
+    {"round": "round_04", "item": "1.2_执行完整性与自检", "amount": 15, "reason": "debug 后验证不充分，未发现 acceptance 未提升"}
+  ],
+  "evidence_gaps": []
+}

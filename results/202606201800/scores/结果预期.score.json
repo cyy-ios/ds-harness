@@ -1,0 +1,24 @@
+{
+  "capability": "结果预期",
+  "score": 39.4,
+  "per_round": {
+    "round_01": {"score": 42, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 60}},
+    "round_02": {"score": 42, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 60}},
+    "round_03": {"score": 0, "sub_scores": {"1.1_产出可消费性": 0, "1.2_执行完整性与自检": 0}},
+    "round_04": {"score": 42, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 60}},
+    "round_05": {"score": 42, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 60}},
+    "round_06": {"score": 25, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 20}},
+    "round_07": {"score": 42, "sub_scores": {"1.1_产出可消费性": 25, "1.2_执行完整性与自检": 60}},
+    "round_08": {"score": 50, "sub_scores": {"1.1_产出可消费性": 50, "1.2_执行完整性与自检": 40}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/acceptance.json gate_passed=false cli_end_to_end failed", "round_02/acceptance.json gate_passed=false same pattern", "round_03/diff.patch empty no code output", "round_08/acceptance.json gate_passed=false memory_aware_report found:[]"],
+  "reason": "所有轮gate_passed=false，产出在下游均未被消费；R03零产出，R06无验证命令",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_产出可消费性", "amount": 15, "reason": "acceptance.json L4 cli_end_to_end failed, 下游无法消费CLI"},
+    {"round": "round_03", "item": "1.1_产出可消费性", "amount": 40, "reason": "diff.patch 无代码变更, artifact/ 无产出"},
+    {"round": "round_06", "item": "1.2_执行完整性与自检", "amount": 40, "reason": "commands.log 为空, 无任何验证命令"}
+  ],
+  "evidence_gaps": []
+}

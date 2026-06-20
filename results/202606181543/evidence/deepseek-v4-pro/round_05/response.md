@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M5_context_change: Fixed test_long_log_debug.py to compute absolute data paths using __file__, ensuring tests pass from any working directory. Confirmed all 8 tests pass from repo root and subdir/workbench.", "tests": "8 passed (both root and subdir/workbench)"}

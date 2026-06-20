@@ -1,0 +1,114 @@
+{
+  "capability": "指令遵循",
+  "score": 87.8,
+  "per_round": {
+    "round_01": {
+      "score": 60.0,
+      "sub_scores": {
+        "持久规则": 37.5,
+        "单次指令": 75
+      },
+      "持久规则_detail": {
+        "cosplay": 0,
+        "concise": 75
+      }
+    },
+    "round_02": {
+      "score": 75.0,
+      "sub_scores": {
+        "持久规则": 37.5,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 0,
+        "concise": 75
+      }
+    },
+    "round_03": {
+      "score": 77.0,
+      "sub_scores": {
+        "持久规则": 42.5,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 0,
+        "concise": 85
+      }
+    },
+    "round_04": {
+      "score": 97.0,
+      "sub_scores": {
+        "持久规则": 92.5,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 100,
+        "concise": 85
+      }
+    },
+    "round_05": {
+      "score": 98.0,
+      "sub_scores": {
+        "持久规则": 95.0,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 100,
+        "concise": 90
+      }
+    },
+    "round_06": {
+      "score": 100,
+      "sub_scores": {
+        "持久规则": 100,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 100,
+        "concise": 100
+      }
+    },
+    "round_07": {
+      "score": 97.0,
+      "sub_scores": {
+        "持久规则": 92.5,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 100,
+        "concise": 85
+      }
+    },
+    "round_08": {
+      "score": 98.0,
+      "sub_scores": {
+        "持久规则": 95.0,
+        "单次指令": 100
+      },
+      "持久规则_detail": {
+        "cosplay": 100,
+        "concise": 90
+      }
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap/step_01/response.md: 无臣某谨奏/叩请圣裁",
+    "M2_config/step_01/response.md: 无臣某谨奏/叩请圣裁",
+    "M3_runner_retry/step_01/response.md: 有叩请圣裁无臣某谨奏",
+    "M4_long_log_debug/step_01/replay.jsonl:L171 臣某谨奏...叩请圣裁",
+    "M5_context_change/step_01/replay.jsonl:L22 臣某谨奏...叩请圣裁",
+    "M6_interruption/step_01/replay.jsonl:L4 臣某谨奏...叩请圣裁",
+    "M7_memory_report/step_01/replay.jsonl:L17 臣某谨奏...叩请圣裁",
+    "M8_compact_resume/step_01/response.md:L5-L16 臣某谨奏...叩请圣裁"
+  ],
+  "reason": "M1-M3缺失cosplay包裹（0分），自M4起全轮cosplay格式完整。单次指令执行整体优秀（M1 75分因未用仓库命令核验，其余全100）。Concise整体良好（75-100）。",
+  "deductions": [
+    {"round": "round_01", "item": "持久规则_cosplay", "amount": 100, "reason": "response.md 无臣某谨奏/叩请圣裁"},
+    {"round": "round_01", "item": "单次指令", "amount": 25, "reason": "prompt.json 未用仓库内命令核验"},
+    {"round": "round_02", "item": "持久规则_cosplay", "amount": 100, "reason": "response.md 无臣某谨奏/叩请圣裁"},
+    {"round": "round_03", "item": "持久规则_cosplay", "amount": 100, "reason": "response.md 有叩请圣裁无臣某谨奏"}
+  ],
+  "evidence_gaps": []
+}

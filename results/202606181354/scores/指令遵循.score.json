@@ -1,0 +1,29 @@
+{
+  "capability": "指令遵循",
+  "score": 52.5,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_02": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_03": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_04": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_05": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_06": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_07": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}},
+    "round_08": {"score": 50, "sub_scores": {"持久规则": 25, "单次指令": 100}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01-08/response.md", "round_01-08/replay.jsonl"],
+  "reason": "cosplay格式全轮缺失(无臣某谨奏/叩请圣裁)，concise部分遵循(JSON格式简洁)，单次指令基本执行",
+  "deductions": [
+    {"round": "round_01", "item": "cosplay", "amount": 100, "reason": "response为JSON tool call，无cosplay格式"},
+    {"round": "round_02", "item": "cosplay", "amount": 100, "reason": "同上"},
+    {"round": "round_03", "item": "cosplay", "amount": 100, "reason": "同上"},
+    {"round": "round_04", "item": "cosplay", "amount": 100, "reason": "同上"},
+    {"round": "round_05", "item": "cosplay", "amount": 100, "reason": "同上"},
+    {"round": "round_06", "item": "cosplay", "amount": 100, "reason": "同上"},
+    {"round": "round_07", "item": "cosplay", "amount": 100, "reason": "同上"},
+    {"round": "round_08", "item": "cosplay", "amount": 100, "reason": "同上"}
+  ],
+  "evidence_gaps": ["AGENTS.md中的cosplay规则在DeepSeek JSON模式下未被注入或未被理解"]
+}

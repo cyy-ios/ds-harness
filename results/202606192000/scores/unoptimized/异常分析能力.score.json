@@ -1,0 +1,25 @@
+{
+  "capability": "异常分析能力",
+  "score": 86.3,
+  "per_round": {
+    "round_01": {"score": 85, "sub_scores": {}, "note": "多异常: mcp_tool_error → 切换command_execution; PowerShell内联Python解析错误 → 改用文件方式; snake_case断言语法错误 → 简化测试; pytest FAILED → 修正断言; pycache顽固残留 → sitecustomize+__init__双保险"},
+    "round_02": {"score": 90, "sub_scores": {}, "note": "module not found → 设PYTHONPATH; JSONDecodeError BOM → utf-8-sig容错; YAML多键只返回首对 → _parse_yaml委托_parse_yaml_dict"},
+    "round_03": {"score": 85, "sub_scores": {}, "note": "m4_noise_test.csv注释行导致None键→to_snake_case崩溃 → 增强extract/clean鲁棒性"},
+    "round_04": {"score": 85, "sub_scores": {}, "note": "test_integration.py模块级断言导致collection报错+source_files路径不匹配 → 改为标准pytest函数+通配匹配"},
+    "round_05": null,
+    "round_06": null,
+    "round_07": null,
+    "round_08": null
+  },
+  "rounds_scored": 4,
+  "rounds_excluded": 4,
+  "evidence_used": ["M1 replay.jsonl L27-L109 (pycache/mcp/assert/测试失败异常链)", "M2 replay.jsonl L47-L92 (BOM/YAML模块路径异常)", "M3 response.md L5-L6 (m4_noise异常)", "M4 response.md L1-L2 (test_integration异常)"],
+  "reason": "异常分析方向准确，多数情况定位到根因；pycache问题反复3次才彻底解决略拖沓；m4_noise边界case修复正确",
+  "deductions": [
+    {"round": "round_01", "item": "异常分析能力", "amount": 15, "reason": "replay.jsonl:L64-L104 pycache问题反复3轮才解决，未在首次发现时彻底根治"},
+    {"round": "round_02", "item": "异常分析能力", "amount": 10, "reason": "replay.jsonl:L58 BOM问题由heredoc引起，可提前避免"},
+    {"round": "round_03", "item": "异常分析能力", "amount": 15, "reason": "response.md:L5注释行崩溃问题可通过对None键提前防御避免"},
+    {"round": "round_04", "item": "异常分析能力", "amount": 15, "reason": "response.md:L1 test_integration.py是模块级脚本非pytest格式应更早发现"}
+  ],
+  "evidence_gaps": []
+}

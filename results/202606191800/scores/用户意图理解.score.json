@@ -1,0 +1,23 @@
+{
+  "capability": "用户意图理解",
+  "score": 74.5,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"1.1": 80, "1.2": 75, "1.3": 75, "1.4": 75, "1.5": 70}},
+    "round_02": {"score": 75, "sub_scores": {"1.1": 80, "1.2": 75, "1.3": 75, "1.4": 75, "1.5": 70}},
+    "round_03": {"score": 75, "sub_scores": {"1.1": 80, "1.2": 75, "1.3": 75, "1.4": 75, "1.5": 70}},
+    "round_04": {"score": 70, "sub_scores": {"1.1": 75, "1.2": 70, "1.3": 70, "1.4": 70, "1.5": 65}},
+    "round_05": {"score": 75, "sub_scores": {"1.1": 80, "1.2": 75, "1.3": 75, "1.4": 75, "1.5": 70}},
+    "round_06": {"score": 78, "sub_scores": {"1.1": 80, "1.2": 80, "1.3": 75, "1.4": 80, "1.5": 75}},
+    "round_07": {"score": 75, "sub_scores": {"1.1": 80, "1.2": 75, "1.3": 75, "1.4": 75, "1.5": 70}},
+    "round_08": {"score": 73, "sub_scores": {"1.1": 75, "1.2": 75, "1.3": 70, "1.4": 75, "1.5": 70}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["全部 round/prompt.json", "全部 round/response.md", "全部 round/replay.jsonl"],
+  "reason": "每轮准确识别了 milestone 目标和任务类型。M6 中断处理正确区分了无关错误和主线任务。M5 cwd 切换后正确定位。M8 compact resume 后继续主线",
+  "deductions": [
+    {"round": "round_04", "item": "1.5_策略匹配", "amount": 10, "reason": "debug 策略偏重测试修复而非定位根本原因"},
+    {"round": "round_08", "item": "1.3_workspace归属", "amount": 5, "reason": "compact 后 workspace 上下文恢复有轻微偏差"}
+  ],
+  "evidence_gaps": []
+}

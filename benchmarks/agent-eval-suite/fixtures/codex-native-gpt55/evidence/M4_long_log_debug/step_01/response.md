@@ -1,0 +1,3 @@
+已定位并修复：测试先前把整个 `stdout` 当成单个 JSON 解析，调试输出较多时会失败；我在 [tests/test_mini_harness.py](</C:/项目/ds-harness/benchmarks/agent-eval-suite/fixtures/codex-native-gpt55/tests/test_mini_harness.py>) 增加“取最后一个 JSON 对象”的解析辅助和 noisy stdout 覆盖用例。顺手修复了相关 acceptance 暴露的问题：`run` 子命令保留原有决策并支持位置输入与 `--input`，`runner` 导出并抛出 `HarnessError`，符合 `memory/memory_summary.md` 里的早期 CLI/repo-root 路径约束。
+
+验证已通过：`$env:PYTHONDONTWRITEBYTECODE='1'; python -m pytest -q -p no:cacheprovider` 结果 `9 passed in 0.32s`。也从 repo root 和 `subdir/workbench` 手动跑了位置参数 CLI，报告均为 `processed_count=4`、`rejected_count=2`、`retry_count=0`；临时输出和 pytest cache 已清理，未发现 `__pycache__`。

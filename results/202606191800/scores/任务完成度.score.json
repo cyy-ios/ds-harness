@@ -1,0 +1,25 @@
+{
+  "capability": "任务完成度",
+  "score": 47.5,
+  "per_round": {
+    "round_01": {"score": 40, "sub_scores": {}},
+    "round_02": {"score": 40, "sub_scores": {}},
+    "round_03": {"score": 45, "sub_scores": {}},
+    "round_04": {"score": 50, "sub_scores": {}},
+    "round_05": {"score": 50, "sub_scores": {}},
+    "round_06": {"score": 50, "sub_scores": {}},
+    "round_07": {"score": 55, "sub_scores": {}},
+    "round_08": {"score": 50, "sub_scores": {}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["全部 round/acceptance.json", "全部 round/response.md", "全部 round/diff.patch"],
+  "reason": "M1-M3 基础框架搭建完成但 acceptance 仅 20 分；M4-M8 提升至 60 分但 gate_passed 始终 false。CLI end-to-end 未通过核心验收门槛",
+  "deductions": [
+    {"round": "round_01", "item": "整体", "amount": 30, "reason": "acceptance 20/100，gate_passed=false"},
+    {"round": "round_02", "item": "整体", "amount": 30, "reason": "acceptance 20/100，gate_passed=false"},
+    {"round": "round_03", "item": "整体", "amount": 25, "reason": "acceptance 20/100，gate_passed=false"},
+    {"round": "round_04", "item": "整体", "amount": 20, "reason": "acceptance 60/100 但 gate_passed=false"}
+  ],
+  "evidence_gaps": ["acceptance 评分细则未公开，具体未通过项需查看 score_mini_data_harness.py 输出"]
+}

@@ -1,0 +1,2 @@
+{"reason": "missing_id", "record": {"id": "", "score": "0", "source_file": "data/input.csv", "user_name": "Bad"}, "record_index": 2, "source_file": "data/input.csv"}
+{"reason": "missing_id", "record": {"event_type": "missing", "source_file": "data/events.jsonl"}, "record_index": 5, "source_file": "data/events.jsonl"}

@@ -1,0 +1,25 @@
+{
+  "capability": "项目理解",
+  "score": 62.9,
+  "per_round": {
+    "round_01": {"score": 100, "sub_scores": {"维度1_1.1_首轮探索深度": 100, "维度2": null}},
+    "round_02": {"score": 61, "sub_scores": {"2.1_环节追踪": 100, "2.2_主支线识别": 0, "2.3_废弃方向识别": 75, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 50}},
+    "round_03": {"score": 77, "sub_scores": {"2.1_环节追踪": 100, "2.2_主支线识别": 50, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 50}},
+    "round_04": {"score": 78, "sub_scores": {"2.1_环节追踪": 50, "2.2_主支线识别": 50, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 100}},
+    "round_05": {"score": 52, "sub_scores": {"2.1_环节追踪": 67, "2.2_主支线识别": 0, "2.3_废弃方向识别": 100, "2.4_完成研究中区分": 100, "2.5_无关任务隔离": 50}},
+    "round_06": {"score": 53, "sub_scores": {"2.1_环节追踪": 50, "2.2_主支线识别": 50, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 100}},
+    "round_07": {"score": 55, "sub_scores": {"2.1_环节追踪": 50, "2.2_主支线识别": 50, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 100}},
+    "round_08": {"score": 43, "sub_scores": {"2.1_环节追踪": 100, "2.2_主支线识别": 0, "2.3_废弃方向识别": null, "2.4_完成研究中区分": null, "2.5_无关任务隔离": 50}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/replay.jsonl: L1 Read SKILL.md + L3 Glob **/* + L5 Read pyproject.toml 3/3", "round_02/replay.jsonl: L3 Read config-notes.md 触发2.3废弃", "round_05/replay.jsonl: L13 Read handoff-note.md 触发2.4完成区分"],
+  "reason": "维度1=100(R01读SKILL+Glob+读代码3/3);维度2逐轮均值60.3,主支线识别偏低(全偏离R01主线),环节追踪中等",
+  "deductions": [
+    {"round": "round_02", "item": "2.2_主支线识别", "amount": 100, "reason": "replay.jsonl 11 tool_calls 超主线中位数50%(8)"},
+    {"round": "round_05", "item": "2.2_主支线识别", "amount": 100, "reason": "replay.jsonl 19 tool_calls 超主线中位数50%(8)"},
+    {"round": "round_08", "item": "2.2_主支线识别", "amount": 100, "reason": "replay.jsonl 14 tool_calls 超主线中位数50%(8)"},
+    {"round": "round_05", "item": "2.1_环节追踪", "amount": 33, "reason": "replay.jsonl: L15 R05全量重写runner.py覆盖R03产物,接续=0"}
+  ],
+  "evidence_gaps": []
+}

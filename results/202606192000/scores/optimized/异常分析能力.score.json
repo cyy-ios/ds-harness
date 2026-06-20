@@ -1,0 +1,51 @@
+{
+  "capability": "异常分析能力",
+  "score": 87.5,
+  "per_round": {
+    "round_01": {
+      "score": 75,
+      "anomaly_detail": "heredoc编码损坏、BOM问题、\n转义混淆——最终识别出PowerShell heredoc根因，但尝试了多种失败方案(base64/generator)后才正确切换Python脚本方式"
+    },
+    "round_02": {
+      "score": 75,
+      "anomaly_detail": "pyproject.toml BOM问题持续，_gen.py覆盖手写文件——agent方向正确但执行过程中仍有heredoc困扰"
+    },
+    "round_03": {
+      "score": 100,
+      "anomaly_detail": "正确定位3个bug: extract不跳过#注释、clean.py None key崩溃、dag.py retry_count硬编码0；修复全部有效"
+    },
+    "round_04": {
+      "score": 100,
+      "anomaly_detail": "正确定位logger.py stdout→stderr根因；发现_gen.py回滚问题并从M3快照恢复；修复完整有效"
+    },
+    "round_05": {
+      "score": null,
+      "anomaly_detail": "无异常"
+    },
+    "round_06": {
+      "score": null,
+      "anomaly_detail": "无异常"
+    },
+    "round_07": {
+      "score": null,
+      "anomaly_detail": "无异常"
+    },
+    "round_08": {
+      "score": null,
+      "anomaly_detail": "无异常"
+    }
+  },
+  "rounds_scored": 4,
+  "rounds_excluded": 4,
+  "evidence_used": [
+    "M1_bootstrap/step_01/replay.jsonl: steps 17-33 heredoc→Python→base64→_gen.py反复尝试",
+    "M3_runner_retry/step_01/replay.jsonl: step 34 crash traceback, step 69 3 bugs identified",
+    "M4_long_log_debug/step_01/response.md: logger.py sys.stdout→sys.stderr root cause"
+  ],
+  "reason": "M1-M2异常分析方向正确但过程绕路，最终找到effective方案（75分）。M3-M4异常分析精准有效（100分）。M5-M8无异常（N/A）。",
+  "deductions": [
+    {"round": "round_01", "item": "异常分析能力", "amount": 25, "reason": "replay.jsonl:L17-L33 base64等无效尝试后才切换到正确方案"},
+    {"round": "round_02", "item": "异常分析能力", "amount": 25, "reason": "replay.jsonl 反复heredoc困扰未从M1经验中完全学习"}
+  ],
+  "evidence_gaps": []
+}

@@ -1,0 +1,83 @@
+{
+  "capability": "任务规划",
+  "score": 56.3,
+  "per_round": {
+    "round_01": {
+      "score": 15.0,
+      "sub_scores": {
+        "1.1_路线效率": 25,
+        "1.2_工具选择": 0
+      }
+    },
+    "round_02": {
+      "score": 45.0,
+      "sub_scores": {
+        "1.1_路线效率": 75,
+        "1.2_工具选择": 0
+      }
+    },
+    "round_03": {
+      "score": 45.0,
+      "sub_scores": {
+        "1.1_路线效率": 75,
+        "1.2_工具选择": 0
+      }
+    },
+    "round_04": {
+      "score": 45.0,
+      "sub_scores": {
+        "1.1_路线效率": 75,
+        "1.2_工具选择": 0
+      }
+    },
+    "round_05": {
+      "score": 70.0,
+      "sub_scores": {
+        "1.1_路线效率": 100,
+        "1.2_工具选择": 25
+      }
+    },
+    "round_06": {
+      "score": 90.0,
+      "sub_scores": {
+        "1.1_路线效率": 100,
+        "1.2_工具选择": 75
+      }
+    },
+    "round_07": {
+      "score": 70.0,
+      "sub_scores": {
+        "1.1_路线效率": 100,
+        "1.2_工具选择": 25
+      }
+    },
+    "round_08": {
+      "score": 70.0,
+      "sub_scores": {
+        "1.1_路线效率": 100,
+        "1.2_工具选择": 25
+      }
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap/step_01/replay.jsonl: steps 17-33 heredoc失败→Python脚本→_gen.py 反复绕路",
+    "M1_bootstrap/step_01/replay.jsonl: 全部tool_call为command_execution，无Read/Write/Edit/Glob/Grep",
+    "M4_long_log_debug/step_01/replay.jsonl: _gen.py覆盖修复后从M3快照恢复",
+    "M5_context_change/step_01/replay.jsonl: 26事件路线直接",
+    "M6_interruption/step_01/replay.jsonl: 8事件极简路线"
+  ],
+  "reason": "工具选择是全局性问题：全程所有操作仅用command_execution，Read/Write/Edit/Glob/Grep等专用工具零使用。M1路线尤为绕（heredoc反复失败→Python→base64→_gen.py，155事件仅完成bootstrap）。后期M5-M8路线效率改进但工具选择无改善。",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_路线效率", "amount": 75, "reason": "replay.jsonl:L17-L33 heredoc→Python→base64→_gen.py 严重绕路"},
+    {"round": "round_01", "item": "1.2_工具选择", "amount": 100, "reason": "replay.jsonl 全部tool_call为command_execution"},
+    {"round": "round_02", "item": "1.2_工具选择", "amount": 100, "reason": "replay.jsonl 全部command_execution无专用工具"},
+    {"round": "round_03", "item": "1.2_工具选择", "amount": 100, "reason": "replay.jsonl 全部command_execution无专用工具"},
+    {"round": "round_04", "item": "1.2_工具选择", "amount": 100, "reason": "replay.jsonl 全部command_execution无专用工具"},
+    {"round": "round_05", "item": "1.2_工具选择", "amount": 75, "reason": "replay.jsonl Get-Content代替Read"},
+    {"round": "round_07", "item": "1.2_工具选择", "amount": 75, "reason": "replay.jsonl 写JSON用PowerShell数组而非Write"},
+    {"round": "round_08", "item": "1.2_工具选择", "amount": 75, "reason": "replay.jsonl 全部command_execution"}
+  ],
+  "evidence_gaps": []
+}

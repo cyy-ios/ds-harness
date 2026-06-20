@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M4_long_log_debug 完成：修复 tests/test_long_log_debug.py 中导入错误，创建 mini_harness/runner.py 提供 run_dag 函数，并添加测试所需数据文件 data/input.csv。10 个测试全部通过。", "tests": "10 passed"}

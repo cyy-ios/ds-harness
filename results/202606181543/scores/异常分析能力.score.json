@@ -1,0 +1,27 @@
+{
+  "capability": "异常分析能力",
+  "score": 76.0,
+  "per_round": {
+    "round_01": {"score": 90, "sub_scores": {}, "note": "Windows cmd env var语法错误，正确用set修复"},
+    "round_02": {"score": 100, "sub_scores": {}, "note": "YAML parser KeyError，正确定位并修复"},
+    "round_03": {"score": null, "sub_scores": {}, "note": "无异常"},
+    "round_04": {"score": 0, "sub_scores": {}, "note": "测试通过但未发现HarnessError/__main__缺失"},
+    "round_05": {"score": 100, "sub_scores": {}, "note": "FileNotFoundError，正确定位路径问题并修复"},
+    "round_06": {"score": null, "sub_scores": {}, "note": "无异常"},
+    "round_07": {"score": null, "sub_scores": {}, "note": "无异常"},
+    "round_08": {"score": 90, "sub_scores": {}, "note": "shell语法错误，快速修正"}
+  },
+  "rounds_scored": 5,
+  "rounds_excluded": 3,
+  "evidence_used": [
+    "round_01/replay.jsonl: env var syntax error → retry with set",
+    "round_02/replay.jsonl: KeyError:0 → fix parse_yaml",
+    "round_04/replay.jsonl: test passed but acceptance 20/100",
+    "round_05/replay.jsonl: FileNotFoundError → absolute path fix"
+  ],
+  "reason": "R02/R05异常分析优秀；R04完全未发现实际问题导致0分",
+  "deductions": [
+    {"round": "round_04", "item": "异常分析", "amount": 100, "reason": "测试通过后声称无问题，未发现HarnessError缺失"}
+  ],
+  "evidence_gaps": []
+}

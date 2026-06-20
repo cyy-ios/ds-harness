@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro",
+  "input": [
+    {
+      "role": "user",
+      "content": "say hi"
+    }
+  ]
+}

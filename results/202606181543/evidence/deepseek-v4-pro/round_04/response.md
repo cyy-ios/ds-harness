@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M4_long_log_debug: Test confirmed working with caplog (1 passed). runner.py already wraps pipeline correctly. No changes needed.", "tests": "8 passed + 1 passed = 9 passed"}

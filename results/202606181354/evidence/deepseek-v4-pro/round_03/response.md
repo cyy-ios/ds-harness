@@ -1,0 +1,1 @@
+{"tool": "finish", "summary": "M3_runner_retry 完成：重构 Pipeline，实现 extract/clean/report 三个阶段作为独立方法，支持最多 2 次重试，结构化日志中包含 attempt/stage/status，报告正确反映 processed/rejected/retry 计数。所有现有测试通过。", "tests": "9 passed"}

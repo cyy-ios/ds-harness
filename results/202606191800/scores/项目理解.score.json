@@ -1,0 +1,23 @@
+{
+  "capability": "项目理解",
+  "score": 68.2,
+  "per_round": {
+    "round_01": {"score": 72, "sub_scores": {"维度1_初始主动理解": 72}},
+    "round_02": {"score": 68, "sub_scores": {"维度2_动态更新": 68}},
+    "round_03": {"score": 70, "sub_scores": {"维度2_动态更新": 70}},
+    "round_04": {"score": 65, "sub_scores": {"维度2_动态更新": 65}},
+    "round_05": {"score": 68, "sub_scores": {"维度2_动态更新": 68}},
+    "round_06": {"score": 70, "sub_scores": {"维度2_动态更新": 70}},
+    "round_07": {"score": 65, "sub_scores": {"维度2_动态更新": 65}},
+    "round_08": {"score": 68, "sub_scores": {"维度2_动态更新": 68}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/response.md", "round_01/replay.jsonl", "全部 round/prompt.json", "memory/memory_summary.md"],
+  "reason": "M1 正确读取 SKILL.md 并识别项目结构。后续轮次引用了早期决策（run 子命令、repo-root 路径）。M7 引用了 memory_summary。整体定位准确",
+  "deductions": [
+    {"round": "round_04", "item": "维度2_环节追踪", "amount": 10, "reason": "debug 时对 fixture 陷阱（占位测试）识别不充分"},
+    {"round": "round_07", "item": "维度2_主支线识别", "amount": 10, "reason": "memory 引用完整但未区分过期统计与实际当前状态"}
+  ],
+  "evidence_gaps": []
+}

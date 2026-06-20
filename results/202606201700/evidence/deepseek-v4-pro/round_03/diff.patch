@@ -1,0 +1,210 @@
+diff --git a/eval_deepseek_transcript.jsonl b/eval_deepseek_transcript.jsonl
+index fa7ba9f..858cfa0 100644
+--- a/eval_deepseek_transcript.jsonl
++++ b/eval_deepseek_transcript.jsonl
+@@ -58,3 +58,13 @@
+ {"milestone": "M2_config", "step": 10, "tool_result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 4964}}
+ {"milestone": "M2_config", "step": 11, "assistant": "                                           [str], config: dict = None):\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\n    retry_count = 0\n    try:\n        extracted = extract_all(files)\n    except RetryExceededError:\n        retry_count += 3  # all attempts exhausted\n        extracted = []\n    \n    try:\n        cleaned, rejects = clean(extracted)\n    except RetryExceededError:\n        retry_count += 3\n        cleaned, rejects = [], []\n    \n    try:\n        report = generate_report(cleaned, rejects, retry_count, files)\n    except RetryExceededError:\n        retry_count += 3\n        report = {\"processed_count\": 0, \"rejected_count\": 0, \"retry_count\": retry_count, \"source_files\": files}\n    \n    logger.info(\"Final Report:\")\n    logger.info(json.dumps(report, indent=2))</parameter>\n<parameter name=\"new_string\">def run(files: List[str], config: dict = None):\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\n    if config is None:\n        config = {}\n    # Update global retry config if needed\n    if \"retry_attempts\" in config:\n        retries = int(config[\"retry_attempts\"])\n        _RETRY_CONFIG[\"max_attempts\"] = retries + 1  # total attempts = retries + 1\n    \n    retry_count = 0\n    try:\n        extracted = extract_all(files)\n    except RetryExceededError:\n        retry_count += _RETRY_CONFIG[\"max_attempts\"]\n        extracted = []\n    \n    try:\n        cleaned, rejects = clean(extracted)\n    except RetryExceededError:\n        retry_count += _RETRY_CONFIG[\"max_attempts\"]\n        cleaned, rejects = [], []\n    \n    try:\n        report = generate_report(cleaned, rejects, retry_count, files)\n    except RetryExceededError:\n        retry_count += _RETRY_CONFIG[\"max_attempts\"]\n        report = {\"processed_count\": 0, \"rejected_count\": 0, \"retry_count\": retry_count, \"source_files\": files}\n    \n    logger.info(\"Final Report:\")\n    logger.info(json.dumps(report, indent=2))\n    \n    # Write report to file if configured\n    output_path = config.get(\"report_output\")\n    if output_path:\n        with open(output_path, 'w', encoding='utf-8') as f:\n            json.dump(report, f, indent=2)</parameter>\n</invoke>\n</function_calls>"}
+ {"milestone": "M2_config", "step": 11, "tool_result": {"ok": true, "finished": true}}
++{"milestone": "M3_runner_retry", "step": 0, "assistant": "{\"tool\": \"edit\", \"path\": \"src/mini_harness/runner.py\", \"old_string\": \"def retry_stage(stage_name: str, max_attempts: int = None):\\n    \\\"\\\"\\\"Decorator to retry a stage function when an exception occurs. \\n    Records attempt, stage, status in logs. First attempt is 0.\\\"\\\"\\\"\\n    def decorator(func):\\n        def wrapper(*args, **kwargs):\\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\\\"max_attempts\\\", 3)\\n            for attempt in range(attempts):\\n                try:\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"started\\\"}))\\n                    result = func(*args, **kwargs)\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"completed\\\"}))\\n                    return result\\n                except Exception as e:\\n                    logger.error(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"failed\\\", \\\"error\\\": str(e)}))\\n                    if attempt == attempts - 1:\\n                        raise RetryExceededError(f\\\"Stage {stage_name} failed after {attempts} attempts\\\") from e\\n            return None\\n        return wrapper\\n    return decorator\", \"new_string\": \"def retry_stage(stage_name: str, max_attempts: int = None):\\n    \\\"\\\"\\\"Decorator to retry a stage function when an exception occurs. \\n    Records attempt, stage, status in logs. First attempt is 0.\\\"\\\"\\\"\\n    def decorator(func):\\n        def wrapper(*args, **kwargs):\\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\\\"max_attempts\\\", 3)\\n            for attempt in range(attempts):\\n                try:\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"started\\\"}))\\n                    result = func(*args, **kwargs)\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"completed\\\"}))\\n                    wrapper.last_attempt_info = (attempt + 1, True)\\n                    return result\\n                except Exception as e:\\n                    logger.error(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"failed\\\", \\\"error\\\": str(e)}))\\n                    if attempt == attempts - 1:\\n                        wrapper.last_attempt_info = (attempt + 1, False)\\n                        raise RetryExceededError(f\\\"Stage {stage_name} failed after {attempts} attempts\\\") from e\\n            return None\\n        return wrapper\\n    return decorator\"}"}
++{"milestone": "M3_runner_retry", "step": 0, "tool_result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 5107}}
++{"milestone": "M3_runner_retry", "step": 1, "assistant": "{\"tool\": \"edit\", \"path\": \"src/mini_harness/runner.py\", \"new_string\": \"def retry_stage(stage_name: str, max_attempts: int = None):\\n    \\\"\\\"\\\"Decorator to retry a stage function when an exception occurs. \\n    Records attempt, stage, status in logs. First attempt is 0.\\\"\\\"\\\"\\n    def decorator(func):\\n        def wrapper(*args, **kwargs):\\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\\\"max_attempts\\\", 3)\\n            for attempt in range(attempts):\\n                try:\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"started\\\"}))\\n                    result = func(*args, **kwargs)\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"completed\\\"}))\\n                    wrapper.retries_used = attempt  # retry count = attempt number\\n                    wrapper.success = True\\n                    return result\\n                except Exception as e:\\n                    logger.error(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"failed\\\", \\\"error\\\": str(e)}))\\n                    if attempt == attempts - 1:\\n                        wrapper.retries_used = attempts - 1  # max retries\\n                        wrapper.success = False\\n                        raise RetryExceededError(f\\\"Stage {stage_name} failed after {attempts} attempts\\\") from e\\n            return None\\n        return wrapper\\n    return decorator\", \"old_string\": \"def retry_stage(stage_name: str, max_attempts: int = None):\\n    \\\"\\\"\\\"Decorator to retry a stage function when an exception occurs. \\n    Records attempt, stage, status in logs. First attempt is 0.\\\"\\\"\\\"\\n    def decorator(func):\\n        def wrapper(*args, **kwargs):\\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\\\"max_attempts\\\", 3)\\n            for attempt in range(attempts):\\n                try:\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"started\\\"}))\\n                    result = func(*args, **kwargs)\\n                    logger.info(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"completed\\\"}))\\n                    wrapper.last_attempt_info = (attempt + 1, True)\\n                    return result\\n                except Exception as e:\\n                    logger.error(json.dumps({\\\"attempt\\\": attempt, \\\"stage\\\": stage_name, \\\"status\\\": \\\"failed\\\", \\\"error\\\": str(e)}))\\n                    if attempt == attempts - 1:\\n                        wrapper.last_attempt_info = (attempt + 1, False)\\n                        raise RetryExceededError(f\\\"Stage {stage_name} failed after {attempts} attempts\\\") from e\\n            return None\\n        return wrapper\\n    return decorator\"}"}
++{"milestone": "M3_runner_retry", "step": 1, "tool_result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 5217}}
++{"milestone": "M3_runner_retry", "step": 2, "assistant": "{\"tool\": \"edit\", \"path\": \"src/mini_harness/runner.py\", \"new_string\": \"def run(files: List[str], config: dict = None):\\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\\n    # Apply config to retry attempts\\n    if config:\\n        retry_max = config.get(\\\"retry_attempts\\\")\\n        if retry_max is not None:\\n            _RETRY_CONFIG[\\\"max_attempts\\\"] = retry_max + 1  # attempts = initial + retries\\n    retry_count = 0\\n    try:\\n        extracted = extract_all(files)\\n        retry_count += extract_all.retries_used if hasattr(extract_all, 'retries_used') else 0\\n    except RetryExceededError:\\n        retry_count += extract_all.retries_used if hasattr(extract_all, 'retries_used') else 0\\n        extracted = []\\n    \\n    try:\\n        cleaned, rejects = clean(extracted)\\n        retry_count += clean.retries_used if hasattr(clean, 'retries_used') else 0\\n    except RetryExceededError:\\n        retry_count += clean.retries_used if hasattr(clean, 'retries_used') else 0\\n        cleaned, rejects = [], []\\n    \\n    try:\\n        report = generate_report(cleaned, rejects, retry_count, files)\\n    except RetryExceededError:\\n        retry_count += generate_report.retries_used if hasattr(generate_report, 'retries_used') else 0\\n        report = {\\\"processed_count\\\": 0, \\\"rejected_count\\\": 0, \\\"retry_count\\\": retry_count, \\\"source_files\\\": files}\\n    \\n    logger.info(\\\"Final Report:\\\")\\n    logger.info(json.dumps(report, indent=2))\", \"old_string\": \"def run(files: List[str], config: dict = None):\\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\\n    retry_count = 0\\n    try:\\n        extracted = extract_all(files)\\n    except RetryExceededError:\\n        retry_count += 3  # all attempts exhausted\\n        extracted = []\\n    \\n    try:\\n        cleaned, rejects = clean(extracted)\\n    except RetryExceededError:\\n        retry_count += 3\\n        cleaned, rejects = [], []\\n    \\n    try:\\n        report = generate_report(cleaned, rejects, retry_count, files)\\n    except RetryExceededError:\\n        retry_count += 3\\n        report = {\\\"processed_count\\\": 0, \\\"rejected_count\\\": 0, \\\"retry_count\\\": retry_count, \\\"source_files\\\": files}\\n    \\n    logger.info(\\\"Final Report:\\\")\\n    logger.info(json.dumps(report, indent=2))\"}"}
++{"milestone": "M3_runner_retry", "step": 2, "tool_result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 5807}}
++{"milestone": "M3_runner_retry", "step": 3, "assistant": "{\"tool\": \"write_file\", \"content\": \"import json\\nimport logging\\nimport pytest\\nfrom mini_harness.runner import extract, clean, generate_report, run, retry_stage, RetryExceededError\\n\\ndef test_extract_csv(tmp_path):\\n    csv_path = tmp_path / \\\"test.csv\\\"\\n    csv_path.write_text(\\\"ID,Name\\\\n1,Alice\\\\n2,Bob\\\\n\\\", encoding='utf-8')\\n    records = list(extract(str(csv_path)))\\n    assert len(records) == 2\\n    assert records[0]['ID'] == '1'\\n\\ndef test_extract_jsonl(tmp_path):\\n    jsonl_path = tmp_path / \\\"test.jsonl\\\"\\n    jsonl_path.write_text('{\\\"id\\\":\\\"1\\\",\\\"name\\\":\\\"Alice\\\"}\\\\n{\\\"id\\\":\\\"2\\\",\\\"name\\\":\\\"Bob\\\"}\\\\n', encoding='utf-8')\\n    records = list(extract(str(jsonl_path)))\\n    assert len(records) == 2\\n    assert records[0]['id'] == '1'\\n\\ndef test_clean_snake_case():\\n    data = [{\\\"User Name\\\": \\\"Alice\\\", \\\"ID\\\": \\\"1\\\"}]\\n    cleaned, rejects = clean(data)\\n    assert cleaned[0] == {\\\"user_name\\\": \\\"Alice\\\", \\\"id\\\": \\\"1\\\"}\\n    assert len(rejects) == 0\\n\\ndef test_clean_missing_id():\\n    data = [{\\\"User Name\\\": \\\"Bad\\\", \\\"ID\\\": \\\"\\\"}]\\n    cleaned, rejects = clean(data)\\n    assert len(cleaned) == 0\\n    assert len(rejects) == 1\\n    assert rejects[0] == {\\\"user_name\\\": \\\"Bad\\\", \\\"id\\\": \\\"\\\"}\\n\\ndef test_generate_report():\\n    cleaned = [{\\\"id\\\": \\\"1\\\"}]\\n    rejects = [{\\\"user_name\\\": \\\"Bad\\\"}]\\n    report = generate_report(cleaned, rejects, 0, [\\\"f.csv\\\"])\\n    assert report[\\\"processed_count\\\"] == 1\\n    assert report[\\\"rejected_count\\\"] == 1\\n    assert report[\\\"retry_count\\\"] == 0\\n    assert report[\\\"source_files\\\"] == [\\\"f.csv\\\"]\\n    assert \\\"memory_reference\\\" in report\\n\\ndef test_retry_stage_success():\\n    @retry_stage(\\\"test_stage\\\", max_attempts=2)\\n    def stage():\\n        return \\\"success\\\"\\n    result = stage()\\n    assert result == \\\"success\\\"\\n    # retries_used should be 0\\n    assert stage.retries_used == 0\\n    assert stage.success\\n\\ndef test_retry_stage_retry_once():\\n    calls = []\\n    @retry_stage(\\\"test_stage\\\", max_attempts=3)  # 3 attempts, so up to 2 retries\\n    def stage():\\n        calls.append(1)\\n        if len(calls) == 1:\\n            raise ValueError(\\\"first fail\\\")\\n        return \\\"ok\\\"\\n    result = stage()\\n    assert result == \\\"ok\\\"\\n    assert stage.retries_used == 1  # 1 retry (attempt 1)\\n    assert stage.success\\n\\ndef test_retry_stage_exceeds():\\n    @retry_stage(\\\"test_stage\\\", max_attempts=2)  # 2 attempts, so 1 retry\\n    def stage():\\n        raise RuntimeError(\\\"fail\\\")\\n    with pytest.raises(RetryExceededError):\\n        stage()\\n    assert stage.retries_used == 1  # after 2 attempts, retries_used = 1\\n    assert not stage.success\\n\\n# Patch to prevent reading memory_summary.md\\ndef test_run_with_config(tmp_path, monkeypatch):\\n    # create temp csv\\n    csv_path = tmp_path / \\\"data.csv\\\"\\n    csv_path.write_text(\\\"ID,Name\\\\n1,Alice\\\\n2,Bob\\\\n\\\", encoding='utf-8')\\n    # dummy memory summary to satisfy generate_report\\n    monkeypatch.setattr(\\\"mini_harness.runner.generate_report\\\", lambda cleaned, rejects, retry, source: {\\n        \\\"processed_count\\\": len(cleaned),\\n        \\\"rejected_count\\\": len(rejects),\\n        \\\"retry_count\\\": retry,\\n        \\\"source_files\\\": source\\n    })\\n    config = {\\\"retry_attempts\\\": 2}\\n    run([str(csv_path)], config=config)\\n    # No assertion, just check no exception\\n\\nif __name__ == \\\"__main__\\\":\\n    pytest.main([__file__])\\n\", \"path\": \"tests/test_harness.py\"}"}
++{"milestone": "M3_runner_retry", "step": 3, "tool_result": {"ok": true, "path": "tests\\test_harness.py", "bytes": 3241}}
++{"milestone": "M3_runner_retry", "step": 4, "assistant": "{\"tool\": \"shell\", \"cmd\": \"set PYTHONPATH=src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q\"}"}
++{"milestone": "M3_runner_retry", "step": 4, "tool_result": {"ok": true, "returncode": 0, "output": "..........                                                               [100%]\n10 passed in 0.07s\n"}}
+diff --git a/evidence/round_03/commands.log b/evidence/round_03/commands.log
+new file mode 100644
+index 0000000..97630e8
+--- /dev/null
++++ b/evidence/round_03/commands.log
+@@ -0,0 +1,8 @@
++[
++  {
++    "command": "set PYTHONPATH=src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q",
++    "cwd": "C:\\项目\\ds-harness\\tmp\\pro-full",
++    "exit_code": 0,
++    "stdout": "..........                                                               [100%]\n10 passed in 0.07s\n"
++  }
++]
+\ No newline at end of file
+diff --git a/evidence/round_03/replay.jsonl b/evidence/round_03/replay.jsonl
+new file mode 100644
+index 0000000..d03416c
+--- /dev/null
++++ b/evidence/round_03/replay.jsonl
+@@ -0,0 +1,12 @@
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/runner.py", "old_string": "def retry_stage(stage_name: str, max_attempts: int = None):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\"max_attempts\", 3)\n            for attempt in range(attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == attempts - 1:\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator", "new_string": "def retry_stage(stage_name: str, max_attempts: int = None):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\"max_attempts\", 3)\n            for attempt in range(attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    wrapper.last_attempt_info = (attempt + 1, True)\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == attempts - 1:\n                        wrapper.last_attempt_info = (attempt + 1, False)\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 5107}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/runner.py", "new_string": "def retry_stage(stage_name: str, max_attempts: int = None):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\"max_attempts\", 3)\n            for attempt in range(attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    wrapper.retries_used = attempt  # retry count = attempt number\n                    wrapper.success = True\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == attempts - 1:\n                        wrapper.retries_used = attempts - 1  # max retries\n                        wrapper.success = False\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator", "old_string": "def retry_stage(stage_name: str, max_attempts: int = None):\n    \"\"\"Decorator to retry a stage function when an exception occurs. \n    Records attempt, stage, status in logs. First attempt is 0.\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            attempts = max_attempts if max_attempts is not None else _RETRY_CONFIG.get(\"max_attempts\", 3)\n            for attempt in range(attempts):\n                try:\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"started\"}))\n                    result = func(*args, **kwargs)\n                    logger.info(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"completed\"}))\n                    wrapper.last_attempt_info = (attempt + 1, True)\n                    return result\n                except Exception as e:\n                    logger.error(json.dumps({\"attempt\": attempt, \"stage\": stage_name, \"status\": \"failed\", \"error\": str(e)}))\n                    if attempt == attempts - 1:\n                        wrapper.last_attempt_info = (attempt + 1, False)\n                        raise RetryExceededError(f\"Stage {stage_name} failed after {attempts} attempts\") from e\n            return None\n        return wrapper\n    return decorator"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 5217}}
++{"role": "assistant", "tool_call": {"tool": "edit", "path": "src/mini_harness/runner.py", "new_string": "def run(files: List[str], config: dict = None):\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\n    # Apply config to retry attempts\n    if config:\n        retry_max = config.get(\"retry_attempts\")\n        if retry_max is not None:\n            _RETRY_CONFIG[\"max_attempts\"] = retry_max + 1  # attempts = initial + retries\n    retry_count = 0\n    try:\n        extracted = extract_all(files)\n        retry_count += extract_all.retries_used if hasattr(extract_all, 'retries_used') else 0\n    except RetryExceededError:\n        retry_count += extract_all.retries_used if hasattr(extract_all, 'retries_used') else 0\n        extracted = []\n    \n    try:\n        cleaned, rejects = clean(extracted)\n        retry_count += clean.retries_used if hasattr(clean, 'retries_used') else 0\n    except RetryExceededError:\n        retry_count += clean.retries_used if hasattr(clean, 'retries_used') else 0\n        cleaned, rejects = [], []\n    \n    try:\n        report = generate_report(cleaned, rejects, retry_count, files)\n    except RetryExceededError:\n        retry_count += generate_report.retries_used if hasattr(generate_report, 'retries_used') else 0\n        report = {\"processed_count\": 0, \"rejected_count\": 0, \"retry_count\": retry_count, \"source_files\": files}\n    \n    logger.info(\"Final Report:\")\n    logger.info(json.dumps(report, indent=2))", "old_string": "def run(files: List[str], config: dict = None):\n    logging.basicConfig(level=logging.INFO, format='%(message)s')\n    retry_count = 0\n    try:\n        extracted = extract_all(files)\n    except RetryExceededError:\n        retry_count += 3  # all attempts exhausted\n        extracted = []\n    \n    try:\n        cleaned, rejects = clean(extracted)\n    except RetryExceededError:\n        retry_count += 3\n        cleaned, rejects = [], []\n    \n    try:\n        report = generate_report(cleaned, rejects, retry_count, files)\n    except RetryExceededError:\n        retry_count += 3\n        report = {\"processed_count\": 0, \"rejected_count\": 0, \"retry_count\": retry_count, \"source_files\": files}\n    \n    logger.info(\"Final Report:\")\n    logger.info(json.dumps(report, indent=2))"}}
++{"role": "tool", "result": {"ok": true, "path": "src\\mini_harness\\runner.py", "bytes": 5807}}
++{"role": "assistant", "tool_call": {"tool": "write_file", "content": "import json\nimport logging\nimport pytest\nfrom mini_harness.runner import extract, clean, generate_report, run, retry_stage, RetryExceededError\n\ndef test_extract_csv(tmp_path):\n    csv_path = tmp_path / \"test.csv\"\n    csv_path.write_text(\"ID,Name\\n1,Alice\\n2,Bob\\n\", encoding='utf-8')\n    records = list(extract(str(csv_path)))\n    assert len(records) == 2\n    assert records[0]['ID'] == '1'\n\ndef test_extract_jsonl(tmp_path):\n    jsonl_path = tmp_path / \"test.jsonl\"\n    jsonl_path.write_text('{\"id\":\"1\",\"name\":\"Alice\"}\\n{\"id\":\"2\",\"name\":\"Bob\"}\\n', encoding='utf-8')\n    records = list(extract(str(jsonl_path)))\n    assert len(records) == 2\n    assert records[0]['id'] == '1'\n\ndef test_clean_snake_case():\n    data = [{\"User Name\": \"Alice\", \"ID\": \"1\"}]\n    cleaned, rejects = clean(data)\n    assert cleaned[0] == {\"user_name\": \"Alice\", \"id\": \"1\"}\n    assert len(rejects) == 0\n\ndef test_clean_missing_id():\n    data = [{\"User Name\": \"Bad\", \"ID\": \"\"}]\n    cleaned, rejects = clean(data)\n    assert len(cleaned) == 0\n    assert len(rejects) == 1\n    assert rejects[0] == {\"user_name\": \"Bad\", \"id\": \"\"}\n\ndef test_generate_report():\n    cleaned = [{\"id\": \"1\"}]\n    rejects = [{\"user_name\": \"Bad\"}]\n    report = generate_report(cleaned, rejects, 0, [\"f.csv\"])\n    assert report[\"processed_count\"] == 1\n    assert report[\"rejected_count\"] == 1\n    assert report[\"retry_count\"] == 0\n    assert report[\"source_files\"] == [\"f.csv\"]\n    assert \"memory_reference\" in report\n\ndef test_retry_stage_success():\n    @retry_stage(\"test_stage\", max_attempts=2)\n    def stage():\n        return \"success\"\n    result = stage()\n    assert result == \"success\"\n    # retries_used should be 0\n    assert stage.retries_used == 0\n    assert stage.success\n\ndef test_retry_stage_retry_once():\n    calls = []\n    @retry_stage(\"test_stage\", max_attempts=3)  # 3 attempts, so up to 2 retries\n    def stage():\n        calls.append(1)\n        if len(calls) == 1:\n            raise ValueError(\"first fail\")\n        return \"ok\"\n    result = stage()\n    assert result == \"ok\"\n    assert stage.retries_used == 1  # 1 retry (attempt 1)\n    assert stage.success\n\ndef test_retry_stage_exceeds():\n    @retry_stage(\"test_stage\", max_attempts=2)  # 2 attempts, so 1 retry\n    def stage():\n        raise RuntimeError(\"fail\")\n    with pytest.raises(RetryExceededError):\n        stage()\n    assert stage.retries_used == 1  # after 2 attempts, retries_used = 1\n    assert not stage.success\n\n# Patch to prevent reading memory_summary.md\ndef test_run_with_config(tmp_path, monkeypatch):\n    # create temp csv\n    csv_path = tmp_path / \"data.csv\"\n    csv_path.write_text(\"ID,Name\\n1,Alice\\n2,Bob\\n\", encoding='utf-8')\n    # dummy memory summary to satisfy generate_report\n    monkeypatch.setattr(\"mini_harness.runner.generate_report\", lambda cleaned, rejects, retry, source: {\n        \"processed_count\": len(cleaned),\n        \"rejected_count\": len(rejects),\n        \"retry_count\": retry,\n        \"source_files\": source\n    })\n    config = {\"retry_attempts\": 2}\n    run([str(csv_path)], config=config)\n    # No assertion, just check no exception\n\nif __name__ == \"__main__\":\n    pytest.main([__file__])\n", "path": "tests/test_harness.py"}}
++{"role": "tool", "result": {"ok": true, "path": "tests\\test_harness.py", "bytes": 3241}}
++{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "set PYTHONPATH=src && set PYTHONDONTWRITEBYTECODE=1 && set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 && python -m pytest -q"}}
++{"role": "tool", "result": {"ok": true, "returncode": 0, "output": "..........                                                               [100%]\n10 passed in 0.07s\n"}}
++{"role": "assistant", "tool_call": {"tool": "finish", "summary": "Implemented DAG runner retry mechanism with up to 2 retries (max_attempts=3). Retry decorator tracks retries_used and success. Runner uses configurable retry_attempts from JSON config. Structured logs record attempt, stage, status. Report reflects real retry_count. All 10 tests pass.", "tests": "10 passed"}}
++{"role": "tool", "result": {"ok": true, "finished": true}}
+diff --git a/evidence/round_03/response.md b/evidence/round_03/response.md
+new file mode 100644
+index 0000000..53fdab1
+--- /dev/null
++++ b/evidence/round_03/response.md
+@@ -0,0 +1 @@
++{"tool": "finish", "summary": "Implemented DAG runner retry mechanism with up to 2 retries (max_attempts=3). Retry decorator tracks retries_used and success. Runner uses configurable retry_attempts from JSON config. Structured logs record attempt, stage, status. Report reflects real retry_count. All 10 tests pass.", "tests": "10 passed"}
+\ No newline at end of file
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+index 80de0a7..c1a31a9 100644
+--- a/src/mini_harness/runner.py
++++ b/src/mini_harness/runner.py
+@@ -22,10 +22,14 @@ def retry_stage(stage_name: str, max_attempts: int = None):
+                     logger.info(json.dumps({"attempt": attempt, "stage": stage_name, "status": "started"}))
+                     result = func(*args, **kwargs)
+                     logger.info(json.dumps({"attempt": attempt, "stage": stage_name, "status": "completed"}))
++                    wrapper.retries_used = attempt  # retry count = attempt number
++                    wrapper.success = True
+                     return result
+                 except Exception as e:
+                     logger.error(json.dumps({"attempt": attempt, "stage": stage_name, "status": "failed", "error": str(e)}))
+                     if attempt == attempts - 1:
++                        wrapper.retries_used = attempts - 1  # max retries
++                        wrapper.success = False
+                         raise RetryExceededError(f"Stage {stage_name} failed after {attempts} attempts") from e
+             return None
+         return wrapper
+@@ -99,23 +103,30 @@ def generate_report(cleaned: List[Dict[str, Any]], rejects: List[Dict[str, Any]]
+ 
+ def run(files: List[str], config: dict = None):
+     logging.basicConfig(level=logging.INFO, format='%(message)s')
++    # Apply config to retry attempts
++    if config:
++        retry_max = config.get("retry_attempts")
++        if retry_max is not None:
++            _RETRY_CONFIG["max_attempts"] = retry_max + 1  # attempts = initial + retries
+     retry_count = 0
+     try:
+         extracted = extract_all(files)
++        retry_count += extract_all.retries_used if hasattr(extract_all, 'retries_used') else 0
+     except RetryExceededError:
+-        retry_count += 3  # all attempts exhausted
++        retry_count += extract_all.retries_used if hasattr(extract_all, 'retries_used') else 0
+         extracted = []
+     
+     try:
+         cleaned, rejects = clean(extracted)
++        retry_count += clean.retries_used if hasattr(clean, 'retries_used') else 0
+     except RetryExceededError:
+-        retry_count += 3
++        retry_count += clean.retries_used if hasattr(clean, 'retries_used') else 0
+         cleaned, rejects = [], []
+     
+     try:
+         report = generate_report(cleaned, rejects, retry_count, files)
+     except RetryExceededError:
+-        retry_count += 3
++        retry_count += generate_report.retries_used if hasattr(generate_report, 'retries_used') else 0
+         report = {"processed_count": 0, "rejected_count": 0, "retry_count": retry_count, "source_files": files}
+     
+     logger.info("Final Report:")
+diff --git a/tests/test_harness.py b/tests/test_harness.py
+new file mode 100644
+index 0000000..069f5e8
+--- /dev/null
++++ b/tests/test_harness.py
+@@ -0,0 +1,92 @@
++import json
++import logging
++import pytest
++from mini_harness.runner import extract, clean, generate_report, run, retry_stage, RetryExceededError
++
++def test_extract_csv(tmp_path):
++    csv_path = tmp_path / "test.csv"
++    csv_path.write_text("ID,Name\n1,Alice\n2,Bob\n", encoding='utf-8')
++    records = list(extract(str(csv_path)))
++    assert len(records) == 2
++    assert records[0]['ID'] == '1'
++
++def test_extract_jsonl(tmp_path):
++    jsonl_path = tmp_path / "test.jsonl"
++    jsonl_path.write_text('{"id":"1","name":"Alice"}\n{"id":"2","name":"Bob"}\n', encoding='utf-8')
++    records = list(extract(str(jsonl_path)))
++    assert len(records) == 2
++    assert records[0]['id'] == '1'
++
++def test_clean_snake_case():
++    data = [{"User Name": "Alice", "ID": "1"}]
++    cleaned, rejects = clean(data)
++    assert cleaned[0] == {"user_name": "Alice", "id": "1"}
++    assert len(rejects) == 0
++
++def test_clean_missing_id():
++    data = [{"User Name": "Bad", "ID": ""}]
++    cleaned, rejects = clean(data)
++    assert len(cleaned) == 0
++    assert len(rejects) == 1
++    assert rejects[0] == {"user_name": "Bad", "id": ""}
++
++def test_generate_report():
++    cleaned = [{"id": "1"}]
++    rejects = [{"user_name": "Bad"}]
++    report = generate_report(cleaned, rejects, 0, ["f.csv"])
++    assert report["processed_count"] == 1
++    assert report["rejected_count"] == 1
++    assert report["retry_count"] == 0
++    assert report["source_files"] == ["f.csv"]
++    assert "memory_reference" in report
++
++def test_retry_stage_success():
++    @retry_stage("test_stage", max_attempts=2)
++    def stage():
++        return "success"
++    result = stage()
++    assert result == "success"
++    # retries_used should be 0
++    assert stage.retries_used == 0
++    assert stage.success
++
++def test_retry_stage_retry_once():
++    calls = []
++    @retry_stage("test_stage", max_attempts=3)  # 3 attempts, so up to 2 retries
++    def stage():
++        calls.append(1)
++        if len(calls) == 1:
++            raise ValueError("first fail")
++        return "ok"
++    result = stage()
++    assert result == "ok"
++    assert stage.retries_used == 1  # 1 retry (attempt 1)
++    assert stage.success
++
++def test_retry_stage_exceeds():
++    @retry_stage("test_stage", max_attempts=2)  # 2 attempts, so 1 retry
++    def stage():
++        raise RuntimeError("fail")
++    with pytest.raises(RetryExceededError):
++        stage()
++    assert stage.retries_used == 1  # after 2 attempts, retries_used = 1
++    assert not stage.success
++
++# Patch to prevent reading memory_summary.md
++def test_run_with_config(tmp_path, monkeypatch):
++    # create temp csv
++    csv_path = tmp_path / "data.csv"
++    csv_path.write_text("ID,Name\n1,Alice\n2,Bob\n", encoding='utf-8')
++    # dummy memory summary to satisfy generate_report
++    monkeypatch.setattr("mini_harness.runner.generate_report", lambda cleaned, rejects, retry, source: {
++        "processed_count": len(cleaned),
++        "rejected_count": len(rejects),
++        "retry_count": retry,
++        "source_files": source
++    })
++    config = {"retry_attempts": 2}
++    run([str(csv_path)], config=config)
++    # No assertion, just check no exception
++
++if __name__ == "__main__":
++    pytest.main([__file__])

@@ -1,0 +1,1 @@
+Added JSON config parsing with `--config` CLI argument, default config.json. All 4 tests pass.

@@ -1,0 +1,25 @@
+{
+  "capability": "任务完成度",
+  "score": 25.0,
+  "per_round": {
+    "round_01": {"score": 50, "sub_scores": {"子步骤覆盖": "≥50%"}},
+    "round_02": {"score": 50, "sub_scores": {"子步骤覆盖": "≥50%"}},
+    "round_03": {"score": 0, "sub_scores": {"子步骤覆盖": "无产出"}},
+    "round_04": {"score": 50, "sub_scores": {"子步骤覆盖": "≥50%"}},
+    "round_05": {"score": 50, "sub_scores": {"子步骤覆盖": "≥50%"}},
+    "round_06": {"score": 25, "sub_scores": {"子步骤覆盖": "<50%"}},
+    "round_07": {"score": 50, "sub_scores": {"子步骤覆盖": "≥50%"}},
+    "round_08": {"score": 50, "sub_scores": {"子步骤覆盖": "≥50%"}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/acceptance.json gate_passed=false", "round_03/diff.patch empty + acceptance.json gate_passed=false", "round_06/replay.jsonl L1-L6 仅读2文件即finish无mini harness工作"],
+  "reason": "全部8轮gate_passed=false，R03零产出,R06仅读文件未回主线,R01/R02实现为placeholder级别",
+  "deductions": [
+    {"round": "round_01", "item": "子步骤覆盖", "amount": 25, "reason": "acceptance.json:L4 gate_passed=false, CLI实为placeholder非最小可用"},
+    {"round": "round_02", "item": "子步骤覆盖", "amount": 25, "reason": "prompt.json:L2 YAML解析未实现, 仅JSON parse"},
+    {"round": "round_03", "item": "子步骤覆盖", "amount": 50, "reason": "diff.patch 无代码变更, 0%子步骤覆盖"},
+    {"round": "round_06", "item": "子步骤覆盖", "amount": 25, "reason": "replay.jsonl:L5 finish未执行mini harness主线继续"}
+  ],
+  "evidence_gaps": []
+}

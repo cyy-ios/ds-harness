@@ -1,0 +1,25 @@
+{
+  "capability": "任务规划",
+  "score": 76.5,
+  "per_round": {
+    "round_01": {"score": 81.0, "sub_scores": {"1.1": 85, "1.2": 75}},
+    "round_02": {"score": 81.0, "sub_scores": {"1.1": 85, "1.2": 75}},
+    "round_03": {"score": 45.0, "sub_scores": {"1.1": 25, "1.2": 75}},
+    "round_04": {"score": 81.0, "sub_scores": {"1.1": 85, "1.2": 75}},
+    "round_05": {"score": 81.0, "sub_scores": {"1.1": 85, "1.2": 75}},
+    "round_06": {"score": 84.0, "sub_scores": {"1.1": 90, "1.2": 75}},
+    "round_07": {"score": 84.0, "sub_scores": {"1.1": 90, "1.2": 75}},
+    "round_08": {"score": 75.0, "sub_scores": {"1.1": 75, "1.2": 75}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "all/replay.jsonl: tool call序列分析",
+    "round_03/replay.jsonl: 仅2步，直接跑pytest后finish"
+  ],
+  "reason": "R03严重不足（仅跑pytest）；其余轮次路线基本直接，工具选择混合使用shell和专用工具",
+  "deductions": [
+    {"round": "round_03", "item": "1.1_路线效率", "amount": 35, "reason": "2 tool steps，未探索也未执行任务"}
+  ],
+  "evidence_gaps": []
+}

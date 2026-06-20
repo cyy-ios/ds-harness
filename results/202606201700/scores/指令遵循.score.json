@@ -1,0 +1,32 @@
+{
+  "capability": "指令遵循",
+  "score": 63.1,
+  "per_round": {
+    "round_01": {"score": 75, "sub_scores": {"cosplay": 0, "concise": 75, "单次指令": 100}},
+    "round_02": {"score": 50, "sub_scores": {"cosplay": 0, "concise": 25, "单次指令": 75}},
+    "round_03": {"score": 75, "sub_scores": {"cosplay": 0, "concise": 75, "单次指令": 100}},
+    "round_04": {"score": 30, "sub_scores": {"cosplay": 0, "concise": 0, "单次指令": 50}},
+    "round_05": {"score": 65, "sub_scores": {"cosplay": 0, "concise": 25, "单次指令": 100}},
+    "round_06": {"score": 60, "sub_scores": {"cosplay": 0, "concise": 75, "单次指令": 75}},
+    "round_07": {"score": 75, "sub_scores": {"cosplay": 0, "concise": 75, "单次指令": 100}},
+    "round_08": {"score": 75, "sub_scores": {"cosplay": 0, "concise": 75, "单次指令": 100}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["round_01/response.md: L1 summary text", "round_02/response.md: L1 garbled response", "round_03/response.md: L1 finish summary", "round_04/response.md: L1 blank", "round_05/response.md: L1 tool_call text", "round_06/response.md: L1 finish summary", "round_07/response.md: L1 finish summary", "round_08/response.md: L1 finish summary"],
+  "reason": "裸模型无cosplay包裹格式，cosplay=0；concise多数简洁但R02/R04/R05无正常回复；单次指令整体完成率高，R04未修复仅运行验证",
+  "deductions": [
+    {"round": "round_01", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 无臣某谨奏/叩请圣裁格式"},
+    {"round": "round_02", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 无cosplay格式"},
+    {"round": "round_02", "item": "持久规则_concise", "amount": 25, "reason": "response.md: L1 内容为diff片段非正常回复"},
+    {"round": "round_03", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 无cosplay格式"},
+    {"round": "round_04", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 空白回复无cosplay"},
+    {"round": "round_04", "item": "持久规则_concise", "amount": 50, "reason": "response.md: L1 空字符串无有效内容"},
+    {"round": "round_04", "item": "单次指令", "amount": 25, "reason": "replay.jsonl: L4-L6 仅定位未修复test_long_log_debug失败"},
+    {"round": "round_05", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 tool_call文本无cosplay格式"},
+    {"round": "round_06", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 无cosplay格式"},
+    {"round": "round_07", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 无cosplay格式"},
+    {"round": "round_08", "item": "持久规则_cosplay", "amount": 50, "reason": "response.md: L1 无cosplay格式"}
+  ],
+  "evidence_gaps": ["R02 response.md为garbled diff内容，非agent正常输出；R04 response.md仅含空格；R05 response.md为raw tool_call JSON"]
+}

@@ -1,0 +1,2 @@
+﻿origin	https://github.com/openai/codex.git (fetch)
+origin	https://github.com/openai/codex.git (push)

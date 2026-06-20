@@ -1,0 +1,30 @@
+{
+  "capability": "结果预期",
+  "score": 55.3,
+  "per_round": {
+    "round_01": {"score": 52, "sub_scores": {"1.1": 40, "1.2": 60}},
+    "round_02": {"score": 52, "sub_scores": {"1.1": 40, "1.2": 60}},
+    "round_03": {"score": 58, "sub_scores": {"1.1": 40, "1.2": 70}},
+    "round_04": {"score": 52, "sub_scores": {"1.1": 40, "1.2": 60}},
+    "round_05": {"score": 52, "sub_scores": {"1.1": 40, "1.2": 60}},
+    "round_06": {"score": 72, "sub_scores": {"1.1": 60, "1.2": 80}},
+    "round_07": {"score": 52, "sub_scores": {"1.1": 40, "1.2": 60}},
+    "round_08": {"score": 52, "sub_scores": {"1.1": 40, "1.2": 60}}
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": ["M1-M8 acceptance.json", "M1-M8 replay.jsonl"],
+  "reason": "所有轮次acceptance CLI端到端/cwd独立性失败，下游无法消费产出；agent自检仅覆盖pytest+基本CLI，不覆盖evaluator接口格式",
+  "deductions": [
+    {"round": "round_01", "item": "1.1_产出可消费性", "amount": 50, "reason": "acceptance.json:L2 cli_end_to_end(returncode=2), --input不支持多文件"},
+    {"round": "round_01", "item": "1.2_执行完整性与自检", "amount": 35, "reason": "replay.jsonl:L110自检不覆盖acceptance CLI格式"},
+    {"round": "round_02", "item": "1.1_产出可消费性", "amount": 50, "reason": "acceptance.json cli_end_to_end仍失败"},
+    {"round": "round_02", "item": "1.2_执行完整性与自检", "amount": 35, "reason": "replay.jsonl自检范围过窄"},
+    {"round": "round_03", "item": "1.1_产出可消费性", "amount": 50, "reason": "acceptance.json cli_end_to_end仍失败"},
+    {"round": "round_03", "item": "1.2_执行完整性与自检", "amount": 25, "reason": "replay步骤更多但自检仍不覆盖acceptance场景"},
+    {"round": "round_06", "item": "1.1_产出可消费性", "amount": 35, "reason": "M6无代码产出，仅回复文本，无工程可消费性"},
+    {"round": "round_07", "item": "1.2_执行完整性与自检", "amount": 35, "reason": "replay仅生成report无运行验证"},
+    {"round": "round_08", "item": "1.2_执行完整性与自检", "amount": 35, "reason": "response.md:L1仅确认pytest通过，未新增实际功能"}
+  ],
+  "evidence_gaps": ["diff.patch全为(no changes)", "commands.log全为空"]
+}

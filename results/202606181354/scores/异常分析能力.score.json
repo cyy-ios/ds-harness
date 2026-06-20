@@ -1,0 +1,23 @@
+{
+  "capability": "异常分析能力",
+  "score": 50.0,
+  "per_round": {
+    "round_01": null,
+    "round_02": null,
+    "round_03": null,
+    "round_04": {"score": 25},
+    "round_05": {"score": 75},
+    "round_06": null,
+    "round_07": null,
+    "round_08": null
+  },
+  "rounds_scored": 2,
+  "rounds_excluded": 6,
+  "evidence_used": ["round_04/replay.jsonl + response.md", "round_05/replay.jsonl"],
+  "reason": "仅M4和M5有异常；M4分析正确方向(ModuleNotFoundError)但解决方式错误(创建假数据)；M5的test_cli失败修复正确",
+  "deductions": [
+    {"round": "round_04", "item": "异常分析", "amount": 75, "reason": "定位到导入错误但用假数据绕过而非修复"},
+    {"round": "round_05", "item": "异常分析", "amount": 25, "reason": "修复了test_cli的PYTHONPATH但重写了整个测试文件"}
+  ],
+  "evidence_gaps": []
+}

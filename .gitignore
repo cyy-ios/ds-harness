@@ -1,0 +1,27 @@
+﻿# secrets
+.env
+.env.*
+*.pem
+*.key
+*secret*
+*credential*
+*token*
+**/deepseek-api-key.txt
+
+# local/runtime/build outputs
+**/target/
+**/node_modules/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+.DS_Store
+Thumbs.db
+
+# local scratch
+/tmp/
+tmp/
+*.log
+
+# generated bundles
+research.zip

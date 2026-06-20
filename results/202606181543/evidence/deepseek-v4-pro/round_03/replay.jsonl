@@ -1,0 +1,4 @@
+{"role": "assistant", "tool_call": {"tool": "shell", "cmd": "set PYTHONDONTWRITEBYTECODE=1&& set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1&& python -m pytest -q tests/"}}
+{"role": "tool", "result": {"ok": true, "returncode": 0, "output": "........                                                                 [100%]\n8 passed in 0.08s\n"}}
+{"role": "assistant", "tool_call": {"tool": "finish", "summary": "M3_runner_retry: DAG runner with extract/clean/report stages, retry logic (max 2 retries), structured logs (attempt, stage, status), and report including processed_count, rejected_count, retry_count, source_files, and memory reference. All tests pass.", "tests": "8 passed"}}
+{"role": "tool", "result": {"ok": true, "finished": true}}
