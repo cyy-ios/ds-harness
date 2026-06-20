@@ -8,6 +8,7 @@ DS Harness is an agent evaluation harness. The canonical workflow is under `benc
 - Folder map: `docs/project-map.md`
 - Main evaluation workflow: `benchmarks/agent-eval-suite/orchestrator.md`
 - Output contract: `results/readme.md`
+- Model scoreboard: `results/model-scoreboard.md`
 - Local key handling: `docs/local-environment.md`
 
 Do not put public run outputs under `benchmarks/agent-eval-suite/results/`; use `results/<timestamp>/`.
