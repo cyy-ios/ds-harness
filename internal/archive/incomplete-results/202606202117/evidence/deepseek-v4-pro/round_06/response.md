@@ -1,0 +1,1 @@
+M6_interruption 完成：解读 logs/unrelated_error.log（外部缓存超时但最终恢复，与 mini harness 无关）和 docs/handoff-note.md（交接草稿，指引核验当前仓库状态）；随后运行 pytest 确认主线功能仍然全部通过。

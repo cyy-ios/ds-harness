@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, time
 from pathlib import Path
 import requests
+from requests import exceptions as requests_exceptions
 
 DEFAULT_MODEL = "deepseek-v4-pro"
 API_URL = "https://api.deepseek.com/v1/chat/completions"
@@ -46,6 +47,9 @@ def load_key(path: Path | None) -> str:
     env_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
     if env_key:
         return env_key
+    env_file = os.environ.get("DEEPSEEK_API_KEY_FILE", "").strip()
+    if path is None and env_file:
+        path = Path(env_file)
     if path is None:
         raise SystemExit("Set DEEPSEEK_API_KEY or pass --key-file <path>.")
     text = path.read_text(encoding='utf-8').strip()
@@ -76,13 +80,36 @@ def extract_json(text: str) -> dict:
 
 
 def call_ds(messages, api_key: str, model: str) -> str:
-    r = requests.post(API_URL, headers={"Authorization": f"Bearer {api_key}", "Content-Type":"application/json"}, json={
+    payload = {
         "model": model,
         "messages": messages,
         "temperature": 0.2,
+        "max_tokens": 4096,
         "stream": False,
         "response_format": {"type":"json_object"},
-    }, timeout=(30, 300))
+    }
+    last_error: Exception | None = None
+    for attempt in range(1, 8):
+        try:
+            r = requests.post(
+                API_URL,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type":"application/json", "Connection": "close"},
+                json=payload,
+                timeout=(30, 300),
+            )
+            break
+        except (
+            requests_exceptions.ChunkedEncodingError,
+            requests_exceptions.ConnectionError,
+            requests_exceptions.Timeout,
+            requests_exceptions.SSLError,
+        ) as exc:
+            last_error = exc
+            if attempt == 7:
+                raise
+            time.sleep(min(30, 2 * attempt))
+    else:
+        raise RuntimeError(f"DeepSeek request failed: {last_error}")
     if r.status_code >= 400:
         raise RuntimeError(f"DeepSeek HTTP {r.status_code}: {r.text[:1000]}")
     data = r.json()

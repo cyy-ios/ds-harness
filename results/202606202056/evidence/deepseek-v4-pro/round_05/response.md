@@ -1,0 +1,1 @@
+M5_context_change：在 subdir/workbench 中增测试，确认 mini_harness 在不同工作目录下可正常使用（通过绝对路径传递文件）。3 passed。

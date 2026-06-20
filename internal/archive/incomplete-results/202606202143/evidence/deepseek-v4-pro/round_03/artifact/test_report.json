@@ -1,0 +1,8 @@
+{
+  "processed_count": 2,
+  "rejected_count": 1,
+  "retry_count": 0,
+  "source_files": [
+    "data/input.csv"
+  ]
+}

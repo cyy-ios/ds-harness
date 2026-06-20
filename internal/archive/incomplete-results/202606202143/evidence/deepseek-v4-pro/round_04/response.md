@@ -1,0 +1,1 @@
+M4_long_log_debug completed. Fixed Runner.extract to handle comment lines (#) and blank lines in CSV via _read_csv method, eliminating the 'expected string or bytes-like object, got 'NoneType'' error produced by m4_noise_test.csv. Updated test_long_log_debug.py to import Runner instead of non-existent run_dag and adjusted process/reject counts to 6/3. All 22 tests now pass.

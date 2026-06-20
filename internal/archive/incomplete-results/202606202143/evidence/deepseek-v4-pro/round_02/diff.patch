@@ -1,0 +1,278 @@
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index e025c08..4e183d7 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -5,6 +5,7 @@ import sys
+ from pathlib import Path
+ 
+ from .cleaning import clean_records
++from .config import load_config
+ 
+ 
+ def parse_csv(file_path: Path) -> list[dict]:
+@@ -42,8 +43,28 @@ def parse_file(file_path: Path) -> list[dict]:
+ 
+ def run_command(args):
+     """Implementation of the 'run' subcommand."""
++    # Load config if provided
++    config = {}
++    if args.config:
++        config_path = Path(args.config)
++        if not config_path.is_absolute():
++            config_path = Path.cwd() / config_path
++        config = load_config(config_path)
++    
++    # Determine input files: CLI args take precedence, then config['input_files']
++    input_sources = args.input if args.input else config.get('input_files', [])
++    if not input_sources:
++        print("Error: No input files specified.", file=sys.stderr)
++        sys.exit(1)
++    # Ensure it's a list if config gave a string
++    if isinstance(input_sources, str):
++        input_sources = [input_sources]
++    
++    # Determine output: CLI --output overrides config['output']
++    output_target = args.output if args.output else config.get('output')
++    
+     all_records = []
+-    for file_str in args.input:
++    for file_str in input_sources:
+         path = Path(file_str)
+         if not path.is_absolute():
+             # Resolve relative to current working directory
+@@ -56,15 +77,16 @@ def run_command(args):
+     
+     processed, rejected = clean_records(all_records)
+     
+-    # Minimal report
++    source_files = [str(p) for p in input_sources]
+     report = {
+         "processed_count": len(processed),
+         "rejected_count": len(rejected),
+         "retry_count": 0,
+-        "source_files": [str(f) for f in args.input],
++        "source_files": source_files,
+     }
+-    if args.output:
+-        with open(args.output, 'w', encoding='utf-8') as f:
++    if output_target:
++        out_path = Path(output_target)
++        with open(out_path, 'w', encoding='utf-8') as f:
+             json.dump(report, f, indent=2)
+     else:
+         print(json.dumps(report, indent=2))
+@@ -76,7 +98,8 @@ def main():
+     
+     # run subcommand
+     run_parser = subparsers.add_parser('run', help='Run the data harness')
+-    run_parser.add_argument('input', nargs='+', help='Input files (CSV or JSONL)')
++    run_parser.add_argument('input', nargs='*', help='Input files (CSV or JSONL). If not provided, config input_files used.')
++    run_parser.add_argument('-c', '--config', help='Path to JSON or YAML config file')
+     run_parser.add_argument('-o', '--output', help='Output report file (default: stdout)')
+     run_parser.set_defaults(func=run_command)
+     
+diff --git a/src/mini_harness/config.py b/src/mini_harness/config.py
+new file mode 100644
+index 0000000..1ae1f0c
+--- /dev/null
++++ b/src/mini_harness/config.py
+@@ -0,0 +1,32 @@
++import json
++from pathlib import Path
++
++try:
++    import yaml
++except ImportError:
++    yaml = None
++
++
++def load_config(config_path: Path) -> dict:
++    """
++    Load configuration from a JSON or YAML file.
++    Returns a dict. Raises ValueError for unsupported formats.
++    """
++    if not config_path.exists():
++        raise FileNotFoundError(f"Config file not found: {config_path}")
++    with open(config_path, 'r', encoding='utf-8') as f:
++        content = f.read()
++    # Try JSON first
++    try:
++        result = json.loads(content)
++    except json.JSONDecodeError:
++        if yaml is not None:
++            try:
++                result = yaml.safe_load(content)
++            except yaml.YAMLError as e:
++                raise ValueError(f"Failed to parse config as JSON or YAML: {e}")
++        else:
++            raise ValueError("Config file is not valid JSON and PyYAML is not installed")
++    if not isinstance(result, dict):
++        raise ValueError(f"Failed to parse config as JSON or YAML: expected a mapping, got {type(result).__name__}")
++    return result
+diff --git a/test_config_no_output.yaml b/test_config_no_output.yaml
+new file mode 100644
+index 0000000..2bf12c4
+--- /dev/null
++++ b/test_config_no_output.yaml
+@@ -0,0 +1,3 @@
++input_files:
++- data/input.csv
++- data/events.jsonl
+diff --git a/test_report.json b/test_report.json
+new file mode 100644
+index 0000000..7327c4f
+--- /dev/null
++++ b/test_report.json
+@@ -0,0 +1,8 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv"
++  ]
++}
+\ No newline at end of file
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+new file mode 100644
+index 0000000..bc12b75
+--- /dev/null
++++ b/tests/test_cli.py
+@@ -0,0 +1,85 @@
++import json
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++
++def run_cli(*args):
++    """Run mini_harness.cli as a subprocess."""
++    env = os.environ.copy()
++    env["PYTHONDONTWRITEBYTECODE"] = "1"
++    env["PYTHONPATH"] = str(Path("src").resolve())
++    return subprocess.run(
++        [sys.executable, "-m", "mini_harness.cli"] + list(args),
++        capture_output=True,
++        text=True,
++        env=env,
++    )
++
++
++def test_run_no_args():
++    result = run_cli("run")
++    assert result.returncode != 0
++    assert "No input files" in result.stderr
++
++
++def test_run_with_input_files():
++    result = run_cli("run", "data/input.csv", "data/events.jsonl")
++    assert result.returncode == 0
++    report = json.loads(result.stdout)
++    assert report["processed_count"] == 4
++    assert report["rejected_count"] == 2
++    assert report["retry_count"] == 0
++    assert len(report["source_files"]) == 2
++
++
++def test_run_with_config_stdout():
++    # Config without output file, so report goes to stdout
++    result = run_cli("run", "-c", "test_config_no_output.yaml")
++    assert result.returncode == 0
++    report = json.loads(result.stdout)
++    assert report["processed_count"] == 4
++    assert report["rejected_count"] == 2
++
++
++def test_run_config_with_output_file(tmp_path):
++    output_file = tmp_path / "out.json"
++    # Write a temporary config
++    config_file = tmp_path / "config.yaml"
++    config_file.write_text(f"input_files:\n- data/input.csv\n- data/events.jsonl\noutput: {output_file}")
++    result = run_cli("run", "-c", str(config_file))
++    assert result.returncode == 0
++    assert output_file.exists()
++    with open(output_file) as f:
++        report = json.load(f)
++    assert report["processed_count"] == 4
++
++
++def test_run_cli_overrides_config():
++    # CLI input should override config input_files.
++    # Use custom config without output to get stdout.
++    result = run_cli("run", "-c", "test_config_no_output.yaml", "data/input.csv")
++    assert result.returncode == 0
++    report = json.loads(result.stdout)
++    assert report["processed_count"] == 2  # Only two valid rows in input.csv alone
++
++
++def test_run_config_not_found():
++    result = run_cli("run", "-c", "nonexistent.yaml")
++    assert result.returncode != 0
++    assert "Config file not found" in result.stderr
++
++
++def test_run_file_not_found():
++    result = run_cli("run", "data/missing.csv")
++    assert result.returncode != 0
++    assert "File not found" in result.stderr
++
++
++def test_run_unsupported_format(tmp_path):
++    bad_file = tmp_path / "data.txt"
++    bad_file.write_text("id,name\n1,test")
++    result = run_cli("run", str(bad_file))
++    assert result.returncode != 0
++    assert "Unsupported" in result.stderr
+diff --git a/tests/test_config.py b/tests/test_config.py
+new file mode 100644
+index 0000000..a18355e
+--- /dev/null
++++ b/tests/test_config.py
+@@ -0,0 +1,46 @@
++import json
++import pytest
++import yaml
++from pathlib import Path
++from mini_harness.config import load_config
++
++
++def test_load_config_json(tmp_path):
++    config_file = tmp_path / "config.json"
++    config_file.write_text(json.dumps({"input_files": ["in.csv"], "output": "out.json"}))
++    result = load_config(config_file)
++    assert result == {"input_files": ["in.csv"], "output": "out.json"}
++
++
++def test_load_config_yaml(tmp_path):
++    config_file = tmp_path / "config.yaml"
++    config_file.write_text("input_files:\n- in.csv\noutput: out.json")
++    result = load_config(config_file)
++    assert result == {"input_files": ["in.csv"], "output": "out.json"}
++
++
++def test_load_config_yml_extension(tmp_path):
++    config_file = tmp_path / "config.yml"
++    config_file.write_text("input_files:\n- in.csv")
++    result = load_config(config_file)
++    assert result == {"input_files": ["in.csv"]}
++
++
++def test_load_config_file_not_found():
++    with pytest.raises(FileNotFoundError):
++        load_config(Path("nonexistent.json"))
++
++
++def test_load_config_invalid_json(tmp_path):
++    config_file = tmp_path / "bad.json"
++    config_file.write_text("not json")
++    # It should fallback to YAML, but not valid YAML either -> ValueError
++    with pytest.raises(ValueError, match="Failed to parse config as JSON or YAML"):
++        load_config(config_file)
++
++
++def test_load_config_yaml_error(tmp_path):
++    config_file = tmp_path / "bad.yaml"
++    config_file.write_text("\tbad: indentation")  # tabs are invalid in YAML
++    with pytest.raises(ValueError, match="Failed to parse config as JSON or YAML"):
++        load_config(config_file)

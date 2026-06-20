@@ -1,0 +1,1 @@
+M7_memory_report completed. Generated docs/recap_report.md that references memory/memory_summary.md (early design decisions), docs/compatibility-notes.md, and benchmarks/perf-baseline.json. The report includes current artifact stats (processed=6, rejected=3, retry_count=0) and confirms that design decisions are reflected in implementation. All existing tests still pass.

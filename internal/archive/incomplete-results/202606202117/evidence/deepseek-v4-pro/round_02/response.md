@@ -1,0 +1,1 @@
+M2_config 完成：增加 config 模块支持 JSON/YAML 解析和默认配置文件；在 CLI run 子命令中集成配置加载，CLI 参数覆盖配置；pytest 通过且 CLI 功能正常。

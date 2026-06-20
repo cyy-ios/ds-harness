@@ -1,0 +1,2 @@
+{"role": "assistant", "tool_call": {"tool": "finish", "summary": "invalid json: Extra data: line 1 column 59 (char 58)", "tests": "unknown"}}
+{"role": "tool", "result": {"ok": true, "finished": true}}

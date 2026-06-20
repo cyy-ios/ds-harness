@@ -1,0 +1,1 @@
+M3_runner_retry 完成：实现 runner.py 包含 extract/clean/report 三阶段 DAG runner，每个阶段都有最多 2 次重试，结构化日志输出到 stderr；clean 阶段包括去除空行、字段名转 snake_case、缺失 id 的记录进入 rejects；CLI run 输出 JSON 报告（processed_count、rejected_count、retry_count、source_files）。测试覆盖各阶段。

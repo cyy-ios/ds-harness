@@ -1,0 +1,1 @@
+M3_runner_retry: runner.py 内建 extract/clean 阶段重试循环（max_retries 可配置），所有日志含 attempt/stage/status；CLI 新增 --config 支持，报告字段反映真实处理结果。测试 4 passed。

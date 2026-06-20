@@ -1,0 +1,1 @@
+M5_context_change 完成：更新 subdir/workbench/pyproject.toml 增加 pythonpath 指向 ../../src，使测试可从 workbench 导入 mini_harness；新增 harness_run.py 作为 workbench 下的 CLI 运行入口；所有测试（repo root 和 workbench）均通过，确保主线功能在不同工作目录下可用。

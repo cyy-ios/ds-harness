@@ -1,0 +1,20 @@
+[
+  {
+    "stage": "extract",
+    "attempt": 1,
+    "status": "success",
+    "message": ""
+  },
+  {
+    "stage": "clean",
+    "attempt": 1,
+    "status": "success",
+    "message": ""
+  },
+  {
+    "stage": "report",
+    "attempt": 1,
+    "status": "success",
+    "message": ""
+  }
+]

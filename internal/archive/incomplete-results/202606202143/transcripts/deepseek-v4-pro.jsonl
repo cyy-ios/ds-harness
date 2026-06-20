@@ -1,0 +1,3 @@
+{"event": "context_compacted", "milestone": "M8_compact_resume", "compact_source": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606202143\\docs\\compact-summary.md", "compact_chars": 700}
+{"milestone": "M8_compact_resume", "step": 0, "assistant": "{\"tool\":\"read_file\",\"path\":\"skills/data-harness/SKILL.md\"}\n{\"tool\":\"glob\",\"pattern\":\"src/mini_harness/**/*.py\"}\n{\"tool\":\"glob\",\"pattern\":\"tests/**/*.py\"}"}
+{"milestone": "M8_compact_resume", "step": 0, "tool_result": {"ok": true, "finished": true}}

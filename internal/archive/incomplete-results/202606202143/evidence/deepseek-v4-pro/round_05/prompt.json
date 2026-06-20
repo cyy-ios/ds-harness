@@ -1,0 +1,4 @@
+{
+  "round": "round_05",
+  "prompt": "里程碑 M5_context_change：现在从 subdir/workbench 继续开发，当前环境含若干项目相关变量；保持主线功能在不同工作目录下可用。"
+}

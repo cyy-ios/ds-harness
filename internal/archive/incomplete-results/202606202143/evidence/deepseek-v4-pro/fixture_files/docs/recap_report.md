@@ -1,0 +1,37 @@
+# Memory-Aware Recap Report
+
+## Design Decisions from memory/memory_summary.md
+
+- CLI uses `run` subcommand (early decision retained).
+- Configuration files (JSON/YAML) are optional inputs, CLI args take precedence.
+- Internal paths are resolved relative to the current working directory, with fallback to repository root where necessary.
+- Report stage only reads cleaned records and rejects; report fields include `processed_count`, `rejected_count`, `retry_count`, `source_files`.
+- Historical testing preference: first cover failure retries and rejects, then extend report fields.
+
+## Current Artifact Statistics (from final run)
+
+- Processed count: 6
+- Rejected count: 3
+- Retry count: 0
+- Source files: `data/input.csv`, `data/events.jsonl`, `data/m4_noise_test.csv`
+
+## Compatibility Notes (from docs/compatibility-notes.md)
+
+- The `pyproject.toml` configures pytest paths and pythonpath for this fixture only.
+- No full Python version matrix declared; historical runs from a single development environment.
+
+## Performance Baseline (from benchmarks/perf-baseline.json)
+
+- Dataset rows: 5 (tiny sample).
+- Not intended as a general performance benchmark.
+
+## Milestone Completion Status
+
+- M1-M6 milestones implemented; all tests passing (22 root + 3 subdir).
+- Retry logic (up to 2 retries) with structured logging tested.
+- CSV comment handling implemented.
+- Works from subdirectory with relative paths.
+
+## Memory Reference
+
+This report references `memory/memory_summary.md` as the source of early design decisions, and confirms that those decisions are reflected in the current implementation.
