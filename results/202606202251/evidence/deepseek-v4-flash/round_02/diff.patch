@@ -1,0 +1,103 @@
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 4cdd10d..528ef8c 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -1,15 +1,34 @@
+ import argparse
++from pathlib import Path
++from mini_harness.config import load_config
+ from mini_harness.run import run_pipeline
+ 
+ def main():
+     parser = argparse.ArgumentParser(prog='mini-harness')
+     subparsers = parser.add_subparsers(dest='command', required=True)
+     run_parser = subparsers.add_parser('run', help='Run data pipeline')
+-    run_parser.add_argument('input', help='Input file (CSV or JSONL)')
++    run_parser.add_argument('input', nargs='?', help='Input file (CSV or JSONL)')
+     run_parser.add_argument('--output', default='report.json', help='Output report path')
++    run_parser.add_argument('--config', help='Path to config file (JSON or YAML)')
+     args = parser.parse_args()
+     if args.command == 'run':
+-        run_pipeline(args.input, args.output)
++        config = {}
++        if args.config:
++            config_path = Path(args.config)
++            if not config_path.exists():
++                parser.error(f'Config file not found: {args.config}')
++            config = load_config(str(config_path))
++        # Determine input: explicit > config > error
++        input_path = args.input
++        if input_path is None:
++            input_path = config.get('input')
++        if input_path is None:
++            parser.error('Input file required, provide as argument or in config')
++        # Determine output: explicit > config > default
++        output_path = args.output
++        if output_path == 'report.json' and 'output' in config:
++            output_path = config['output']
++        run_pipeline(input_path, output_path)
+ 
+ if __name__ == '__main__':
+     main()
+diff --git a/src/mini_harness/config.py b/src/mini_harness/config.py
+new file mode 100644
+index 0000000..1585698
+--- /dev/null
++++ b/src/mini_harness/config.py
+@@ -0,0 +1,41 @@
++import json
++from pathlib import Path
++
++def load_config(config_path):
++    """Load config from JSON or YAML file."""
++    ext = Path(config_path).suffix.lower()
++    if ext == '.json':
++        with open(config_path, 'r', encoding='utf-8') as f:
++            return json.load(f)
++    elif ext in ('.yaml', '.yml'):
++        with open(config_path, 'r', encoding='utf-8') as f:
++            return parse_yaml(f.read())
++    else:
++        raise ValueError(f'Unsupported config format: {ext}')
++
++def parse_yaml(text):
++    """Simple YAML parser for flat key-value pairs (no nesting)."""
++    result = {}
++    for line in text.splitlines():
++        line = line.strip()
++        if not line or line.startswith('#'):
++            continue
++        if ':' in line:
++            key, val = line.split(':', 1)
++            key = key.strip()
++            val = val.strip()
++            # Handle quoted strings
++            if val.startswith('"') and val.endswith('"'):
++                val = val[1:-1]
++            elif val.startswith("'") and val.endswith("'"):
++                val = val[1:-1]
++            # Try to parse int/float
++            try:
++                val = int(val)
++            except ValueError:
++                try:
++                    val = float(val)
++                except ValueError:
++                    pass
++            result[key] = val
++    return result
+diff --git a/src/mini_harness/run.py b/src/mini_harness/run.py
+index 0a5fc9d..19a8171 100644
+--- a/src/mini_harness/run.py
++++ b/src/mini_harness/run.py
+@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
+ 
+ def to_snake_case(name):
+     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+-    s2 = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s2) if re.search('([a-z0-9])([A-Z])', s1) else s1
+-    return re.sub('[^a-zA-Z0-9]', '_', name).lower()
++    s2 = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1)
++    return re.sub('[^a-zA-Z0-9]', '_', s2).lower()
+ 
+ 
+ def extract(input_path):

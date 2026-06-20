@@ -1,0 +1,1 @@
+M3_runner_retry complete: Refactored run.py with proper DAG runner, max 2 retries per stage, structured logging (attempt, stage, status). Report includes processed_count, rejected_count, retry_count, source_files. Verified with data/input.csv output shows 2 processed, 1 rejected, 0 retries. Tests pass.

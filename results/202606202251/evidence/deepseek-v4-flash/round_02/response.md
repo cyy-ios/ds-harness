@@ -1,0 +1,1 @@
+M2_config complete: added src/mini_harness/config.py supporting JSON and YAML config files, updated CLI to allow config option with fallback to argument input/output, preserved existing 'run' subcommand. Tests pass.
