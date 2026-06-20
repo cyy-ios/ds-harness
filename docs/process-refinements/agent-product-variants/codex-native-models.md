@@ -1,102 +1,67 @@
-# Codex CLI + 原生模型首次跑通时遇到的问题和调整
+# Codex CLI + 原生模型跑通记录
 
-日期：2026-06-19
-变体：Codex CLI + Codex 原生模型（GPT-5.5、GPT-5.4 等）
-实测模型：GPT-5.5 high
-主导/评分：CC + DeepSeek v4 Pro
+日期：2026-06-19  
+变体：Codex CLI + Codex 原生模型（如 GPT-5.5）  
+用途：记录第一次把 Agent Eval Suite 跑到 Codex 原生模型时遇到的问题和修正。
 
----
+## 背景
 
-### models.yaml 只有 DeepSeek 模型，没有 GPT 系列
+最初评测对象主要是 DeepSeek 裸模型和 DeepSeek 接入 Codex 后的变体。为了建立 Agent 产品基线，需要让官方 Codex CLI 直接连接自己的原生模型，并跑同一套 M1-M8 fixture。
 
-`models.yaml` 原本只注册了 deepseek-v4-pro 和 deepseek-v4-flash。用 Codex 原生模型时主导 agent 找不到被测模型 key。
+## 问题与修正
 
-新增 gpt-5.5 / gpt-5.5-medium / gpt-5.5-low / gpt-5.5-xhigh 条目，key 名对应 `-m` 参数，额外记录 `reasoning_effort`。后续 GPT-5.4 等按同样格式追加。
+### 1. 模型注册缺少 GPT 系列
 
-影响：`models.yaml`
+`models.yaml` 早期只登记 DeepSeek 相关模型，主流程无法把用户指定的 GPT 模型映射到 Codex CLI 的 `-m` 参数。
 
-### PowerShell 传参 codex exec 时 prompt 被丢弃，Codex 卡在 stdin
+修正：为原生模型增加显式 key，并记录 reasoning effort 等模型参数。后续新增模型按同样格式登记。
 
-PowerShell 5.1 下 `codex exec --json -m gpt-5.5 "中文prompt"` 的参数引号处理异常，prompt 未传给 Codex，Codex 输出 "Reading additional input from stdin..." 后阻塞。
+### 2. PowerShell 传中文 prompt 容易卡在 stdin
 
-主导 agent 统一用 Bash 调用 Codex CLI。手动执行时 `echo "prompt" | codex exec --json ...`，runner 脚本内用 subprocess 无此限制。
+在 PowerShell 5.1 下直接执行 `codex exec --json -m <model> "中文 prompt"` 时，prompt 可能没有正确传给 Codex，Codex 进入 “Reading additional input from stdin...” 状态。
 
-影响：`runners/drivers/codex-driver.md`
+修正：runner 使用 `subprocess.run(input=prompt)` 传入 prompt；手工调试时用管道输入，避免复杂 shell quoting。
 
-### model_reasoning_effort 无法通过 PowerShell CLI 传入
+### 3. `model_reasoning_effort` 不适合依赖临时 CLI 参数
 
-`-c model_reasoning_effort="high"` 中内层引号在 PowerShell 5.1 下被吃掉，Codex 收到的参数残缺。
+`-c model_reasoning_effort="high"` 在某些 shell 下引号会被错误处理，导致 Codex 收到残缺配置。
 
-改为在 fixture 的 `.codex/config.toml` 中直接写 `model_reasoning_effort = "high"`，不再依赖 `-c` 传参。换 effort 时改 config.toml 中的值即可。
+修正：把稳定参数写入 fixture 的 `.codex/config.toml`，只把必要的动态参数留给 CLI。
 
-影响：`inject-persistent-rules.md`（持久化 model_reasoning_effort 配置）、`runners/drivers/codex-driver.md`
+### 4. Codex config 层级容易写错
 
-### approval_policy 和 sandbox_mode 放在 [permissions] section 下导致 Codex 启动报错
+`approval_policy` 和 `sandbox_mode` 是顶层 key，不属于 `[permissions]`。放错层级会触发 Codex 配置解析错误。
 
-`[permissions]` 是命名权限配置文件的容器（map），不是扁平键值对。放错层级后 Codex 报 `invalid type: string, expected struct PermissionProfileToml`。
+修正：统一使用顶层配置，并在注入文档里写明文件名是 `config.toml`，不是 `codex.toml`。
 
-`approval_policy` 和 `sandbox_mode` 改为 config.toml 顶层 key，与 `model_reasoning_effort` 同级。
+### 5. `model_instructions_file` 相对路径规则容易误解
 
-影响：`inject-persistent-rules.md`、`runners/drivers/codex-driver.md`
+Codex 从 `.codex/` 目录解析相对路径。写成 `.codex/instructions.md` 会变成 `.codex/.codex/instructions.md`。
 
-### model_instructions_file = ".codex/instructions.md" 导致路径双写
+修正：写成 `instructions.md`。
 
-Codex 从 `.codex/` 目录解析相对路径，`.codex/instructions.md` 被解析为 `.codex/.codex/instructions.md`，启动报找不到文件。
+### 6. Windows sandbox 在本机环境不稳定
 
-改为 `model_instructions_file = "instructions.md"`。
+`sandbox_mode = "workspace-write"` 触发 Windows Sandbox helper 错误，导致 shell 命令失败。
 
-影响：`inject-persistent-rules.md`
+修正：fixture 是隔离临时仓库，评测时统一使用 `danger-full-access`，用 fixture 边界和结果校验控制风险。
 
-### sandbox_mode = "workspace-write" 触发 Windows Sandbox 报 helper_unknown_error
+### 7. fixture 不是 git repo，Codex 默认拒绝执行
 
-`workspace-write` 启用 Windows Sandbox，当前环境报 `helper_unknown_error: setup refresh had errors`，所有 shell 命令执行失败。
+Codex CLI 默认要求在 git repo 中运行；fixture 是临时目录，未必初始化 git。
 
-fixture 是隔离测试仓库，统一用 `sandbox_mode = "danger-full-access"` 绕过 Sandbox。
+修正：runner 固定传 `--skip-git-repo-check`。
 
-影响：`inject-persistent-rules.md`、`runners/drivers/codex-driver.md`
+### 8. 输出文件被 PowerShell 后台进程锁定
 
-### fixture 目录不是 git repo，Codex 默认拒绝执行
+手工多轮调试时复用同一个 raw JSONL 文件，可能被旧进程占用。
 
-`setup_fixture.py` 创建的 fixture 目录不含 `.git`，Codex CLI 默认要求 git repo，直接运行报错。
+修正：按轮次命名 raw 输出；正式 runner 内部管理文件名。
 
-每次 `codex exec` 必须传 `--skip-git-repo-check`。此 flag 无 config.toml 等价项，CLI 传入。
+## 当前状态
 
-影响：`inject-persistent-rules.md`（明确写入注入步骤）、`runners/drivers/codex-driver.md`
+主流程已把 Codex 原生模型作为第 4 条运行路径：
 
-### 多次执行时输出文件被旧 PowerShell 进程锁定
-
-PowerShell 后台任务未完全退出时仍持有 `m1_raw.jsonl` 等输出文件，后续 `rm` 和 `>` 重定向均报 "Device or resource busy"。
-
-手动逐轮执行时，每轮用不同文件名（`round_01_turn_raw.jsonl`、`round_02_turn_raw.jsonl` 等）避免冲突。runner 脚本内部管理文件名，无此问题。
-
-影响：`runners/drivers/codex-driver.md`（手动备用流程中注明按轮次命名）
-
-### inject-persistent-rules.md 中 codex.toml 和 config.toml 混用
-
-文档中用 `codex.toml` 指代 Codex 配置文件，实际文件名是 `config.toml`。
-
-全文统一为 `config.toml`。
-
-影响：`inject-persistent-rules.md`
-
----
-
-## 项目级配置
-
-### CC 安全策略拦截 codex exec
-
-`approval_policy="never"` + `sandbox_mode="danger-full-access"` + `--skip-git-repo-check` 组合被 CC 判定为不安全自主 Agent，HARD BLOCK。
-
-在项目 `.claude/settings.json` 加入 Bash 允许规则：
-
-```json
-{
-  "permissions": {
-    "bash": {
-      "allow": ["codex exec*"]
-    }
-  }
-}
+```bash
+python benchmarks/agent-eval-suite/runners/run_codex_replay.py   --root ${fixture_root}   --out ${result_root}/evidence/codex-native   --variant native   --model gpt-5.5
 ```
-
-影响：`.claude/settings.json`（项目级）
