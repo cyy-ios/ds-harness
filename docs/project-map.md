@@ -1,4 +1,4 @@
-# Project Map
+﻿# Project Map
 
 This map is the repository-level navigation contract. Use `AGENTS.md` as the first entry point and this file for folder ownership.
 
@@ -41,9 +41,25 @@ AGENTS.md
   -> benchmarks/agent-eval-suite/orchestrator.md
       -> tasks/mini-data-harness/scenario.md
       -> runners/run_*_replay.py
-      -> rubrics/evidence-spec.md + scoring-output.md
+      -> rubrics/evidence-spec.md (evidence contract)
+      -> rubrics/scoring-output.md (only scoring entry)
       -> results/<timestamp>/
 ```
+
+## Scoring document chain
+
+Scoring has one entry point:
+
+```text
+benchmarks/agent-eval-suite/orchestrator.md
+  -> rubrics/scoring-output.md
+      -> capability-scoring.md
+          -> 项目理解-scoring.md
+      -> capability-weights.yaml
+      -> scoring-calibration.md
+```
+
+Do not start scoring from `capability-list.md`, templates, process-refinements, or historical docs.
 
 ## Four supported run modes
 
@@ -53,3 +69,4 @@ AGENTS.md
 4. Codex native: official Codex CLI with a native model
 
 The exact commands and acceptance rules live in `benchmarks/agent-eval-suite/orchestrator.md`.
+

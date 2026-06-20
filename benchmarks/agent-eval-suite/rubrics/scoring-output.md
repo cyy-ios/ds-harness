@@ -1,11 +1,16 @@
 # Scoring Output Contract
 
-This file is the scoring entry contract. The canonical scoring rules are:
+This file is the only scoring entry point. Do not start from any other rubric file.
 
-1. `capability-scoring.md`
-2. `项目理解-scoring.md`
-3. `capability-weights.yaml`
-4. this output contract
+Read order:
+
+1. `scoring-output.md` (this file): workflow, output contract, acceptance boundary.
+2. `capability-scoring.md`: capability rubrics referenced by this file.
+3. `项目理解-scoring.md`: project-understanding sub-rubric referenced by `capability-scoring.md`.
+4. `capability-weights.yaml`: weights used only during aggregation.
+5. `scoring-calibration.md`: calibration reference used only after a first pass.
+
+Files not in this chain are references or templates, not scoring entry points.
 
 ## Core rule: acceptance is evidence, not the score
 
@@ -27,14 +32,21 @@ Allowed:
 
 ## Required inputs
 
-Read all of these before scoring:
+Read in this order:
 
-- `evidence/<variant>/index.yaml` or `run_summary.json`
-- all round evidence: `round_01..08/` or `M*_*/step_01/`
-- `rubrics/capability-scoring.md`
-- `rubrics/项目理解-scoring.md`
-- `rubrics/capability-weights.yaml`
-- `rubrics/scoring-calibration.md`
+1. `evidence/<variant>/index.yaml` or `run_summary.json`
+2. all round evidence: `round_01..08/` or `M*_*/step_01/`
+3. `rubrics/capability-scoring.md`
+4. `rubrics/项目理解-scoring.md` when scoring project understanding
+5. `rubrics/capability-weights.yaml` only when aggregating
+6. `rubrics/scoring-calibration.md` only after a first scoring pass
+
+## Evidence parsing notes
+
+- `commands.log` is JSON command records, not plain log text.
+- `acceptance.json` is a wrapper; parse evaluator details from the nested `output` text when needed. Noisy output or malformed nested JSON is an evidence gap, not an automatic capability score.
+- `response.md` may contain runner-level parse errors. If so, use `replay.jsonl` to inspect the raw assistant output and any `invalid_json` / `json_repair` events.
+- For Codex evidence, some command output may live only in `replay.jsonl`; do not require `commands.log` when replay contains equivalent evidence.
 
 ## Output layout
 

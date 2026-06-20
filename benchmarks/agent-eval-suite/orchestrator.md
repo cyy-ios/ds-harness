@@ -93,14 +93,14 @@ evidence/<variant>/
     cost.json
 ```
 
-裸模型 runner 使用 `collect_evidence.py` 的 `round_01..08` 结构；Codex runner 使用 `M*_*/step_01` 结构。评分时两种结构都必须支持。
+裸模型 runner 使用 `collect_evidence.py` 的 `round_01..08` 结构；Codex runner 使用 `M*_*/step_01` 结构。评分时两种结构都必须支持，文件语义见 `rubrics/evidence-spec.md`。
 
 ## 4. 评分
 
 评分 agent 按 `benchmarks/agent-eval-suite/rubrics/scoring-output.md` 执行。主规则：`acceptance.json` 是证据，不是 8 个能力的分数。
 
-1. 读取对应 `evidence/<variant>/` 的全部轮次。
-2. 读取 `rubrics/capability-scoring.md`、`rubrics/项目理解-scoring.md`、`rubrics/capability-weights.yaml`、`rubrics/scoring-calibration.md`。
+1. 先打开 `rubrics/scoring-output.md`；它是唯一评分入口，并定义后续引用链。
+2. 按 `scoring-output.md` 的 read order 读取 evidence 和下级 rubric。
 3. 按 8 个能力独立评分，分别生成 `scores/*.score.json`。
 4. `score_mini_data_harness.py` / `acceptance.json` 只能作为 evidence 和 deductions 来源；禁止把 acceptance `score` 复制为能力分或逐轮分。
 5. 汇总生成 `scorecard.md` 和 `deductions.md`。

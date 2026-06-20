@@ -47,7 +47,7 @@ python3 runners/run_codex_replay.py --root ${fixture_root} --variant optimized
 
 ### 4. 评分
 
-同裸模型流程，按 `rubrics/` 评分。
+同裸模型流程，评分入口只用 `rubrics/scoring-output.md`。
 
 ### 5. 还原持久规则
 
