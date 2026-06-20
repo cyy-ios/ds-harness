@@ -7,6 +7,7 @@ Start here when an agent enters this repository.
 - Run or inspect agent evaluation: read `benchmarks/agent-eval-suite/orchestrator.md` first.
 - Understand repository layout: read `docs/project-map.md`.
 - Inspect published run outputs: read `results/readme.md`.
+- Inspect model benchmark scores: read `results/model-scoreboard.md`.
 - Change scoring rules: start from `benchmarks/agent-eval-suite/rubrics/scoring-output.md`; edit lower rubrics only through that chain.
 - Change task fixtures/prompts: edit `benchmarks/agent-eval-suite/tasks/` and `benchmarks/agent-eval-suite/fixtures/`.
 - Change runners: edit `benchmarks/agent-eval-suite/runners/`.

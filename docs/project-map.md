@@ -7,7 +7,7 @@ This map is the repository-level navigation contract. Use `AGENTS.md` as the fir
 | Path | Purpose | Read when |
 | --- | --- | --- |
 | `benchmarks/agent-eval-suite/` | Main agent evaluation suite: workflow, fixtures, runners, rubrics, reports. | Running or changing evaluations. |
-| `results/` | Canonical public run outputs. Each run timestamp contains `evidence/`, `scores/`, `deductions/`, and `scorecard.md`. | Comparing or auditing completed runs. |
+| `results/` | Canonical public run outputs. Each run timestamp contains `evidence/`, `scores/`, `deductions/`, and `scorecard.md`; `model-scoreboard.md` records accepted model/model+harness scores. | Comparing completed runs or checking benchmark scores. |
 | `scripts/` | Repository-level validation and maintenance scripts. | Checking layout or repo hygiene. |
 | `docs/` | Stable project documentation, current status, decisions, and history. | Understanding project structure or non-runtime decisions. |
 | `docs/process-refinements/` | Historical optimization/adaptation/scoring records. | Explaining how the project evolved; not an execution entry. |
@@ -45,6 +45,10 @@ AGENTS.md
       -> rubrics/scoring-output.md (only scoring entry)
       -> results/<timestamp>/
 ```
+
+## Scoreboard rule
+
+Use `results/model-scoreboard.md` for the curated model/model+harness score table. Do not infer the scoreboard from every historical `results/<timestamp>/`; only runs listed there are accepted benchmark entries.
 
 ## Scoring document chain
 
