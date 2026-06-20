@@ -42,7 +42,12 @@ SYSTEM = """你是隔离 fixture repo 内的编码 agent。只输出 JSON object
 """
 
 
-def load_key(path: Path) -> str:
+def load_key(path: Path | None) -> str:
+    env_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    if path is None:
+        raise SystemExit("Set DEEPSEEK_API_KEY or pass --key-file <path>.")
     text = path.read_text(encoding='utf-8').strip()
     m = re.search(r'(sk-[A-Za-z0-9_-]+|[A-Za-z0-9]{20,})', text)
     if not m:
@@ -146,15 +151,15 @@ def reject_benchmark_results_path(path: Path) -> None:
         )
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description='Run bare DeepSeek model through the M1-M8 fixture loop.')
     ap.add_argument('--root', required=True)
-    ap.add_argument('--key-file', default='<local-deepseek-api-key-file>')
+    ap.add_argument('--key-file', default=None, help='DeepSeek API key file; optional when DEEPSEEK_API_KEY is set')
     ap.add_argument('--out', default=None)
-    ap.add_argument('--start-from', type=int, default=1, help='从第几个 milestone 开始（1-8）')
-    ap.add_argument('--max-milestones', type=int, default=None)
-    ap.add_argument('--evidence-dir', default=None)
-    ap.add_argument('--rules', default=None, help='persistent rules 文件（模拟 harness 全局注入，session 开始时注入一次）')
-    ap.add_argument('--model', default=DEFAULT_MODEL, help=f'DeepSeek 模型名（默认 {DEFAULT_MODEL}）')
+    ap.add_argument('--start-from', type=int, default=1, help='First milestone index, 1-8')
+    ap.add_argument('--max-milestones', type=int, default=None, help='Maximum number of milestones to run')
+    ap.add_argument('--evidence-dir', default=None, help='Evidence output directory')
+    ap.add_argument('--rules', default=None, help='Optional persistent rules file injected once at session start')
+    ap.add_argument('--model', default=DEFAULT_MODEL, help=f'DeepSeek model name, default {DEFAULT_MODEL}')
     args = ap.parse_args()
     root = Path(args.root).resolve()
     out = Path(args.out or root/'eval_deepseek_transcript.jsonl').resolve()
@@ -170,7 +175,7 @@ def main():
     except Exception:
         collector = None
 
-    api_key = load_key(Path(args.key_file))
+    api_key = load_key(Path(args.key_file) if args.key_file else None)
     milestones = json.loads((root/'prompts/milestones.json').read_text(encoding='utf-8'))
 
     # 读取 persistent rules（模拟 harness CLAUDE.md 注入，session 开始时注入一次）

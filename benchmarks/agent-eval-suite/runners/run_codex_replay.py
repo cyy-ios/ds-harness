@@ -303,7 +303,15 @@ PROXY_PORT = 8898
 PROXY_SCRIPT = str(
     Path(__file__).resolve().parent / "deepseek_responses_proxy.py"
 )
-DEEPSEEK_KEY_FILE = r"<local-deepseek-api-key-file>"
+
+def resolve_deepseek_api_key() -> str:
+    env_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    key_file = os.environ.get("DEEPSEEK_API_KEY_FILE", "").strip()
+    if key_file:
+        return Path(key_file).read_text(encoding="utf-8").strip()
+    raise RuntimeError("Set DEEPSEEK_API_KEY or DEEPSEEK_API_KEY_FILE for DeepSeek variants.")
 
 
 def _proxy_running() -> bool:
@@ -321,7 +329,7 @@ def _proxy_running() -> bool:
 
 def _start_proxy() -> None:
     """后台启动 DeepSeek 翻译代理。"""
-    api_key = Path(DEEPSEEK_KEY_FILE).read_text().strip()
+    api_key = resolve_deepseek_api_key()
     env = os.environ.copy()
     env["DEEPSEEK_API_KEY"] = api_key
     env["NO_PROXY"] = "127.0.0.1,localhost"
@@ -403,9 +411,7 @@ def run_codex(
     env = os.environ.copy()
     # 注入 DeepSeek API key（unoptimized/optimized 变体需要）
     if variant in ("unoptimized", "optimized"):
-        key_file = Path(DEEPSEEK_KEY_FILE)
-        if key_file.exists() and "DEEPSEEK_API_KEY" not in env:
-            env["DEEPSEEK_API_KEY"] = key_file.read_text().strip()
+        env["DEEPSEEK_API_KEY"] = resolve_deepseek_api_key()
     # 确保 codex 能找到 API key
     if "CODEX_API_KEY" not in env and "OPENAI_API_KEY" not in env:
         print("  提示: 未设置 CODEX_API_KEY 或 OPENAI_API_KEY 环境变量")
@@ -657,24 +663,20 @@ def reject_benchmark_results_path(path: Path) -> None:
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Codex CLI replay runner — 用 Codex CLI 执行 M1-M8 并收集证据",
+        description="Run Codex CLI through the M1-M8 fixture loop and collect evidence.",
     )
-    ap.add_argument("--root", required=True, help="Fixture repo 根目录")
-    ap.add_argument("--out", default=None, help="证据输出目录（默认 <root>/evidence）")
-    ap.add_argument("--start-from", type=int, default=1, help="从第几个 milestone 开始（1-8）")
-    ap.add_argument("--max-milestones", type=int, default=None, help="最多执行几个 milestone")
-    ap.add_argument("--compact-summary", default=None,
-                    help="M8 使用的 compact summary 文件路径（默认 <root>/docs/compact-summary.md）")
-    ap.add_argument("--timeout", type=int, default=900, help="每个 milestone 超时秒数")
-    ap.add_argument("--raw-out", default=None, help="保存原始 codex JSONL 的目录（调试用）")
-    ap.add_argument("--auto-compact-token-limit", type=int, default=38000,
-                    help="model_auto_compact_token_limit，确保在 M1-M8 间触发一次 compaction（默认 38000）")
-    ap.add_argument("--instructions-file", default=".codex/instructions.md",
-                    help="model_instructions_file 路径（默认 .codex/instructions.md）")
+    ap.add_argument("--root", required=True, help="Fixture repo root")
+    ap.add_argument("--out", default=None, help="Evidence output directory; default <root>/evidence")
+    ap.add_argument("--start-from", type=int, default=1, help="First milestone index, 1-8")
+    ap.add_argument("--max-milestones", type=int, default=None, help="Maximum number of milestones to run")
+    ap.add_argument("--compact-summary", default=None, help="Compact summary file for M8; default <root>/docs/compact-summary.md")
+    ap.add_argument("--timeout", type=int, default=900, help="Timeout seconds per milestone")
+    ap.add_argument("--raw-out", default=None, help="Directory for raw Codex JSONL debug logs")
+    ap.add_argument("--auto-compact-token-limit", type=int, default=38000, help="model_auto_compact_token_limit")
+    ap.add_argument("--instructions-file", default=".codex/instructions.md", help="model_instructions_file path")
     ap.add_argument("--variant", default="unoptimized", choices=["unoptimized", "optimized", "native"],
-                    help="Codex 变体: unoptimized=官方CLI+proxy翻译DeepSeek / optimized=ds-codex内建适配 / native=官方CLI+原生GPT模型 (默认 unoptimized)")
-    ap.add_argument("--model", default=None,
-                    help="被测模型 slug（仅 native 变体使用，如 gpt-5.5）")
+                    help="unoptimized=official Codex CLI + DeepSeek proxy; optimized=ds-codex DeepSeek provider; native=official Codex CLI + native model")
+    ap.add_argument("--model", default=None, help="Native model slug; required for --variant native")
     args = ap.parse_args()
 
     root = Path(args.root).resolve()

@@ -1,22 +1,16 @@
 # Agent Eval Suite
 
-入口：`orchestrator.md`。
+权威入口：`orchestrator.md`。
 
-结果目录统一为仓库根目录 `results/<YYYYMMDDHHmm>/`；`benchmarks/agent-eval-suite/results/` 已废弃，runner 会拒绝写入该路径。
+本目录只放评测资产：fixture 生成器、runner、rubric、任务定义。公开结果统一写到仓库根目录 `results/<YYYYMMDDHHmm>/`。
 
-## 组件
+## 子流程文件
 
-- `tasks/mini-data-harness/scenario.md`：M1-M8 任务定义。
-- `runners/setup_fixture.py`：搭建隔离 fixture。
-- `runners/run_deepseek_agent_replay.py`：运行裸模型。
-- `runners/run_codex_replay.py`：运行 Codex Agent 产品。
-- `runners/collect_evidence.py`：收集每轮 evidence。
-- `rubrics/scoring-output.md`：评分输出规范。
+- `tasks/mini-data-harness/scenario.md`：M1-M8 被测任务设计。
+- `runners/setup_fixture.py`：生成隔离 fixture。
+- `runners/run_deepseek_agent_replay.py`：裸模型 API runner。
+- `runners/run_codex_replay.py`：Codex 产品 runner，覆盖 unoptimized / optimized / native。
+- `runners/collect_evidence.py`：裸模型 evidence 采集器。
+- `rubrics/scoring-output.md`：评分与报告输出契约。
 
-## 完成标准
-
-一次公开 run 必须通过：
-
-```bash
-python scripts/verify_results_layout.py
-```
+废弃：`benchmarks/agent-eval-suite/results/`、条件占位目录、空 runbook。
