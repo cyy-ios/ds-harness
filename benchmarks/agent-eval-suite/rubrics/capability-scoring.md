@@ -10,6 +10,17 @@
 
 **总分计算**：所有轮的得分做加权平均（权重见 `capability-weights.yaml`），**不再有 M1-M8 概念**。特殊能力（项目理解维度1 仅首轮、异常分析能力仅异常轮）按对应规则剔除不适用的轮次后取均值。
 
+
+## Acceptance boundary
+
+`acceptance.json` is a mechanical evaluator check. It is used only where this rubric explicitly says so.
+
+- Do not copy `acceptance.json.score` into any capability score.
+- Do not use `gate_passed=false` to make all capabilities zero.
+- For `任务完成度`, use the prompt sub-step coverage × `gate_passed` matrix below.
+- For `真实性&可靠性`, use acceptance only to verify or falsify response claims.
+- For `项目理解`, `用户意图理解`, `任务规划`, and `异常分析能力`, score from replay/diff/commands/response evidence first; acceptance is at most supporting context unless that section explicitly says otherwise.
+
 ## 通用规则
 
 ### 子项评分与汇总

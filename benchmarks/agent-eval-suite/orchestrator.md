@@ -97,12 +97,14 @@ evidence/<variant>/
 
 ## 4. 评分
 
-评分 agent 按 `benchmarks/agent-eval-suite/rubrics/scoring-output.md` 执行：
+评分 agent 按 `benchmarks/agent-eval-suite/rubrics/scoring-output.md` 执行。主规则：`acceptance.json` 是证据，不是 8 个能力的分数。
 
 1. 读取对应 `evidence/<variant>/` 的全部轮次。
-2. 按 8 个能力分别生成 `scores/*.score.json`。
-3. 汇总生成 `scorecard.md` 和 `deductions.md`。
-4. 多变体对比时，先写 `scores/<variant>/...`，再写根目录汇总报告。
+2. 读取 `rubrics/capability-scoring.md`、`rubrics/项目理解-scoring.md`、`rubrics/capability-weights.yaml`、`rubrics/scoring-calibration.md`。
+3. 按 8 个能力独立评分，分别生成 `scores/*.score.json`。
+4. `score_mini_data_harness.py` / `acceptance.json` 只能作为 evidence 和 deductions 来源；禁止把 acceptance `score` 复制为能力分或逐轮分。
+5. 汇总生成 `scorecard.md` 和 `deductions.md`。
+6. 多变体对比时，先写 `scores/<variant>/...`，再写根目录汇总报告。
 
 ## 5. 完成校验
 
