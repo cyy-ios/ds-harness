@@ -1,2 +1,0 @@
-已完成：`run_dag` 现在固定执行 `extract/clean/report`，重试上限强制封顶为 2，结构化日志保留 `attempt/stage/status`，报告按真实 processed/rejected/retry/source_files 生成，并补了空 JSONL 记录和重试封顶测试，延续 `memory/memory_summary.md` 的 repo-root 路径与 `run` 子命令决策。  
-已核验：`PYTHONDONTWRITEBYTECODE=1 python -m pytest -q` 通过，`8 passed`；已清理 `.pytest_cache` 且无 `__pycache__`，但本目录不是 git repo，`git status --short` 不可用。
