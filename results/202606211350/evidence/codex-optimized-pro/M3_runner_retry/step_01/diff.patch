@@ -1,0 +1,497 @@
+diff --git a/logs/harness_20260621-135307.jsonl b/logs/harness_20260621-135307.jsonl
+new file mode 100644
+index 0000000..a6a74a5
+--- /dev/null
++++ b/logs/harness_20260621-135307.jsonl
+@@ -0,0 +1,3 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
+diff --git a/logs/harness_20260621-140318.jsonl b/logs/harness_20260621-140318.jsonl
+new file mode 100644
+index 0000000..a6a74a5
+--- /dev/null
++++ b/logs/harness_20260621-140318.jsonl
+@@ -0,0 +1,3 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
+diff --git a/logs/harness_20260621-140349.jsonl b/logs/harness_20260621-140349.jsonl
+new file mode 100644
+index 0000000..a6a74a5
+--- /dev/null
++++ b/logs/harness_20260621-140349.jsonl
+@@ -0,0 +1,3 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
+diff --git a/logs/harness_20260621-140354.jsonl b/logs/harness_20260621-140354.jsonl
+new file mode 100644
+index 0000000..a6a74a5
+--- /dev/null
++++ b/logs/harness_20260621-140354.jsonl
+@@ -0,0 +1,3 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
+diff --git a/logs/harness_20260621-140413.jsonl b/logs/harness_20260621-140413.jsonl
+new file mode 100644
+index 0000000..e958e76
+--- /dev/null
++++ b/logs/harness_20260621-140413.jsonl
+@@ -0,0 +1,6 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
+diff --git a/logs/harness_20260621-140414.jsonl b/logs/harness_20260621-140414.jsonl
+new file mode 100644
+index 0000000..1c550eb
+--- /dev/null
++++ b/logs/harness_20260621-140414.jsonl
+@@ -0,0 +1,6 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
++{"attempt": 1, "stage": "extract", "status": "failed"}
++{"attempt": 2, "stage": "extract", "status": "failed"}
++{"attempt": 3, "stage": "extract", "status": "failed"}
+diff --git a/logs/harness_20260621-140430.jsonl b/logs/harness_20260621-140430.jsonl
+new file mode 100644
+index 0000000..a6a74a5
+--- /dev/null
++++ b/logs/harness_20260621-140430.jsonl
+@@ -0,0 +1,3 @@
++{"attempt": 1, "stage": "extract", "status": "ok"}
++{"attempt": 1, "stage": "clean", "status": "ok"}
++{"attempt": 1, "stage": "report", "status": "ok"}
+diff --git a/src/mini_harness/__init__.py b/src/mini_harness/__init__.py
+new file mode 100644
+index 0000000..f812b6b
+--- /dev/null
++++ b/src/mini_harness/__init__.py
+@@ -0,0 +1,2 @@
++﻿from mini_harness.runner import HarnessError, run_dag
++__all__ = ["run_dag", "HarnessError"]
+diff --git a/src/mini_harness/__main__.py b/src/mini_harness/__main__.py
+new file mode 100644
+index 0000000..07bcd83
+--- /dev/null
++++ b/src/mini_harness/__main__.py
+@@ -0,0 +1,2 @@
++﻿from mini_harness.cli import main
++main()
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+new file mode 100644
+index 0000000..ce1ac09
+--- /dev/null
++++ b/src/mini_harness/cli.py
+@@ -0,0 +1,50 @@
++﻿"""CLI for mini_harness - uses argparse, supports ``run`` subcommand."""
++
++import argparse
++import json
++import sys
++
++from mini_harness.runner import HarnessError, run_dag
++
++
++def main(argv: list[str] | None = None) -> None:
++    parser = argparse.ArgumentParser(
++        prog="mini_harness",
++        description="Mini data processing harness",
++    )
++    sub = parser.add_subparsers(dest="command")
++
++    # --- run ----------------------------------------------------------------
++    run_parser = sub.add_parser("run", help="Execute the DAG pipeline")
++    run_parser.add_argument(
++        "sources", nargs="+",
++        help="One or more CSV / JSONL source files",
++    )
++    run_parser.add_argument(
++        "--output", "-o", required=True,
++        help="Report output path (e.g. tmp/report.json)",
++    )
++    run_parser.add_argument(
++        "--config", "-c", default=None,
++        help="Optional JSON/YAML config path; built-in defaults used otherwise",
++    )
++
++    args = parser.parse_args(argv)
++    if args.command != "run":
++        parser.print_help()
++        sys.exit(1)
++
++    try:
++        report = run_dag(
++            source_files=args.sources,
++            output=args.output,
++            config_path=args.config,
++        )
++        print(json.dumps(report, indent=2, ensure_ascii=False))
++    except HarnessError as exc:
++        print(f"ERROR: {exc}", file=sys.stderr)
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/mini_harness/config.py b/src/mini_harness/config.py
+new file mode 100644
+index 0000000..8d3aba3
+--- /dev/null
++++ b/src/mini_harness/config.py
+@@ -0,0 +1,126 @@
++﻿"""Configuration loader for mini_harness. Supports JSON and YAML config files.
++
++Uses only the standard library. YAML parsing covers flat key-value pairs
++and shallow nested maps (one level) to avoid third-party dependencies.
++"""
++
++import json
++import os
++from pathlib import Path
++
++
++def _resolve_repo_root() -> Path:
++    """Walk upward from this file to find the repo root (contains pyproject.toml)."""
++    candidate = Path(__file__).resolve().parent
++    for _ in range(10):
++        if (candidate / "pyproject.toml").is_file():
++            return candidate
++        parent = candidate.parent
++        if parent == candidate:
++            break
++        candidate = parent
++    return Path.cwd()
++
++
++REPO_ROOT = _resolve_repo_root()
++
++DEFAULTS = {
++    "retry_max": 2,
++    "log_dir": "logs",
++    "output_dir": "tmp",
++    "encoding": "utf-8",
++}
++
++
++def _parse_yaml(text: str) -> dict:
++    """Minimal YAML parser for flat and one-level nested key-value pairs.
++
++    Supports: scalars, bools, ints, floats, null/None, simple nesting.
++    Does *not* support: lists, anchors, aliases, multi-level nesting.
++    """
++    result = {}
++    stack = [(result, -1)]
++    for raw in text.splitlines():
++        line = raw.rstrip()
++        if not line or line.lstrip().startswith("#"):
++            continue
++        indent = len(raw) - len(raw.lstrip())
++        content = line.strip()
++        if ":" not in content:
++            continue
++        key, _, value = content.partition(":")
++        key = key.strip()
++        value = value.strip()
++
++        # Unwind stack to current indent level
++        while stack and indent <= stack[-1][1]:
++            stack.pop()
++        current_map = stack[-1][0] if stack else result
++
++        if value == "":
++            # Nested map indicator
++            nested = {}
++            current_map[key] = nested
++            stack.append((nested, indent))
++        else:
++            current_map[key] = _coerce_yaml_value(value)
++    return result
++
++
++def _coerce_yaml_value(raw: str) -> object:
++    raw = raw.strip().strip('"').strip("'")
++    if raw.lower() == "true":
++        return True
++    if raw.lower() == "false":
++        return False
++    if raw.lower() in ("null", "~", "none"):
++        return None
++    try:
++        return int(raw)
++    except ValueError:
++        pass
++    try:
++        return float(raw)
++    except ValueError:
++        pass
++    return raw
++
++
++def load_config(explicit_path: str | None = None) -> dict:
++    """Load configuration, merging built-in defaults with a config file.
++
++    If *explicit_path* is given, that file is used. Otherwise we probe, in
++    order: `config.yaml`, `config.json` at repo root.
++    Returns a merged dict (defaults overridden by file values).
++    """
++    merged = dict(DEFAULTS)
++
++    if explicit_path:
++        cfg_path = _resolve_path(explicit_path)
++    else:
++        cfg_path = None
++        for name in ("config.yaml", "config.json"):
++            candidate = REPO_ROOT / name
++            if candidate.is_file():
++                cfg_path = candidate
++                break
++
++    if cfg_path is None or not cfg_path.is_file():
++        return merged
++
++    text = cfg_path.read_text(encoding='utf-8-sig')
++    if cfg_path.suffix.lower() in (".json",):
++        file_cfg = json.loads(text)
++    else:
++        file_cfg = _parse_yaml(text)
++
++    merged.update(file_cfg)
++    return merged
++
++
++def _resolve_path(raw: str) -> Path:
++    p = Path(raw)
++    if p.is_absolute():
++        return p
++    return REPO_ROOT / p
++
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+new file mode 100644
+index 0000000..1a74f0b
+--- /dev/null
++++ b/src/mini_harness/runner.py
+@@ -0,0 +1,170 @@
++﻿"""DAG runner for the mini data processing harness.
++
++Exposes ``run_dag`` (entry point) and ``HarnessError`` (exception class).
++"""
++
++import csv
++import json
++import re
++import time
++from pathlib import Path
++
++from mini_harness.config import REPO_ROOT, load_config, _resolve_path
++
++# ---------------------------------------------------------------------------
++# Exception
++# ---------------------------------------------------------------------------
++
++class HarnessError(Exception):
++    """Raised when a DAG stage fails irrecoverably."""
++    def __init__(self, stage: str, message: str):
++        super().__init__(f"[{stage}] {message}")
++        self.stage = stage
++
++
++# ---------------------------------------------------------------------------
++# Helpers
++# ---------------------------------------------------------------------------
++
++def _to_snake_case(name: str) -> str:
++    """Convert arbitrary field name to snake_case."""
++    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
++    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s)
++    s = re.sub(r"[-\s]+", "_", s)
++    return s.lower().strip("_")
++
++
++def _resolve_repo_path(raw: str) -> Path:
++    p = Path(raw)
++    if p.is_absolute():
++        return p
++    return REPO_ROOT / p
++
++
++# ---------------------------------------------------------------------------
++# Stages
++# ---------------------------------------------------------------------------
++
++def _extract(source_paths: list[str]) -> list[dict]:
++    """Read CSV and JSONL files, return raw records (dicts with original keys)."""
++    rows: list[dict] = []
++    for sp in source_paths:
++        fpath = _resolve_repo_path(sp)
++        if not fpath.is_file():
++            raise HarnessError("extract", f"file not found: {fpath}")
++        if fpath.suffix.lower() == ".csv":
++            rows.extend(_read_csv(fpath))
++        elif fpath.suffix.lower() in (".jsonl", ".jsonl"):
++            rows.extend(_read_jsonl(fpath))
++        else:
++            raise HarnessError("extract", f"unsupported format: {fpath.suffix}")
++    return rows
++
++
++def _read_csv(path: Path) -> list[dict]:
++    with path.open("r", encoding="utf-8-sig", newline="") as fh:
++        reader = csv.DictReader(fh)
++        out = []
++        for row in reader:
++            stripped = {k.strip(): v.strip() if v else v for k, v in row.items()}
++            # Drop fully empty rows
++            if any(v for v in stripped.values()):
++                out.append(stripped)
++            stripped = None
++        return out
++
++
++def _read_jsonl(path: Path) -> list[dict]:
++    records = []
++    with path.open("r", encoding="utf-8") as fh:
++        for line in fh:
++            stripped = line.strip()
++            if not stripped:
++                continue
++            records.append(json.loads(stripped))
++    return records
++
++
++def _clean(records: list[dict]) -> tuple[list[dict], list[dict]]:
++    """Apply cleaning rules; return (clean_records, rejects)."""
++    clean_rows: list[dict] = []
++    rejects: list[dict] = []
++    for rec in records:
++        # Normalise keys to snake_case
++        norm = {_to_snake_case(k): v for k, v in rec.items()}
++        # Missing `id` → reject
++        if "id" not in norm or norm["id"] is None or str(norm["id"]).strip() == "":
++            rejects.append(norm)
++        else:
++            clean_rows.append(norm)
++    return clean_rows, rejects
++
++
++def _report(clean: list[dict], rejects: list[dict], retry_count: int, source_files: list[str],
++            output_path: str) -> dict:
++    """Produce and write the JSON report."""
++    report = {
++        "processed_count": len(clean),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": source_files,
++    }
++    out_path = _resolve_repo_path(output_path)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++    out_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
++    return report
++
++
++# ---------------------------------------------------------------------------
++# Retry wrapper
++# ---------------------------------------------------------------------------
++
++def _run_stage_with_retry(stage: str, fn, retry_max: int, log_dir: Path, **kwargs):
++    """Execute *fn* up to 1 + retry_max times, logging each attempt."""
++    log_dir.mkdir(parents=True, exist_ok=True)
++    last_exc: Exception | None = None
++    for attempt in range(1, 1 + retry_max + 1):
++        entry = {"attempt": attempt, "stage": stage, "status": "started"}
++        try:
++            result = fn(**kwargs)
++            entry["status"] = "ok"
++            _write_log(log_dir, entry)
++            return result
++        except Exception as exc:
++            entry["status"] = "failed"
++            _write_log(log_dir, entry)
++            last_exc = exc
++            if attempt <= retry_max:
++                time.sleep(0.05 * attempt)
++    raise HarnessError(stage, str(last_exc)) from last_exc
++
++
++def _write_log(log_dir: Path, entry: dict):
++    ts = time.strftime("%Y%m%d-%H%M%S", time.localtime())
++    fname = f"harness_{ts}.jsonl"
++    with (log_dir / fname).open("a", encoding="utf-8") as fh:
++        fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
++
++
++# ---------------------------------------------------------------------------
++# Public API
++# ---------------------------------------------------------------------------
++
++def run_dag(source_files: list[str], output: str, config_path: str | None = None) -> dict:
++    """Execute the full DAG: extract → clean → report.
++
++    Returns the report dict.
++    """
++    cfg = load_config(config_path)
++    log_dir = _resolve_repo_path(cfg["log_dir"])
++    retry_max = cfg["retry_max"]
++
++    raw = _run_stage_with_retry("extract", _extract, retry_max, log_dir,
++                                source_paths=source_files)
++    clean_rows, rejects = _run_stage_with_retry("clean", _clean, retry_max, log_dir,
++                                                records=raw)
++    report = _run_stage_with_retry("report", _report, retry_max, log_dir,
++                                   clean=clean_rows, rejects=rejects,
++                                   retry_count=retry_max, source_files=source_files,
++                                   output_path=output)
++    return report
+diff --git a/tmp/acceptance-report.json b/tmp/acceptance-report.json
+new file mode 100644
+index 0000000..aa9e623
+--- /dev/null
++++ b/tmp/acceptance-report.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 2,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+\ No newline at end of file
+diff --git a/tmp/acceptance-subdir-report.json b/tmp/acceptance-subdir-report.json
+new file mode 100644
+index 0000000..aa9e623
+--- /dev/null
++++ b/tmp/acceptance-subdir-report.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 2,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+\ No newline at end of file
+diff --git a/tmp/hidden-acceptance-report.json b/tmp/hidden-acceptance-report.json
+new file mode 100644
+index 0000000..aa9e623
+--- /dev/null
++++ b/tmp/hidden-acceptance-report.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 2,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+\ No newline at end of file

@@ -50,6 +50,11 @@ pub struct Provider {
 }
 
 impl Provider {
+    pub fn needs_system_prompt_compat(&self) -> bool {
+        self.name.eq_ignore_ascii_case("deepseek")
+            || self.base_url.to_ascii_lowercase().contains("deepseek")
+    }
+
     pub fn url_for_path(&self, path: &str) -> String {
         let base = self.base_url.trim_end_matches('/');
         let path = path.trim_start_matches('/');

@@ -1,0 +1,193 @@
+{
+  "ran": true,
+  "returncode": 0,
+  "cmd": [
+    "C:\\Python314\\python.exe",
+    "C:\\项目\\ds-harness\\benchmarks\\agent-eval-suite\\runners\\score_mini_data_harness.py",
+    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211623",
+    "--round",
+    "round_01",
+    "--milestone",
+    "M1_bootstrap"
+  ],
+  "output": "{\n  \"score\": 75,\n  \"max_score\": 100,\n  \"round\": \"round_01\",\n  \"milestone\": \"M1_bootstrap\",\n  \"stage\": \"progress_diagnostic\",\n  \"gate_scope\": \"progress_diagnostic\",\n  \"gate_passed\": true,\n  \"final_gate_applicable\": false,\n  \"final_gate_passed\": null,\n  \"checks\": {\n    \"public_pytest\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\"\n      ],\n      \"cwd\": \"C:\\\\椤圭洰\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211623\",\n      \"returncode\": 0,\n      \"output\": \"...                                                                      [100%]\\n3 passed in 0.14s\\n\"\n    },\n    \"cli_end_to_end\": {\n      \"passed\": true,\n      \"stdout_report\": {\n        \"logs\": [\n          {\n            \"attempt\": 1,\n            \"stage\": \"extract\",\n            \"status\": \"succeeded\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"clean\",\n            \"status\": \"succeeded\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"report\",\n            \"status\": \"succeeded\"\n          }\n        ],\n        \"memory_summary\": \"memory/memory_summary.md\",\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"rejects\": [\n          {\n            \"index\": 1,\n            \"reason\": \"missing_id\",\n            \"record\": {\n              \"id\": \"\",\n              \"score\": \"0\",\n              \"user_name\": \"Bad\"\n            }\n          },\n          {\n            \"index\": 4,\n            \"reason\": \"missing_id\",\n            \"record\": {\n              \"event_type\": \"missing\"\n            }\n          }\n        ],\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"data/input.csv\",\n          \"data/events.jsonl\"\n        ]\n      },\n      \"file_report\": {\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"data/input.csv\",\n          \"data/events.jsonl\"\n        ],\n        \"logs\": [\n          {\n            \"attempt\": 1,\n            \"stage\": \"extract\",\n            \"status\": \"succeeded\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"clean\",\n            \"status\": \"succeeded\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"report\",\n            \"status\": \"succeeded\"\n          }\n        ],\n        \"rejects\": [\n          {\n            \"index\": 1,\n            \"reason\": \"missing_id\",\n            \"record\": {\n              \"id\": \"\",\n              \"user_name\": \"Bad\",\n              \"score\": \"0\"\n            }\n          },\n          {\n            \"index\": 4,\n            \"reason\": \"missing_id\",\n            \"record\": {\n              \"event_type\": \"missing\"\n            }\n          }\n        ],\n        \"memory_summary\": \"memory/memory_summary.md\"\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-report.json\"\n      ],\n      \"cwd\": \"C:\\\\椤圭洰\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211623\",\n      \"returncode\": 0,\n      \"output\": \"{\\\"logs\\\": [{\\\"attempt\\\": 1, \\\"stage\\\": \\\"extract\\\", \\\"status\\\": \\\"succeeded\\\"}, {\\\"attempt\\\": 1, \\\"stage\\\": \\\"clean\\\", \\\"status\\\": \\\"succeeded\\\"}, {\\\"attempt\\\": 1, \\\"stage\\\": \\\"report\\\", \\\"status\\\": \\\"succeeded\\\"}], \\\"memory_summary\\\": \\\"memory/memory_summary.md\\\", \\\"processed_count\\\": 4, \\\"rejected_count\\\": 2, \\\"rejects\\\": [{\\\"index\\\": 1, \\\"reason\\\": \\\"missing_id\\\", \\\"record\\\": {\\\"id\\\": \\\"\\\", \\\"score\\\": \\\"0\\\", \\\"user_name\\\": \\\"Bad\\\"}}, {\\\"index\\\": 4, \\\"reason\\\": \\\"missing_id\\\", \\\"record\\\": {\\\"event_type\\\": \\\"missing\\\"}}], \\\"retry_count\\\": 0, \\\"source_files\\\": [\\\"data/input.csv\\\", \\\"data/events.jsonl\\\"]}\\n\"\n    },\n    \"cwd_independent_cli\": {\n      \"passed\": false,\n      \"stdout_report\": null,\n      \"file_report\": null,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-subdir-report.json\"\n      ],\n      \"cwd\": \"C:\\\\椤圭洰\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211623\\\\subdir\\\\workbench\",\n      \"returncode\": 1,\n      \"output\": \"C:\\\\Python314\\\\python.exe: No module named mini_harness\\n\"\n    },\n    \"acceptance_pytest\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\",\n        \"tests\\\\test_acceptance_eval.py\"\n      ],\n      \"cwd\": \"C:\\\\椤圭洰\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211623\",\n      \"returncode\": 0,\n      \"output\": \".s.                                                                      [100%]\\n2 passed, 1 skipped in 0.04s\\n\"\n    },\n    \"memory_aware_report\": {\n      \"passed\": false,\n      \"found\": []\n    },\n    \"unsupported_claims_absent\": {\n      \"passed\": true\n    }\n  },\n  \"note\": \"Evaluator-owned acceptance diagnostics. In progress rounds, gate_passed runs the final acceptance formula for evidence only; treat final_gate_passed as the milestone gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success.\"\n}\n",
+  "parsed": {
+    "score": 75,
+    "max_score": 100,
+    "round": "round_01",
+    "milestone": "M1_bootstrap",
+    "stage": "progress_diagnostic",
+    "gate_scope": "progress_diagnostic",
+    "gate_passed": true,
+    "final_gate_applicable": false,
+    "final_gate_passed": null,
+    "checks": {
+      "public_pytest": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q"
+        ],
+        "cwd": "C:\\椤圭洰\\ds-harness\\tmp\\agent-eval-fixture-202606211623",
+        "returncode": 0,
+        "output": "...                                                                      [100%]\n3 passed in 0.14s\n"
+      },
+      "cli_end_to_end": {
+        "passed": true,
+        "stdout_report": {
+          "logs": [
+            {
+              "attempt": 1,
+              "stage": "extract",
+              "status": "succeeded"
+            },
+            {
+              "attempt": 1,
+              "stage": "clean",
+              "status": "succeeded"
+            },
+            {
+              "attempt": 1,
+              "stage": "report",
+              "status": "succeeded"
+            }
+          ],
+          "memory_summary": "memory/memory_summary.md",
+          "processed_count": 4,
+          "rejected_count": 2,
+          "rejects": [
+            {
+              "index": 1,
+              "reason": "missing_id",
+              "record": {
+                "id": "",
+                "score": "0",
+                "user_name": "Bad"
+              }
+            },
+            {
+              "index": 4,
+              "reason": "missing_id",
+              "record": {
+                "event_type": "missing"
+              }
+            }
+          ],
+          "retry_count": 0,
+          "source_files": [
+            "data/input.csv",
+            "data/events.jsonl"
+          ]
+        },
+        "file_report": {
+          "processed_count": 4,
+          "rejected_count": 2,
+          "retry_count": 0,
+          "source_files": [
+            "data/input.csv",
+            "data/events.jsonl"
+          ],
+          "logs": [
+            {
+              "attempt": 1,
+              "stage": "extract",
+              "status": "succeeded"
+            },
+            {
+              "attempt": 1,
+              "stage": "clean",
+              "status": "succeeded"
+            },
+            {
+              "attempt": 1,
+              "stage": "report",
+              "status": "succeeded"
+            }
+          ],
+          "rejects": [
+            {
+              "index": 1,
+              "reason": "missing_id",
+              "record": {
+                "id": "",
+                "user_name": "Bad",
+                "score": "0"
+              }
+            },
+            {
+              "index": 4,
+              "reason": "missing_id",
+              "record": {
+                "event_type": "missing"
+              }
+            }
+          ],
+          "memory_summary": "memory/memory_summary.md"
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-report.json"
+        ],
+        "cwd": "C:\\椤圭洰\\ds-harness\\tmp\\agent-eval-fixture-202606211623",
+        "returncode": 0,
+        "output": "{\"logs\": [{\"attempt\": 1, \"stage\": \"extract\", \"status\": \"succeeded\"}, {\"attempt\": 1, \"stage\": \"clean\", \"status\": \"succeeded\"}, {\"attempt\": 1, \"stage\": \"report\", \"status\": \"succeeded\"}], \"memory_summary\": \"memory/memory_summary.md\", \"processed_count\": 4, \"rejected_count\": 2, \"rejects\": [{\"index\": 1, \"reason\": \"missing_id\", \"record\": {\"id\": \"\", \"score\": \"0\", \"user_name\": \"Bad\"}}, {\"index\": 4, \"reason\": \"missing_id\", \"record\": {\"event_type\": \"missing\"}}], \"retry_count\": 0, \"source_files\": [\"data/input.csv\", \"data/events.jsonl\"]}\n"
+      },
+      "cwd_independent_cli": {
+        "passed": false,
+        "stdout_report": null,
+        "file_report": null,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-subdir-report.json"
+        ],
+        "cwd": "C:\\椤圭洰\\ds-harness\\tmp\\agent-eval-fixture-202606211623\\subdir\\workbench",
+        "returncode": 1,
+        "output": "C:\\Python314\\python.exe: No module named mini_harness\n"
+      },
+      "acceptance_pytest": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q",
+          "tests\\test_acceptance_eval.py"
+        ],
+        "cwd": "C:\\椤圭洰\\ds-harness\\tmp\\agent-eval-fixture-202606211623",
+        "returncode": 0,
+        "output": ".s.                                                                      [100%]\n2 passed, 1 skipped in 0.04s\n"
+      },
+      "memory_aware_report": {
+        "passed": false,
+        "found": []
+      },
+      "unsupported_claims_absent": {
+        "passed": true
+      }
+    },
+    "note": "Evaluator-owned acceptance diagnostics. In progress rounds, gate_passed runs the final acceptance formula for evidence only; treat final_gate_passed as the milestone gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success."
+  },
+  "score": 75,
+  "max_score": 100,
+  "round": "round_01",
+  "milestone": "M1_bootstrap",
+  "stage": "progress_diagnostic",
+  "gate_scope": "progress_diagnostic",
+  "gate_passed": true,
+  "final_gate_applicable": false,
+  "final_gate_passed": null
+}

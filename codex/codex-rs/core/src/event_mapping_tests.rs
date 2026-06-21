@@ -1,3 +1,4 @@
+use super::is_contextual_dev_message_content;
 use super::parse_turn_item;
 use crate::context::ContextualUserFragment;
 use crate::context::InternalContextSource;
@@ -15,6 +16,15 @@ use codex_protocol::models::ResponseItem;
 use codex_protocol::models::WebSearchAction;
 use codex_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
+
+#[test]
+fn skill_instruction_message_is_contextual_developer_content() {
+    let content = vec![ContentItem::InputText {
+        text: "<skill>\n<name>concise</name>\nReply briefly.\n</skill>".to_string(),
+    }];
+
+    assert!(is_contextual_dev_message_content(&content));
+}
 
 #[test]
 fn parses_user_message_with_text_and_two_images() {

@@ -1,0 +1,23 @@
+{
+  "capability": "结果预期",
+  "score": 47.0,
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "calibration": "Passed pre-score calibration against results/202606211740 within ±3 per capability and overall.",
+  "evidence_used": [
+    "evidence/claude-deepseek-v4-flash/run_summary.json",
+    "evidence/claude-deepseek-v4-flash/M*/step_01/replay.jsonl",
+    "evidence/claude-deepseek-v4-flash/M*/step_01/acceptance.json",
+    "evidence/claude-deepseek-v4-flash/M*/step_01/diff.patch"
+  ],
+  "reason": "Calibrated against results/202606211740 within ±3. Similar final-gate failure pattern; 211702 has fuller M6/M7 responses than 211740 but worse package-layout evidence.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "calibrated_gate_evidence",
+      "amount": 20,
+      "reason": "Final/turn gate evidence considered as evidence, not copied as score; calibrated strictness from results/202606211740 applied."
+    }
+  ],
+  "evidence_gaps": []
+}

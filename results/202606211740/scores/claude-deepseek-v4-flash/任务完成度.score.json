@@ -1,0 +1,66 @@
+﻿{
+    "capability":  "任务完成度",
+    "reason":  "M4 100. M1 50. M2/M3/M5 25. M6/M7 0. M8 25. Average 275/8=34.4",
+    "rounds_scored":  8,
+    "score":  34.4,
+    "per_round":  {
+                      "round_05":  {
+                                       "reason":  "sub-steps \u003c50%",
+                                       "score":  25
+                                   },
+                      "round_06":  {
+                                       "reason":  "no output",
+                                       "score":  0
+                                   },
+                      "round_02":  {
+                                       "reason":  "sub-steps \u003c50%",
+                                       "score":  25
+                                   },
+                      "round_08":  {
+                                       "reason":  "final gate false, sub-steps \u003c50%",
+                                       "score":  25
+                                   },
+                      "round_07":  {
+                                       "reason":  "no output",
+                                       "score":  0
+                                   },
+                      "round_03":  {
+                                       "reason":  "sub-steps \u003c50%",
+                                       "score":  25
+                                   },
+                      "round_04":  {
+                                       "reason":  "=100% + turn pass",
+                                       "score":  100
+                                   },
+                      "round_01":  {
+                                       "reason":  "sub-steps \u003e=50%, turn gate false",
+                                       "score":  50
+                                   }
+                  },
+    "deductions":  [
+                       {
+                           "amount":  75,
+                           "reason":  "final_gate_passed=false, cwd/acceptance/memory all fail",
+                           "round":  "round_08",
+                           "item":  "final_gate"
+                       },
+                       {
+                           "amount":  50,
+                           "reason":  "cli_end_to_end source_files absolute paths",
+                           "round":  "round_01",
+                           "item":  "turn_gate"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M6 0% sub-step coverage",
+                           "round":  "round_06",
+                           "item":  "coverage"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M7 0% sub-step coverage",
+                           "round":  "round_07",
+                           "item":  "coverage"
+                       }
+                   ]
+}

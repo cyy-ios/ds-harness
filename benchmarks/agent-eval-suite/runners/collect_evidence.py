@@ -58,6 +58,7 @@ class EvidenceCollector:
         # 轮次状态
         self._round_num = start_round - 1
         self._current_round: str | None = None
+        self._current_milestone: str | None = None
         self._round_dir: Path | None = None
         self._replay_events: list[dict] = []
         self._commands: list[dict] = []
@@ -103,6 +104,7 @@ class EvidenceCollector:
             self._finalize_current_round()
             self._round_num += 1
             self._current_round = f"round_{self._round_num:02d}"
+            self._current_milestone = milestone_id
             self._round_dir = self.out / self._current_round
             self._round_dir.mkdir(parents=True, exist_ok=True)
             self._replay_events = []
@@ -159,6 +161,7 @@ class EvidenceCollector:
         if tool_call and tool_call.get("tool") == "finish":
             self._finalize_current_round()
             self._current_round = None
+            self._current_milestone = None
             self._round_dir = None
 
     def finalize(self) -> None:
@@ -189,7 +192,7 @@ class EvidenceCollector:
 
     def _save_prompt(self, text: str) -> None:
         (self._round_dir / "prompt.json").write_text(
-            json.dumps({"round": self._current_round, "prompt": text}, ensure_ascii=False, indent=2),
+            json.dumps({"round": self._current_round, "milestone": self._current_milestone, "prompt": text}, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
 
@@ -274,11 +277,41 @@ class EvidenceCollector:
         scorer = Path(__file__).resolve().parent / "score_mini_data_harness.py"
         if scorer.exists():
             try:
+                cmd = ["python", str(scorer), str(self.root)]
+                if self._current_round:
+                    cmd += ["--round", self._current_round]
+                if self._current_milestone:
+                    cmd += ["--milestone", self._current_milestone]
                 cp = subprocess.run(
-                    ["python", str(scorer), str(self.root)],
+                    cmd,
                     capture_output=True, text=True, timeout=120,
                 )
-                result = {"ran": True, "returncode": cp.returncode, "output": cp.stdout[-8000:]}
+                result = {
+                    "ran": True,
+                    "returncode": cp.returncode,
+                    "cmd": cmd,
+                    "output": cp.stdout,
+                    "stderr": cp.stderr,
+                }
+                try:
+                    parsed = json.loads(cp.stdout)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    result["parsed"] = parsed
+                    for key in [
+                        "score",
+                        "max_score",
+                        "round",
+                        "milestone",
+                        "stage",
+                        "gate_scope",
+                        "gate_passed",
+                        "final_gate_applicable",
+                        "final_gate_passed",
+                    ]:
+                        if key in parsed:
+                            result[key] = parsed[key]
             except Exception as e:
                 result = {"ran": False, "error": str(e)}
         (self._round_dir / "acceptance.json").write_text(

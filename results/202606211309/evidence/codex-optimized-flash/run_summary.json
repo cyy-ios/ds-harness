@@ -1,0 +1,46 @@
+{
+  "runner": "codex_cli",
+  "variant": "optimized",
+  "codex_bin": "C:\\项目\\ds-harness\\ds-codex\\codex-rs\\target\\release\\codex.exe",
+  "root": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211309-opt-flash",
+  "evidence_root": "C:\\项目\\ds-harness\\results\\202606211309\\evidence\\codex-optimized-flash",
+  "milestones_completed": 4,
+  "results": [
+    {
+      "milestone": "M5_context_change",
+      "elapsed_s": 224.7,
+      "event_count": 122,
+      "exit_code": 0,
+      "session_id": "019ee8b1-9ed9-73f2-80c4-8f16cd1a9de3",
+      "compact_triggered": false,
+      "evidence_dir": "M5_context_change\\step_01"
+    },
+    {
+      "milestone": "M6_interruption",
+      "elapsed_s": 15.9,
+      "event_count": 8,
+      "exit_code": 0,
+      "session_id": "019ee8b1-9ed9-73f2-80c4-8f16cd1a9de3",
+      "compact_triggered": false,
+      "evidence_dir": "M6_interruption\\step_01"
+    },
+    {
+      "milestone": "M7_memory_report",
+      "elapsed_s": 124.0,
+      "event_count": 55,
+      "exit_code": 0,
+      "session_id": "019ee8b1-9ed9-73f2-80c4-8f16cd1a9de3",
+      "compact_triggered": false,
+      "evidence_dir": "M7_memory_report\\step_01"
+    },
+    {
+      "milestone": "M8_compact_resume",
+      "elapsed_s": 165.7,
+      "event_count": 111,
+      "exit_code": 0,
+      "session_id": "019ee8b7-48ea-7bc3-beea-5b71889a499d",
+      "compact_triggered": false,
+      "evidence_dir": "M8_compact_resume\\step_01"
+    }
+  ]
+}

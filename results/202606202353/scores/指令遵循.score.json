@@ -1,0 +1,72 @@
+{
+  "capability": "指令遵循",
+  "score": 42.9,
+  "per_round": {
+    "round_01": {
+      "score": 45.0,
+      "sub_scores": {"持久规则": 37.5, "单次指令": 50},
+      "evidence": ["round_01/response.md", "round_01/prompt.json", "round_01/replay.jsonl"]
+    },
+    "round_02": {
+      "score": 45.0,
+      "sub_scores": {"持久规则": 37.5, "单次指令": 50},
+      "evidence": ["round_02/response.md", "round_02/prompt.json", "round_02/replay.jsonl"]
+    },
+    "round_03": {
+      "score": 45.0,
+      "sub_scores": {"持久规则": 37.5, "单次指令": 50},
+      "evidence": ["round_03/response.md", "round_03/prompt.json", "round_03/replay.jsonl"]
+    },
+    "round_04": {
+      "score": 45.0,
+      "sub_scores": {"持久规则": 37.5, "单次指令": 50},
+      "evidence": ["round_04/response.md", "round_04/prompt.json", "round_04/replay.jsonl"]
+    },
+    "round_05": {
+      "score": 40.0,
+      "sub_scores": {"持久规则": 25.0, "单次指令": 50},
+      "evidence": ["round_05/response.md", "round_05/prompt.json", "round_05/replay.jsonl"]
+    },
+    "round_06": {
+      "score": 40.0,
+      "sub_scores": {"持久规则": 25.0, "单次指令": 50},
+      "evidence": ["round_06/response.md", "round_06/prompt.json", "round_06/replay.jsonl"]
+    },
+    "round_07": {
+      "score": 40.0,
+      "sub_scores": {"持久规则": 25.0, "单次指令": 50},
+      "evidence": ["round_07/response.md", "round_07/prompt.json", "round_07/replay.jsonl"]
+    },
+    "round_08": {
+      "score": null,
+      "sub_scores": null,
+      "evidence": [],
+      "note": "R08达到18 step上限未finish，无response.md"
+    }
+  },
+  "rounds_scored": 7,
+  "rounds_excluded": 1,
+  "evidence_used": ["round_01-07/response.md", "round_01-07/prompt.json", "round_01-07/replay.jsonl"],
+  "reason": "持久规则：所有response均无'臣某谨奏'和'叩请圣裁'cosplay格式（cosplay=0），concise基本达标但response冗长度不一（多数50-75）。单次指令：正面指令完成率多数≥75%但不到100%（关键遗漏如M1未创建__main__.py、M6未回到主线），无禁止触犯。",
+  "deductions": [
+    {
+      "round": "round_01",
+      "item": "cosplay规则",
+      "amount": 50,
+      "reason": "response.md缺少'臣某谨奏'和'叩请圣裁'格式。round_01/response.md:L1 仅一句话无包裹格式"
+    },
+    {
+      "round": "round_01",
+      "item": "单次指令",
+      "amount": 25,
+      "reason": "M1 SKILL.md要求'CLI优先用argparse'已遵守，但禁止pip install已遵守，7条规则均遵守。正面指令：'完成后用仓库内命令核验'仅跑了pytest，未创建__main__.py使python -m mini_harness run可用。完成率≈90%≥75%→75分"
+    },
+    {
+      "round": "round_06",
+      "item": "单次指令",
+      "amount": 25,
+      "reason": "prompt要求'处理完后回到mini harness主线继续'，agent finish后未执行任何主线开发。完成率≈67%(2/3)<75%→50。round_06/replay.jsonl:L5"
+    }
+  ],
+  "evidence_gaps": ["round_08无response.md（未finish），无法评分"]
+}

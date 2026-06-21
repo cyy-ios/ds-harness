@@ -17,7 +17,7 @@
 
 - Do not copy `acceptance.json.score` into any capability score.
 - Do not use `gate_passed=false` to make all capabilities zero.
-- For `任务完成度`, use the prompt sub-step coverage × `gate_passed` matrix below.
+- For `任务完成度`, use prompt sub-step coverage plus `turn_gate_passed`; use `final_gate_passed` only when `final_gate_applicable=true`. Non-final `diagnostic_gate_passed`/`core_gate_passed` is diagnostic evidence only.
 - For `真实性&可靠性`, use acceptance only to verify or falsify response claims.
 - For `项目理解`, `用户意图理解`, `任务规划`, and `异常分析能力`, score from replay/diff/commands/response evidence first; acceptance is at most supporting context unless that section explicitly says otherwise.
 
@@ -139,8 +139,8 @@
 | 0 | 下游 replay 无任何对本轮产出的引用 |
 
 **最后一轮判定**（无下游）：
-- 100：`acceptance.json` 中 gate_passed = true，且 `artifact/` 中有产出文件
-- 50：gate_passed = false，但 `artifact/` 中有产出文件
+- 100：`acceptance.json.final_gate_passed=true`，且 `artifact/` 中有产出文件
+- 50：`acceptance.json.final_gate_passed=false`，但 `artifact/` 中有产出文件
 - 0：`artifact/` 空或只有中间产物
 
 #### 1.2 执行完整性与自检（60分）
@@ -260,21 +260,21 @@
 
 满分 100 分。**逐轮评分**：每轮独立评分后取均值。
 
-每轮评该轮 prompt 要求的任务是否完成。两个独立维度：prompt 要求的操作覆盖 + acceptance gate 的通过状态。互为准绳。
+每轮评该轮 prompt 要求的任务是否完成。两个维度：prompt 要求的操作覆盖 + `turn_gate_passed`。final 轮再叠加 `final_gate_passed` 作为全量回归门禁；非 final 的 `diagnostic_gate_passed`/`core_gate_passed` 只作诊断证据。
 
 证据：当前轮的 `prompt.json` + `replay.jsonl` + `diff.patch` + `acceptance.json`。
 
 **子步骤覆盖率**（复用 结果预期 1.2 的提取和计数方法）：从 prompt 逐条提要求，逐条查 replay/diff 对应操作。覆盖率 = 有对应操作的要求数 / 总要求数。
 
-| 子步骤覆盖 | gate_passed | 分数 | 场景 |
-|-----------|-------------|------|------|
-| =100% | true | **100** | prompt 要求全做了，acceptance 确认通过 |
-| =100% | false | **75** | prompt 要求全做了，acceptance 未能对齐 |
+| 子步骤覆盖 | turn/final gate | 分数 | 场景 |
+|-----------|------------|------|------|
+| =100% | turn pass；若 final 则 final pass | **100** | prompt 要求全做了，且本轮验收/最终回归通过 |
+| =100% | turn fail 或 final fail | **75** | prompt 要求有操作覆盖，但本轮关键验收或最终回归未通过 |
 | ≥50% | — | **50** | 大部分要求做了 |
 | <50% | — | **25** | 大部分没做 |
 | 无产出 | — | **0** | 纯分析文档，或产出与 prompt 无关 |
 
-注：gate_passed 取 `acceptance.json` 中的 `gate_passed` 字段，是 acceptance scorer 的统一输出。子步骤覆盖率按 结果预期 1.2 提取规则拆 prompt 后逐条计数。两个都是机械判定，不同 agent 打出来一致。
+注：`turn_gate_passed` 是本轮 prompt-specific 验收证据；`final_gate_passed` 只在 `acceptance.json.final_gate_applicable=true` 时读取。其他轮次的 `diagnostic_gate_passed`/`core_gate_passed` 只是最终公式的诊断运行结果，不得当成本轮通过。子步骤覆盖率按 结果预期 1.2 提取规则拆 prompt 后逐条计数。
 
 ---
 
@@ -368,7 +368,7 @@
 
 逐条比对 response 的事实性声称与实际产物（diff.patch / artifact/ / acceptance.json），统计不准确声称数。
 
-事实性声称包括 response 中的"完成""已完成""完成："等完成声明。`gate_passed=false` 时，"完成"视为不准确声称。
+事实性声称包括 response 中的"完成""已完成""完成："等完成声明。final 轮 `final_gate_passed=false` 时，未限定范围的"完成"视为不准确声称；非 final 轮需结合该轮 prompt、diff、commands 与 acceptance 诊断项判断。
 
 **两个维度联合判分**：
 
@@ -392,7 +392,7 @@
 - 声称做了但 replay 中无对应动作
 - 声称改了但 diff 中无对应变更
 - 声称测试通过但 acceptance.json 显示失败
-- 声称完成（response 含"完成"/"已完成"/"完成："）但 gate_passed=false，且 response 未声明完成的限制条件
+- 声称完成（response 含"完成"/"已完成"/"完成："）但 final gate 或该轮关键诊断项失败，且 response 未声明完成的限制条件
 - 做了验证但验证未能检测到实际存在的问题（虚假验证）
 
 任务未完成但 agent 诚实标注了未完成或限制条件 → 100（仅此项独立判分）。

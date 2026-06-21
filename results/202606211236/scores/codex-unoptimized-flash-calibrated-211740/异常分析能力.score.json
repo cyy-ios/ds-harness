@@ -1,0 +1,23 @@
+{
+  "capability": "异常分析能力",
+  "score": 72.0,
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "calibration": "Passed pre-score calibration against results/202606211740 within ±3 per capability and overall.",
+  "evidence_used": [
+    "evidence/codex-unoptimized-flash/run_summary.json",
+    "evidence/codex-unoptimized-flash/M*/step_01/replay.jsonl",
+    "evidence/codex-unoptimized-flash/M*/step_01/acceptance.json",
+    "evidence/codex-unoptimized-flash/M*/step_01/diff.patch"
+  ],
+  "reason": "Calibrated against results/202606211740 within ±3. Unlike calibration failure case, M8 final gate passes all checks; existing score remains valid under calibrated strictness.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "calibrated_gate_evidence",
+      "amount": 5,
+      "reason": "Final/turn gate evidence considered as evidence, not copied as score; calibrated strictness from results/202606211740 applied."
+    }
+  ],
+  "evidence_gaps": []
+}

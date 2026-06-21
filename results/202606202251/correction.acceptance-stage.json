@@ -1,0 +1,56 @@
+{
+  "run": "202606202251",
+  "variant": "deepseek-v4-flash",
+  "correction": "旧 acceptance 早期轮次误判为 final gate，已按 stage/final_gate_applicable 规则重算",
+  "rerun_performed": false,
+  "acceptance_files_preserved": true,
+  "round_scope": {
+    "round_01": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_02": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_03": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_04": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_05": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_06": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_07": {
+      "stage": "intermediate",
+      "final_gate_applicable": false
+    },
+    "round_08": {
+      "stage": "final",
+      "final_gate_applicable": true
+    }
+  },
+  "changed_scores": {
+    "任务完成度": {
+      "original": 25.0,
+      "corrected": 40.0
+    },
+    "结果预期": {
+      "original": 41.3,
+      "corrected": 45.0
+    },
+    "真实性&可靠性": {
+      "original": 55.0,
+      "corrected": 60.0
+    }
+  },
+  "corrected_overall": 47.5
+}

@@ -380,6 +380,10 @@ def resolve_deepseek_api_key() -> str:
     key_file = os.environ.get("DEEPSEEK_API_KEY_FILE", "").strip()
     if key_file:
         return Path(key_file).read_text(encoding="utf-8").strip()
+    local_key_file = Path(r"C:\Users\cuiyi\token\deepseek-api-key.txt")
+    if local_key_file.exists():
+        os.environ["DEEPSEEK_API_KEY_FILE"] = str(local_key_file)
+        return local_key_file.read_text(encoding="utf-8").strip()
     raise RuntimeError("Set DEEPSEEK_API_KEY or DEEPSEEK_API_KEY_FILE for DeepSeek variants.")
 
 
@@ -461,7 +465,7 @@ def run_codex(
         cmd.extend(["-c", "approval_policy=never", "-c", "sandbox_mode=danger-full-access", "--profile", "deepseek"])
     cmd.extend(["exec", "--json", "--skip-git-repo-check"])
 
-    if model and variant == "native":
+    if model and variant in ("native", "optimized"):
         cmd.extend(["-m", model])
 
     if codex_config:
@@ -591,7 +595,8 @@ def collect_evidence(
     )
 
     # acceptance.json —— 公开验收检查
-    acceptance = _run_acceptance(repo_root)
+    round_id = f"round_{_milestone_index(ms_id):02d}"
+    acceptance = _run_acceptance(repo_root, round_id=round_id, milestone=ms_id)
     (step_dir / "acceptance.json").write_text(
         json.dumps(acceptance, ensure_ascii=False, indent=2), encoding="utf-8",
     )
@@ -688,28 +693,64 @@ def _run_analyzer(step_dir: Path) -> None:
         )
 
 
-def _run_acceptance(repo_root: Path) -> dict:
+def _milestone_index(ms_id: str) -> int:
+    prefixes = ["M1_", "M2_", "M3_", "M4_", "M5_", "M6_", "M7_", "M8_"]
+    for idx, prefix in enumerate(prefixes, start=1):
+        if ms_id.startswith(prefix):
+            return idx
+    return 0
+
+
+def _run_acceptance(repo_root: Path, *, round_id: str | None = None, milestone: str | None = None) -> dict:
     """运行 score_mini_data_harness.py。"""
     script = Path(__file__).parent / "score_mini_data_harness.py"
     if not script.exists():
         return {"error": "score_mini_data_harness.py not found", "path": str(script)}
 
+    cmd = [sys.executable, str(script), str(repo_root)]
+    if round_id:
+        cmd += ["--round", round_id]
+    if milestone:
+        cmd += ["--milestone", milestone]
+
     try:
         result = subprocess.run(
-            [sys.executable, str(script), str(repo_root)],
+            cmd,
             capture_output=True, text=True, timeout=120,
             cwd=repo_root,
             env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         )
-        return {
+        output = (result.stdout or "") + (result.stderr or "")
+        acceptance = {
             "ran": True,
             "returncode": result.returncode,
-            "output": (result.stdout or "") + (result.stderr or ""),
+            "cmd": cmd,
+            "output": output,
         }
+        try:
+            parsed = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            acceptance["parsed"] = parsed
+            for key in [
+                "score",
+                "max_score",
+                "round",
+                "milestone",
+                "stage",
+                "gate_scope",
+                "gate_passed",
+                "final_gate_applicable",
+                "final_gate_passed",
+            ]:
+                if key in parsed:
+                    acceptance[key] = parsed[key]
+        return acceptance
     except subprocess.TimeoutExpired:
-        return {"error": "acceptance check timed out"}
+        return {"error": "acceptance check timed out", "cmd": cmd}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "cmd": cmd}
 
 
 # ---------------------------------------------------------------------------

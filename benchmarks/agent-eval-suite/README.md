@@ -15,6 +15,8 @@
 
 废弃：`benchmarks/agent-eval-suite/results/`、条件占位目录、空 runbook。
 
+- `runners/run_claude_replay.py`: Claude Code CLI 本体接 DeepSeek Anthropic API runner。
+
 ## Scoring boundary
 
 `score_mini_data_harness.py` produces evaluator acceptance evidence. Final scores must follow `rubrics/scoring-output.md` and the capability rubrics; acceptance score is not a replacement for capability scores.

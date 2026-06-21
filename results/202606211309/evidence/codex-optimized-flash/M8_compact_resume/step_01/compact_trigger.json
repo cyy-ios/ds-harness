@@ -1,0 +1,18 @@
+{
+  "triggered": false,
+  "triggered_at": null,
+  "post_compact_milestones": [],
+  "summary_meta": {
+    "source": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211309-opt-flash\\docs\\compact-summary.md",
+    "rebuilt": true,
+    "reason": "validation_failed",
+    "missing_terms": [
+      "python -m mini_harness",
+      "__main__",
+      "HarnessError",
+      "M4_long_log_debug",
+      "min_length_900"
+    ],
+    "chars": 1780
+  }
+}

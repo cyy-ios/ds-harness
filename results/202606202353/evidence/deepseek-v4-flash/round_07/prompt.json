@@ -1,0 +1,4 @@
+{
+  "round": "round_07",
+  "prompt": "里程碑 M7_memory_report：读取 memory/memory_summary.md、docs/compatibility-notes.md 和 benchmarks/perf-baseline.json，生成 memory-aware 复盘报告，引用早期设计决策和当前产物的最终统计。"
+}

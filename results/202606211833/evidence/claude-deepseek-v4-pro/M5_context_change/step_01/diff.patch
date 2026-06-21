@@ -1,0 +1,905 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..1c05d32
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1 @@
++"""mini_harness - minimal data processing harness fixture."""
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..2a1c719
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,4 @@
++"""Entry point for python -m mini_harness."""
++from mini_harness.cli import main
++
++main()
+diff --git a/mini_harness/clean.py b/mini_harness/clean.py
+new file mode 100644
+index 0000000..5473671
+--- /dev/null
++++ b/mini_harness/clean.py
+@@ -0,0 +1,34 @@
++"""Clean stage: normalise field names, filter rejects, remove empty rows."""
++import re
++from typing import Any
++
++
++def to_snake_case(name: str) -> str:
++    """Convert a string to snake_case."""
++    s = re.sub(r"[\s\-]+", "_", name.strip())
++    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s)
++    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", s)
++    return s.lower()
++
++
++def clean(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
++    """Clean records: snake_case keys, drop empty rows, split out records missing 'id'.
++
++    Returns (cleaned, rejects).
++    """
++    cleaned = []
++    rejects = []
++    for rec in records:
++        # Remove completely empty rows
++        if all(v is None or (isinstance(v, str) and v.strip() == "") or (isinstance(v, list) and len(v) == 0) for v in rec.values()):
++            continue
++
++        # Convert field names to snake_case
++        row = {to_snake_case(k): v for k, v in rec.items()}
++
++        # Records missing 'id' go to rejects
++        if "id" not in row or row["id"] is None or (isinstance(row["id"], str) and row["id"].strip() == ""):
++            rejects.append(row)
++        else:
++            cleaned.append(row)
++    return cleaned, rejects
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..eeed71b
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,54 @@
++"""CLI for mini_harness using argparse."""
++import argparse
++import sys
++
++from mini_harness.config import load_config
++from mini_harness.runner import run_dag, HarnessError
++
++
++def _merge_config_with_args(args: argparse.Namespace) -> tuple[list[str], str]:
++    """Resolve inputs and output by merging config file with CLI args.
++
++    CLI args always take precedence over config values.
++    """
++    cfg = load_config(args.config)
++    sources = args.inputs or cfg.get("sources", [])
++    output = args.output or cfg.get("output", "")
++    return sources, output
++
++
++def main(argv=None):
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    subparsers = parser.add_subparsers(dest="command")
++
++    run_parser = subparsers.add_parser("run", help="Run the data processing DAG")
++    run_parser.add_argument("inputs", nargs="*", help="Input files (CSV or JSONL)")
++    run_parser.add_argument("--output", "-o", default="", help="Output report path")
++    run_parser.add_argument(
++        "--config", "-c", default=None,
++        help="Config file path (JSON or YAML).  If omitted, scans for mini_harness-config.{json,yaml,yml}",
++    )
++
++    args = parser.parse_args(argv)
++
++    if args.command == "run":
++        sources, output = _merge_config_with_args(args)
++        if not sources:
++            print("Error: no input sources specified (provide as CLI args or in config)", file=sys.stderr)
++            sys.exit(1)
++        if not output:
++            print("Error: no output path specified (provide via --output or in config)", file=sys.stderr)
++            sys.exit(1)
++        try:
++            report = run_dag(sources, output)
++            print(report)
++        except HarnessError as e:
++            print(f"Error: {e}", file=sys.stderr)
++            sys.exit(1)
++    else:
++        parser.print_help()
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/mini_harness/config.py b/mini_harness/config.py
+new file mode 100644
+index 0000000..ea862a4
+--- /dev/null
++++ b/mini_harness/config.py
+@@ -0,0 +1,131 @@
++"""Config loader: JSON and minimal YAML parsing for mini_harness config files.
++
++Supported config keys: sources (list of input paths), output (report path).
++"""
++import json
++import os
++from typing import Any
++
++
++# Conventional default config filenames scanned in CWD when no --config is given.
++DEFAULT_CONFIG_NAMES = [
++    "mini_harness-config.json",
++    "mini_harness-config.yaml",
++    "mini_harness-config.yml",
++]
++
++# Config keys we recognise.
++KNOWN_KEYS = {"sources", "output"}
++
++
++def _load_json(path: str) -> dict[str, Any]:
++    """Load and validate a JSON config file."""
++    with open(path, "r", encoding="utf-8") as f:
++        data = json.load(f)
++    if not isinstance(data, dict):
++        raise ValueError(f"Config file {path}: top-level must be a JSON object")
++    return _filter_known(data)
++
++
++def _load_yaml(path: str) -> dict[str, Any]:
++    """Load a YAML config file with a minimal built-in parser.
++
++    Handles simple mappings, scalars, and list items — sufficient for
++    mini_harness config files.  Does not handle block scalars, anchors,
++    or complex nesting.
++    """
++    with open(path, "r", encoding="utf-8") as f:
++        lines = f.readlines()
++
++    result: dict[str, Any] = {}
++    current_key: str | None = None
++    current_list: list[str] = []
++
++    def _flush():
++        nonlocal current_key, current_list
++        if current_key is not None:
++            result[current_key] = current_list if current_list else result.get(current_key)
++            current_key = None
++            current_list = []
++
++    for raw in lines:
++        line = raw.rstrip("\n\r")
++        # Skip blank lines and full-line comments
++        stripped = line.strip()
++        if not stripped or stripped.startswith("#"):
++            continue
++
++        # List item (must be under a mapping key)
++        list_match = stripped.startswith("- ")
++        if list_match:
++            if current_key is None:
++                raise ValueError(f"YAML list item without parent key in {path}: {stripped}")
++            current_list.append(stripped[2:].strip())
++            continue
++
++        # inline comment removal — only outside quoted strings
++        if "#" in stripped:
++            # Simple heuristic: split on ' #' that isn't inside quotes
++            for i, ch in enumerate(stripped):
++                if ch == "#" and i > 0 and stripped[i - 1] == " ":
++                    in_quotes = False
++                    for j in range(i):
++                        if stripped[j] in ('"', "'"):
++                            in_quotes = not in_quotes
++                    if not in_quotes:
++                        stripped = stripped[:i].rstrip()
++                        break
++
++        if ":" not in stripped:
++            continue
++
++        _flush()
++        key, _, value = stripped.partition(":")
++        key = key.strip()
++        value = value.strip()
++
++        if value:
++            # Scalar value
++            result[key] = value
++            current_key = None
++        else:
++            # Start of a mapping/list block
++            current_key = key
++
++    _flush()
++    return _filter_known(result)
++
++
++def _filter_known(data: dict[str, Any]) -> dict[str, Any]:
++    """Keep only known config keys."""
++    return {k: v for k, v in data.items() if k in KNOWN_KEYS}
++
++
++def _find_default_config() -> str | None:
++    """Return the first default config file found in CWD, or None."""
++    cwd = os.getcwd()
++    for name in DEFAULT_CONFIG_NAMES:
++        path = os.path.join(cwd, name)
++        if os.path.isfile(path):
++            return path
++    return None
++
++
++def load_config(path: str | None = None) -> dict[str, Any]:
++    """Load configuration from a JSON or YAML file.
++
++    If *path* is None, scans CWD for conventional default config files.
++    Returns a dict with zero or more of: sources, output.
++    """
++    if path is None:
++        path = _find_default_config()
++        if path is None:
++            return {}
++
++    ext = os.path.splitext(path)[1].lower()
++    if ext in (".yaml", ".yml"):
++        return _load_yaml(path)
++    elif ext == ".json":
++        return _load_json(path)
++    else:
++        raise ValueError(f"Unsupported config format: {ext} (expected .json, .yaml, or .yml)")
+diff --git a/mini_harness/extract.py b/mini_harness/extract.py
+new file mode 100644
+index 0000000..258d047
+--- /dev/null
++++ b/mini_harness/extract.py
+@@ -0,0 +1,37 @@
++"""Extract stage: read CSV and JSONL files into raw records."""
++import csv
++import json
++import os
++from typing import Any
++
++
++def extract_csv(filepath: str) -> list[dict[str, Any]]:
++    """Extract records from a CSV file."""
++    records = []
++    with open(filepath, "r", encoding="utf-8", newline="") as f:
++        reader = csv.DictReader(f)
++        for row in reader:
++            records.append(dict(row))
++    return records
++
++
++def extract_jsonl(filepath: str) -> list[dict[str, Any]]:
++    """Extract records from a JSONL file."""
++    records = []
++    with open(filepath, "r", encoding="utf-8") as f:
++        for line in f:
++            line = line.strip()
++            if line:
++                records.append(json.loads(line))
++    return records
++
++
++def extract(filepath: str) -> list[dict[str, Any]]:
++    """Extract records from a file, dispatching on extension."""
++    ext = os.path.splitext(filepath)[1].lower()
++    if ext == ".csv":
++        return extract_csv(filepath)
++    elif ext in (".jsonl", ".json"):
++        return extract_jsonl(filepath)
++    else:
++        raise ValueError(f"Unsupported file format: {ext}")
+diff --git a/mini_harness/report.py b/mini_harness/report.py
+new file mode 100644
+index 0000000..21d4edb
+--- /dev/null
++++ b/mini_harness/report.py
+@@ -0,0 +1,32 @@
++"""Report stage: produce the final JSON report reflecting real processing results."""
++import json
++import os
++from typing import Any
++
++
++def generate_report(
++    cleaned: list[dict[str, Any]],
++    rejects: list[dict[str, Any]],
++    retry_count: int,
++    source_files: list[str],
++    output_path: str,
++) -> dict[str, Any]:
++    """Generate and write the report JSON.
++
++    The report includes per-source record counts so the output reflects
++    exactly what extract → clean → report produced.
++    """
++    report = {
++        "processed_count": len(cleaned),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": source_files,
++        "records": {
++            "rejected": rejects,
++        },
++    }
++
++    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
++    with open(output_path, "w", encoding="utf-8") as f:
++        json.dump(report, f, indent=2, ensure_ascii=False)
++    return report
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..915e44d
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,106 @@
++"""DAG runner with retry logic for extract → clean → report pipeline."""
++import json
++import logging
++import os
++import sys
++from typing import Any
++
++from mini_harness.extract import extract
++from mini_harness.clean import clean
++from mini_harness.report import generate_report
++
++logger = logging.getLogger("mini_harness")
++
++# Defer handler setup until execution time so imports don't leak into test captures.
++_configured = False
++
++
++def _ensure_logger():
++    """Attach a stderr handler once, on first actual use."""
++    global _configured
++    if not _configured:
++        logger.setLevel(logging.INFO)
++        if not logger.handlers:
++            _h = logging.StreamHandler(sys.stderr)
++            _h.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
++            logger.addHandler(_h)
++        _configured = True
++
++
++# Ensure memory/ directory reference — see memory/memory_summary.md for design decisions.
++MEMORY_SUMMARY_PATH = os.path.join(os.path.dirname(__file__), "..", "memory", "memory_summary.md")
++
++
++class HarnessError(Exception):
++    """Custom error for harness failures."""
++
++
++def _log_attempt(attempt: int, stage: str, status: str):
++    """Emit a structured log line with attempt, stage, and status."""
++    logger.info(json.dumps({"attempt": attempt, "stage": stage, "status": status}))
++
++
++def _run_dag_with_retry(stage_name: str, fn, *args, **kwargs):
++    """Run a DAG stage with up to 2 retries on failure.
++
++    Returns (result, retry_count).
++    """
++    max_retries = 2
++    retries = 0
++    for attempt_num in range(1, max_retries + 2):  # 1 initial + up to 2 retries
++        try:
++            _log_attempt(attempt_num, stage_name, "running")
++            result = fn(*args, **kwargs)
++            _log_attempt(attempt_num, stage_name, "ok")
++            return result, retries
++        except Exception as e:
++            retries += 1
++            _log_attempt(attempt_num, stage_name, "failed")
++            logger.warning("stage=%s attempt=%d error=%s", stage_name, attempt_num, e)
++            if attempt_num > max_retries:
++                raise HarnessError(
++                    f"Stage '{stage_name}' failed after {max_retries} retries"
++                ) from e
++    raise HarnessError(f"Stage '{stage_name}' failed")  # unreachable
++
++
++def _write_rejects(rejects: list[dict[str, Any]], output_dir: str):
++    """Write rejected records to a sidecar JSON file for inspection."""
++    rejects_path = os.path.join(output_dir, "rejects.json")
++    with open(rejects_path, "w", encoding="utf-8") as f:
++        json.dump(rejects, f, indent=2, ensure_ascii=False)
++    logger.info("rejects written to %s", rejects_path)
++
++
++def run_dag(input_paths: list[str], output_path: str) -> dict[str, Any]:
++    """Run the full extract → clean → report DAG.
++
++    Returns the report dict.
++    """
++    _ensure_logger()
++    total_retries = 0
++
++    # Stage 1: Extract
++    all_records = []
++    for fp in input_paths:
++        records, r = _run_dag_with_retry("extract", extract, fp)
++        total_retries += r
++        all_records.extend(records)
++
++    # Stage 2: Clean
++    clean_result, r = _run_dag_with_retry("clean", clean, all_records)
++    total_retries += r
++    cleaned, rejects = clean_result
++
++    # Stage 3: Report
++    output_dir = os.path.dirname(output_path) or "."
++    os.makedirs(output_dir, exist_ok=True)
++    if rejects:
++        _write_rejects(rejects, output_dir)
++    report_result, r = _run_dag_with_retry(
++        "report", generate_report, cleaned, rejects, total_retries, input_paths, output_path
++    )
++    total_retries += r
++    report = report_result
++
++    return report
+diff --git a/pyproject.toml b/pyproject.toml
+index da60646..a498f38 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,3 +1,3 @@
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
+-pythonpath = ["src"]
++pythonpath = ["."]
+diff --git a/subdir/workbench/mini_harness/__init__.py b/subdir/workbench/mini_harness/__init__.py
+new file mode 100644
+index 0000000..c923037
+--- /dev/null
++++ b/subdir/workbench/mini_harness/__init__.py
+@@ -0,0 +1,33 @@
++"""Workbench shim — redirects all mini_harness imports to the root package.
++
++When CWD is ``subdir/workbench/``, Python finds this shim first.  We inject
++the repo root into sys.path and load the real mini_harness modules from there.
++"""
++import importlib
++import importlib.util
++import os
++import sys
++
++_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
++_subs = ("config", "extract", "clean", "report", "runner", "cli")
++
++
++def _load_root_module(name):
++    """Import the real mini_harness submodule from the repo root."""
++    fp = os.path.join(_repo_root, "mini_harness", f"{name.split('.')[-1]}.py")
++    if not os.path.isfile(fp):
++        return None
++    spec = importlib.util.spec_from_file_location(name, fp)
++    mod = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(mod)
++    return mod
++
++
++# Pre-load all root submodules into sys.modules so that
++# ``from mini_harness.runner import run_dag`` finds the real ones.
++for _sub in _subs:
++    _fq = f"mini_harness.{_sub}"
++    if _fq not in sys.modules:
++        _m = _load_root_module(_fq)
++        if _m is not None:
++            sys.modules[_fq] = _m
+diff --git a/subdir/workbench/mini_harness/__main__.py b/subdir/workbench/mini_harness/__main__.py
+new file mode 100644
+index 0000000..f58ca4c
+--- /dev/null
++++ b/subdir/workbench/mini_harness/__main__.py
+@@ -0,0 +1,37 @@
++"""Workbench entry point — redirects to root mini_harness via importlib.
++
++Makes ``python -m mini_harness run`` work from ``subdir/workbench/`` without
++duplicating the real package.
++"""
++import importlib.util
++import os
++import sys
++
++_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
++
++
++def _import_module_from_path(name, path):
++    spec = importlib.util.spec_from_file_location(name, path)
++    mod = importlib.util.module_from_spec(spec)
++    sys.modules.setdefault(name, mod)
++    spec.loader.exec_module(mod)
++    return mod
++
++
++def main():
++    # Load root mini_harness modules via file paths, bypassing shim namespace
++    _import_module_from_path("mini_harness", os.path.join(_repo_root, "mini_harness", "__init__.py"))
++    # Load the CLI module — it will re-import mini_harness.* as usual, but
++    # we've already registered the root mini_harness in sys.modules, so the
++    # shim is transparent.
++    for sub in ("config", "extract", "clean", "report", "runner"):
++        _import_module_from_path(f"mini_harness.{sub}", os.path.join(_repo_root, "mini_harness", f"{sub}.py"))
++    _import_module_from_path("mini_harness.cli", os.path.join(_repo_root, "mini_harness", "cli.py"))
++
++    # Now invoke the main CLI
++    from mini_harness.cli import main as cli_main
++    cli_main()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/subdir/workbench/pyproject.toml b/subdir/workbench/pyproject.toml
+index 89c6835..ab763b9 100644
+--- a/subdir/workbench/pyproject.toml
++++ b/subdir/workbench/pyproject.toml
+@@ -1,2 +1,3 @@
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
++pythonpath = ["../..", "."]
+diff --git a/subdir/workbench/tests/test_harness_import.py b/subdir/workbench/tests/test_harness_import.py
+new file mode 100644
+index 0000000..5dda117
+--- /dev/null
++++ b/subdir/workbench/tests/test_harness_import.py
+@@ -0,0 +1,29 @@
++"""Verify mini_harness is importable and functional from workbench context."""
++import os
++from pathlib import Path
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++DATA_DIR = REPO_ROOT / "data"
++
++
++def test_import_harness_error():
++    from mini_harness.runner import HarnessError
++    assert issubclass(HarnessError, Exception)
++
++
++def test_run_dag_from_workbench():
++    from mini_harness.runner import run_dag
++    output = str(REPO_ROOT / "tmp" / "workbench-report.json")
++    report = run_dag(
++        [str(DATA_DIR / "events.jsonl")],
++        output,
++    )
++    assert report["processed_count"] >= 1
++    assert report["rejected_count"] >= 1
++    assert report["retry_count"] == 0
++    assert os.path.exists(output)
++
++
++def test_cli_module_importable():
++    from mini_harness.cli import main
++    assert callable(main)
+diff --git a/subdir/workbench/tmp/rejects.json b/subdir/workbench/tmp/rejects.json
+new file mode 100644
+index 0000000..8654c89
+--- /dev/null
++++ b/subdir/workbench/tmp/rejects.json
+@@ -0,0 +1,10 @@
++[
++  {
++    "id": "",
++    "user_name": "Bad",
++    "score": "0"
++  },
++  {
++    "event_type": "missing"
++  }
++]
+\ No newline at end of file
+diff --git a/subdir/workbench/tmp/report.json b/subdir/workbench/tmp/report.json
+new file mode 100644
+index 0000000..7a21369
+--- /dev/null
++++ b/subdir/workbench/tmp/report.json
+@@ -0,0 +1,21 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "../../data/input.csv",
++    "../../data/events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "id": "",
++        "user_name": "Bad",
++        "score": "0"
++      },
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/tests/test_runner.py b/tests/test_runner.py
+new file mode 100644
+index 0000000..c53d53b
+--- /dev/null
++++ b/tests/test_runner.py
+@@ -0,0 +1,93 @@
++"""Tests covering DAG retry, rejects, and report fields."""
++import json
++import os
++import sys
++from pathlib import Path
++
++import pytest
++
++# Ensure project root on path for import
++sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
++
++from mini_harness.runner import run_dag, HarnessError, _ensure_logger
++
++
++TMP_DIR = Path(__file__).resolve().parent.parent / "tmp"
++DATA_DIR = Path(__file__).resolve().parent.parent / "data"
++
++
++@pytest.fixture(autouse=True)
++def _setup_logger_for_tests():
++    """Configure logger so structured logs are captured by pytest, not leaked to real stderr."""
++    import logging
++    logger = logging.getLogger("mini_harness")
++    logger.handlers.clear()
++    _h = logging.StreamHandler(sys.stderr)
++    _h.setFormatter(logging.Formatter("%(message)s"))
++    logger.addHandler(_h)
++
++
++def test_run_dag_produces_report():
++    output = str(TMP_DIR / "test-report.json")
++    report = run_dag(
++        [str(DATA_DIR / "input.csv"), str(DATA_DIR / "events.jsonl")],
++        output,
++    )
++    assert report["processed_count"] == 4
++    assert report["rejected_count"] == 2
++    assert report["retry_count"] == 0
++    assert len(report["source_files"]) == 2
++    assert "records" in report
++    assert len(report["records"]["rejected"]) == 2
++    assert os.path.exists(output)
++
++
++def test_retry_on_nonexistent_file_triggers_harness_error():
++    with pytest.raises(HarnessError, match="extract.*failed after 2 retries"):
++        run_dag([str(TMP_DIR / "nonexistent.csv")], str(TMP_DIR / "should-fail.json"))
++
++
++def test_harness_error_is_exception():
++    assert issubclass(HarnessError, Exception)
++
++
++def test_rejects_include_missing_id():
++    output = str(TMP_DIR / "test-rejects.json")
++    report = run_dag(
++        [str(DATA_DIR / "input.csv"), str(DATA_DIR / "events.jsonl")],
++        output,
++    )
++    rejected_ids = [r.get("id") for r in report["records"]["rejected"]]
++    # CSV row 2: ID="" → rejected; JSONL row 2: no "id" at all → rejected
++    assert "" in rejected_ids or None in rejected_ids
++    rejects_without_id = [r for r in report["records"]["rejected"] if "id" not in r or not r.get("id")]
++    assert len(rejects_without_id) == 2
++
++
++def test_report_required_fields():
++    output = str(TMP_DIR / "test-fields.json")
++    report = run_dag(
++        [str(DATA_DIR / "events.jsonl")],
++        output,
++    )
++    for key in ("processed_count", "rejected_count", "retry_count", "source_files"):
++        assert key in report, f"missing required field: {key}"
++
++
++def test_import_during_test_no_logger_leak():
++    """Logger handler must NOT emit during import — only on run_dag() call."""
++    import logging
++    import mini_harness.runner as runner_mod
++
++    # Reset to simulate fresh import state
++    runner_mod._configured = False
++    logging.getLogger("mini_harness").handlers.clear()
++
++    # Re-import-like check: _configured starts False
++    assert not runner_mod._configured
++
++    # run_dag triggers handler attachment
++    output = str(TMP_DIR / "test-leak.json")
++    runner_mod.run_dag([str(DATA_DIR / "events.jsonl")], output)
++    assert runner_mod._configured
++    assert logging.getLogger("mini_harness").handlers
+diff --git a/tmp/acceptance-config-report.json b/tmp/acceptance-config-report.json
+new file mode 100644
+index 0000000..35908eb
+--- /dev/null
++++ b/tmp/acceptance-config-report.json
+@@ -0,0 +1,21 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "id": "",
++        "user_name": "Bad",
++        "score": "0"
++      },
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/acceptance-config.json b/tmp/acceptance-config.json
+new file mode 100644
+index 0000000..eb3e5c9
+--- /dev/null
++++ b/tmp/acceptance-config.json
+@@ -0,0 +1 @@
++{"sources": ["data/input.csv", "data/events.jsonl"], "output": "tmp/acceptance-config-report.json"}
+\ No newline at end of file
+diff --git a/tmp/acceptance-report.json b/tmp/acceptance-report.json
+new file mode 100644
+index 0000000..35908eb
+--- /dev/null
++++ b/tmp/acceptance-report.json
+@@ -0,0 +1,21 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "id": "",
++        "user_name": "Bad",
++        "score": "0"
++      },
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/report2.json b/tmp/report2.json
+new file mode 100644
+index 0000000..4b78992
+--- /dev/null
++++ b/tmp/report2.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+\ No newline at end of file
+diff --git a/tmp/test-fields.json b/tmp/test-fields.json
+new file mode 100644
+index 0000000..ba3f63e
+--- /dev/null
++++ b/tmp/test-fields.json
+@@ -0,0 +1,15 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\data\\events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/test-leak.json b/tmp/test-leak.json
+new file mode 100644
+index 0000000..ba3f63e
+--- /dev/null
++++ b/tmp/test-leak.json
+@@ -0,0 +1,15 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\data\\events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/test-rejects.json b/tmp/test-rejects.json
+new file mode 100644
+index 0000000..ea74887
+--- /dev/null
++++ b/tmp/test-rejects.json
+@@ -0,0 +1,21 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\data\\events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "id": "",
++        "user_name": "Bad",
++        "score": "0"
++      },
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/test-report.json b/tmp/test-report.json
+new file mode 100644
+index 0000000..ea74887
+--- /dev/null
++++ b/tmp/test-report.json
+@@ -0,0 +1,21 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\data\\events.jsonl"
++  ],
++  "records": {
++    "rejected": [
++      {
++        "id": "",
++        "user_name": "Bad",
++        "score": "0"
++      },
++      {
++        "event_type": "missing"
++      }
++    ]
++  }
++}
+\ No newline at end of file

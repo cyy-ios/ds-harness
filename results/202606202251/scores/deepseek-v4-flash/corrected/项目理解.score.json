@@ -1,0 +1,95 @@
+{
+  "capability": "项目理解",
+  "score": 42.3,
+  "per_round": {
+    "round_01": {
+      "score": null,
+      "evidence": [
+        "round_01/replay.jsonl",
+        "round_01/acceptance.json"
+      ]
+    },
+    "round_02": {
+      "score": null,
+      "evidence": [
+        "round_02/replay.jsonl",
+        "round_02/acceptance.json"
+      ]
+    },
+    "round_03": {
+      "score": null,
+      "evidence": [
+        "round_03/replay.jsonl",
+        "round_03/acceptance.json"
+      ]
+    },
+    "round_04": {
+      "score": null,
+      "evidence": [
+        "round_04/replay.jsonl",
+        "round_04/acceptance.json"
+      ]
+    },
+    "round_05": {
+      "score": null,
+      "evidence": [
+        "round_05/replay.jsonl",
+        "round_05/acceptance.json"
+      ]
+    },
+    "round_06": {
+      "score": null,
+      "evidence": [
+        "round_06/replay.jsonl",
+        "round_06/acceptance.json"
+      ]
+    },
+    "round_07": {
+      "score": null,
+      "evidence": [
+        "round_07/replay.jsonl",
+        "round_07/acceptance.json"
+      ]
+    },
+    "round_08": {
+      "score": null,
+      "evidence": [
+        "round_08/replay.jsonl",
+        "round_08/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "round_01..08/replay.jsonl",
+    "round_01..08/commands.log",
+    "round_01..08/diff.patch",
+    "round_01..08/acceptance.json",
+    "transcripts/deepseek-v4-flash.jsonl"
+  ],
+  "reason": "R1 读 SKILL.md、全局 glob、pyproject.toml，初始探索有效；但后续长期未抓住 python -m mini_harness 入口缺失。",
+  "deductions": [
+    {
+      "round": "round_01..08",
+      "item": "acceptance evidence",
+      "amount": 30,
+      "reason": "all parsed acceptance gates are false; use as evidence, not copied score"
+    },
+    {
+      "round": "round_08",
+      "item": "compact/finalization",
+      "amount": 25,
+      "reason": "transcript shows compact summary rebuilt, but round_08 lacks response.md/finish event"
+    },
+    {
+      "round": "round_02/round_04",
+      "item": "json protocol repair",
+      "amount": 10,
+      "reason": "transcript contains invalid_json/json_repair events; repaired enough to continue but indicates protocol instability"
+    }
+  ],
+  "evidence_gaps": [
+    "round_08 missing response.md and finish event"
+  ]
+}

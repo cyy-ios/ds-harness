@@ -1,0 +1,675 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..46c62ae
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1,3 @@
++from mini_harness.runner import run_dag, HarnessError
++
++__all__ = ["run_dag", "HarnessError"]
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..ef78305
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,4 @@
++from mini_harness.cli import main
++
++if __name__ == "__main__":
++    main()
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..78b03aa
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,78 @@
++"""CLI entry point for mini_harness."""
++
++import argparse
++import logging
++import sys
++import os
++
++from mini_harness.config import load_config
++from mini_harness.runner import run_dag
++
++DEFAULTS = {
++    "sources": [],
++    "output": "tmp/report.json",
++    "max_retries": 2,
++}
++
++
++def build_parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    run_parser = sub.add_parser("run", help="Run the DAG pipeline")
++    run_parser.add_argument("--config", "-c", help="Config file path (.json / .yaml / .yml)")
++    run_parser.add_argument("sources", nargs="*", help="Input CSV or JSONL files")
++    run_parser.add_argument("--output", help="Output report path (overrides config)")
++    run_parser.add_argument("--max-retries", type=int, help="Max retries per stage (overrides config)")
++    run_parser.add_argument("--verbose", "-v", action="store_true", help="Enable DEBUG logging")
++
++    return parser
++
++
++def _merge(config: dict, args: argparse.Namespace) -> dict:
++    """Merge CLI args over config values. CLI wins."""
++    merged = dict(DEFAULTS)
++    merged.update(config)
++    if args.sources:
++        merged["sources"] = args.sources
++    if args.output:
++        merged["output"] = args.output
++    if args.max_retries is not None:
++        merged["max_retries"] = args.max_retries
++    return merged
++
++
++def main(argv: list[str] | None = None) -> None:
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    logging.basicConfig(
++        level=logging.DEBUG if args.verbose else logging.INFO,
++        format="%(levelname)s %(name)s %(message)s",
++        stream=sys.stderr,
++    )
++
++    if args.command != "run":
++        parser.print_help()
++        return
++
++    config = {}
++    if args.config:
++        if not os.path.isfile(args.config):
++            print(f"Config file not found: {args.config}", file=sys.stderr)
++            sys.exit(1)
++        config = load_config(args.config)
++
++    merged = _merge(config, args)
++
++    if not merged["sources"]:
++        print("Error: no source files specified (provide on CLI or in config)", file=sys.stderr)
++        sys.exit(1)
++
++    report = run_dag(
++        sources=merged["sources"],
++        output=merged["output"],
++        max_retries=merged["max_retries"],
++    )
++    print(f"Report written to {merged['output']}")
++    print(f"  processed: {report['processed_count']}, rejected: {report['rejected_count']}")
+diff --git a/mini_harness/config.py b/mini_harness/config.py
+new file mode 100644
+index 0000000..96116b4
+--- /dev/null
++++ b/mini_harness/config.py
+@@ -0,0 +1,149 @@
++"""Configuration loader for JSON and YAML (stdlib-only fallback)."""
++
++import json
++import os
++import re
++from typing import Any
++
++
++def _parse_yaml_value(raw: str) -> Any:
++    """Coerce a YAML scalar string to Python value."""
++    v = raw.strip()
++    if v in ("", "null", "~"):
++        return None
++    if v in ("true", "True", "yes"):
++        return True
++    if v in ("false", "False", "no"):
++        return False
++    # int
++    try:
++        return int(v)
++    except ValueError:
++        pass
++    # float
++    try:
++        return float(v)
++    except ValueError:
++        pass
++    # strip surrounding quotes
++    if len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'"):
++        return v[1:-1]
++    return v
++
++
++def _parse_yaml(text: str) -> dict:
++    """Minimal YAML subset parser: nested dicts, lists, scalars, comments."""
++    data: dict = {}
++    stack: list[tuple[int, dict]] = [(-1, data)]
++    list_context: list[dict | None] = []
++    list_key: str | None = None
++    list_indent: int = -1
++
++    for line in text.splitlines():
++        stripped = line.strip()
++        if not stripped or stripped.startswith("#"):
++            continue
++
++        indent = len(line) - len(line.lstrip())
++        # Strip trailing comment (respect quotes)
++        in_quote = None
++        comment_pos = -1
++        for i, ch in enumerate(stripped):
++            if ch in ('"', "'"):
++                if in_quote == ch:
++                    in_quote = None
++                elif in_quote is None:
++                    in_quote = ch
++            elif ch == "#" and in_quote is None and comment_pos < 0:
++                comment_pos = i
++                break
++        if comment_pos >= 0:
++            stripped = stripped[:comment_pos].rstrip()
++
++        if not stripped:
++            continue
++
++        # List item
++        if stripped.startswith("- "):
++            content = stripped[2:].strip()
++            # Pop back to parent indent level
++            while len(stack) > 1 and indent <= stack[-1][0]:
++                stack.pop()
++            parent = stack[-1][1]
++            # Find or create the list key in parent
++            if list_key is not None and indent == list_indent:
++                pass  # continuing same list
++            else:
++                # Scan for the last key that holds a list
++                for k, v in parent.items():
++                    if isinstance(v, list):
++                        list_key_local = k
++                        break
++                else:
++                    # Create new list under the key from previous line
++                    # We need to find the key name from the last non-list line
++                    list_key_local = list_key
++                list_key = list_key_local
++                list_indent = indent
++
++            if list_key and list_key in parent and isinstance(parent[list_key], list):
++                parent[list_key].append(_parse_yaml_value(content))
++            else:
++                parent[list_key] = [_parse_yaml_value(content)]
++            continue
++
++        # Key: value
++        if ": " in stripped or stripped.endswith(":"):
++            if stripped.endswith(":"):
++                key = stripped[:-1].strip()
++                raw_value = ""
++            else:
++                key, raw_value = stripped.split(": ", 1)
++                key = key.strip()
++                raw_value = raw_value.strip()
++
++            # Pop stack to correct indent level
++            while len(stack) > 1 and indent <= stack[-1][0]:
++                stack.pop()
++            parent = stack[-1][1]
++
++            if raw_value:
++                parent[key] = _parse_yaml_value(raw_value)
++            else:
++                # New nested mapping
++                new_dict: dict = {}
++                # Try to create list if this ends with list marker
++                parent[key] = new_dict
++                stack.append((indent, new_dict))
++                list_key = key
++                list_indent = indent + 2  # will be overwritten on first list item
++        else:
++            # Key without colon-space (edge case)
++            if ":" in stripped:
++                key = stripped.split(":", 1)[0].strip()
++                if key:
++                    parent = stack[-1][1]
++                    parent[key] = None
++
++    return data
++
++
++def load_config(path: str) -> dict[str, Any]:
++    """Load a JSON or YAML config file and return as dict.
++
++    Format is determined by file extension (.json / .yaml / .yml).
++    YAML parsing falls back to a minimal stdlib-only parser when
++    PyYAML is not available.
++    """
++    ext = os.path.splitext(path)[1].lower()
++    with open(path, encoding="utf-8") as f:
++        if ext == ".json":
++            return json.load(f)
++        elif ext in (".yaml", ".yml"):
++            try:
++                import yaml
++            except ImportError:
++                return _parse_yaml(f.read())
++            return yaml.safe_load(f.read()) or {}
++        else:
++            raise ValueError(f"Unsupported config format: {ext} (use .json, .yaml, .yml)")
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..10b9486
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,141 @@
++"""DAG runner: extract → clean → report with retry logic."""
++
++import logging
++import os
++import json
++from datetime import datetime
++from typing import Any
++
++from mini_harness.utils import read_csv, read_jsonl, clean_record
++
++logger = logging.getLogger("mini_harness")
++
++
++class HarnessError(Exception):
++    """Base exception for harness pipeline errors."""
++
++
++def _stage_runner(
++    stage: str,
++    fn,
++    max_retries: int,
++    retry_counter: list[int],
++    detail_key: str | None = None,
++) -> Any:
++    """Run a stage with retry logic.
++
++    Args:
++        stage: Stage name for logging.
++        fn: Callable that performs the stage work.
++        max_retries: Max retry attempts.
++        retry_counter: Shared list with one element to track retry count.
++        detail_key: If set, fn returns a dict; log detail_key=value pairs.
++
++    Returns:
++        The result from fn on success.
++    """
++    for attempt in range(1, max_retries + 2):
++        logger.info("%s attempt=%d stage=%s status=running", stage, attempt, stage)
++        try:
++            result = fn(attempt)
++            if attempt > 1:
++                retry_counter[0] += 1
++            extra = ""
++            if detail_key and isinstance(result, dict):
++                extra = " " + " ".join(f"{k}={v}" for k, v in result.items())
++            logger.info("%s attempt=%d stage=%s status=ok%s", stage, attempt, stage, extra)
++            return result
++        except Exception as e:
++            logger.warning("%s attempt=%d stage=%s status=failed error=%s", stage, attempt, stage, e)
++            if attempt > 1:
++                retry_counter[0] += 1
++            if attempt > max_retries:
++                raise HarnessError(f"Stage '{stage}' failed after {attempt} attempts") from e
++
++    raise HarnessError(f"Stage '{stage}' exited retry loop unexpectedly")
++
++
++def run_dag(
++    sources: list[str],
++    output: str = "tmp/report.json",
++    max_retries: int = 2,
++    memory_ref: str = "memory/memory_summary.md",
++) -> dict[str, Any]:
++    """Run the full DAG pipeline: extract → clean → report.
++
++    Args:
++        sources: List of file paths (CSV or JSONL).
++        output: Path to write the final report JSON.
++        max_retries: Max retries per stage (default 2).
++        memory_ref: Path to memory summary to reference in report.
++    """
++    retry_counter: list[int] = [0]
++    all_records: list[dict] = []
++    source_files: list[str] = []
++
++    # --- extract ---
++    def _extract(_attempt: int) -> dict:
++        all_records.clear()
++        source_files.clear()
++        for path in sources:
++            if not os.path.isfile(path):
++                raise HarnessError(f"Source not found: {path}")
++            if path.endswith(".csv"):
++                rows = read_csv(path)
++            elif path.endswith(".jsonl"):
++                rows = read_jsonl(path)
++            else:
++                raise HarnessError(f"Unsupported format: {path}")
++            source_files.append(os.path.abspath(path))
++            all_records.extend(rows)
++        return {"sources": len(source_files)}
++
++    _stage_runner("extract", _extract, max_retries, retry_counter, detail_key="extract")
++
++    # --- clean ---
++    processed: list[dict] = []
++    rejected: list[dict] = []
++
++    def _clean(_attempt: int) -> dict:
++        processed.clear()
++        rejected.clear()
++        for record in all_records:
++            if not record:
++                continue
++            cleaned = clean_record(record)
++            if not cleaned.get("id") or cleaned["id"].strip() == "":
++                rejected.append(cleaned)
++            else:
++                processed.append(cleaned)
++        return {"processed": len(processed), "rejected": len(rejected)}
++
++    _stage_runner("clean", _clean, max_retries, retry_counter, detail_key="clean")
++
++    # --- report ---
++    report: dict | None = None
++
++    def _report(_attempt: int) -> dict:
++        nonlocal report
++        os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
++        report = {
++            "pipeline": "mini_harness",
++            "generated_at": datetime.now().isoformat(),
++            "processed_count": len(processed),
++            "rejected_count": len(rejected),
++            "retry_count": retry_counter[0],
++            "source_files": source_files,
++            "memory_reference": memory_ref,
++            "stages": {
++                "extract": {"status": "ok", "sources": len(source_files)},
++                "clean": {"status": "ok", "processed": len(processed), "rejected": len(rejected)},
++                "report": {"status": "ok"},
++            },
++        }
++        with open(output, "w", encoding="utf-8") as f:
++            json.dump(report, f, indent=2, ensure_ascii=False)
++        return {"output": output}
++
++    _stage_runner("report", _report, max_retries, retry_counter)
++
++    # report is guaranteed non-None after _report succeeds
++    return report  # type: ignore[return-value]
+diff --git a/mini_harness/utils.py b/mini_harness/utils.py
+new file mode 100644
+index 0000000..c0beba4
+--- /dev/null
++++ b/mini_harness/utils.py
+@@ -0,0 +1,68 @@
++import csv
++import json
++import io
++import re
++
++
++def _skip_comments(lines):
++    """Filter out comment lines (starting with # after optional whitespace)."""
++    for line in lines:
++        if line.lstrip().startswith("#"):
++            continue
++        yield line
++
++
++def read_csv(path: str) -> list[dict[str, str]]:
++    """Read a CSV file, return list of row-dicts. Skips #-comment lines."""
++    rows: list[dict[str, str]] = []
++    with open(path, newline="", encoding="utf-8") as f:
++        filtered = _skip_comments(f)
++        reader = csv.DictReader(filtered)
++        for row in reader:
++            if not row:
++                rows.append({})
++                continue
++            # Detect rows where a value is unexpectedly a list (extra fields
++            # beyond fieldnames — a sign the file's comment-header line was
++            # missed). Normalise every value to str.
++            normalised: dict[str, str] = {}
++            for k, v in row.items():
++                if isinstance(v, list):
++                    # extra fields under restkey — flatten and warn
++                    for item in v:
++                        normalised[k] = str(item) if item is not None else ""
++                else:
++                    normalised[k] = v if v is not None else ""
++            # If every value is empty, treat as blank line
++            if all(v.strip() == "" for v in normalised.values()):
++                rows.append({})
++            else:
++                rows.append(normalised)
++    return rows
++
++
++def read_jsonl(path: str) -> list[dict[str, str]]:
++    """Read a JSONL file, return list of dicts. Blank lines become empty dicts."""
++    rows: list[dict[str, str]] = []
++    with open(path, encoding="utf-8") as f:
++        for line in f:
++            stripped = line.strip()
++            if not stripped:
++                rows.append({})
++                continue
++            rows.append(json.loads(stripped))
++    return rows
++
++
++def snake_case(name: str) -> str:
++    """Convert a field name to snake_case."""
++    name = name.strip()
++    name = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
++    name = re.sub(r"([a-z\d])([A-Z])", r"\1_\2", name)
++    name = re.sub(r"[-\s]+", "_", name)
++    return name.lower()
++
++
++def clean_record(record: dict) -> dict:
++    """Return a new dict with all keys converted to snake_case."""
++    return {snake_case(k): v for k, v in record.items()}
+diff --git a/tmp/acceptance-config-report.json b/tmp/acceptance-config-report.json
+new file mode 100644
+index 0000000..3467af6
+--- /dev/null
++++ b/tmp/acceptance-config-report.json
+@@ -0,0 +1,26 @@
++{
++  "pipeline": "mini_harness",
++  "generated_at": "2026-06-21T17:49:07.092549",
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "stages": {
++    "extract": {
++      "status": "ok",
++      "sources": 2
++    },
++    "clean": {
++      "status": "ok",
++      "processed": 4,
++      "rejected": 2
++    },
++    "report": {
++      "status": "ok"
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/acceptance-config.json b/tmp/acceptance-config.json
+new file mode 100644
+index 0000000..eb3e5c9
+--- /dev/null
++++ b/tmp/acceptance-config.json
+@@ -0,0 +1 @@
++{"sources": ["data/input.csv", "data/events.jsonl"], "output": "tmp/acceptance-config-report.json"}
+\ No newline at end of file
+diff --git a/tmp/acceptance-report.json b/tmp/acceptance-report.json
+new file mode 100644
+index 0000000..703c946
+--- /dev/null
++++ b/tmp/acceptance-report.json
+@@ -0,0 +1,26 @@
++{
++  "pipeline": "mini_harness",
++  "generated_at": "2026-06-21T17:47:42.008910",
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "stages": {
++    "extract": {
++      "status": "ok",
++      "sources": 2
++    },
++    "clean": {
++      "status": "ok",
++      "processed": 4,
++      "rejected": 2
++    },
++    "report": {
++      "status": "ok"
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/hidden-acceptance-report.json b/tmp/hidden-acceptance-report.json
+new file mode 100644
+index 0000000..e446b05
+--- /dev/null
++++ b/tmp/hidden-acceptance-report.json
+@@ -0,0 +1,26 @@
++{
++  "pipeline": "mini_harness",
++  "generated_at": "2026-06-21T17:47:42.785862",
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "stages": {
++    "extract": {
++      "status": "ok",
++      "sources": 2
++    },
++    "clean": {
++      "status": "ok",
++      "processed": 4,
++      "rejected": 2
++    },
++    "report": {
++      "status": "ok"
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..1a732fd
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,27 @@
++{
++  "pipeline": "mini_harness",
++  "generated_at": "2026-06-21T17:49:42.063112",
++  "processed_count": 6,
++  "rejected_count": 3,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\events.jsonl",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\m4_noise_test.csv"
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "stages": {
++    "extract": {
++      "status": "ok",
++      "sources": 3
++    },
++    "clean": {
++      "status": "ok",
++      "processed": 6,
++      "rejected": 3
++    },
++    "report": {
++      "status": "ok"
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/report.yaml-test.json b/tmp/report.yaml-test.json
+new file mode 100644
+index 0000000..54f6010
+--- /dev/null
++++ b/tmp/report.yaml-test.json
+@@ -0,0 +1,26 @@
++{
++  "pipeline": "mini_harness",
++  "generated_at": "2026-06-21T17:49:09.860046",
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "stages": {
++    "extract": {
++      "status": "ok",
++      "sources": 2
++    },
++    "clean": {
++      "status": "ok",
++      "processed": 4,
++      "rejected": 2
++    },
++    "report": {
++      "status": "ok"
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/tmp/test-config.json b/tmp/test-config.json
+new file mode 100644
+index 0000000..1f18817
+--- /dev/null
++++ b/tmp/test-config.json
+@@ -0,0 +1,5 @@
++{
++  "sources": ["data/input.csv", "data/events.jsonl"],
++  "output": "tmp/report.json",
++  "max_retries": 3
++}
+diff --git a/tmp/test-config.yaml b/tmp/test-config.yaml
+new file mode 100644
+index 0000000..524a4ca
+--- /dev/null
++++ b/tmp/test-config.yaml
+@@ -0,0 +1,5 @@
++sources:
++  - data/input.csv
++  - data/events.jsonl
++output: tmp/report.yaml-test.json
++max_retries: 1

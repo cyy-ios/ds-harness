@@ -1,0 +1,1 @@
+里程碑 M2_config 完成：增加 JSON/YAML 配置解析模块 config.py，CLI run 子命令支持 --config 参数，支持配置缺省和显式路径，pytest 通过。

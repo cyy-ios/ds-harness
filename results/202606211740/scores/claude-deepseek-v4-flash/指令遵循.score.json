@@ -1,0 +1,54 @@
+﻿{
+    "capability":  "指令遵循",
+    "reason":  "M1/M4 good (75). M6/M7 zero. Others partial. Average 300/8=37.5",
+    "rounds_scored":  8,
+    "score":  37.5,
+    "per_round":  {
+                      "round_05":  {
+                                       "reason":  "partial compliance",
+                                       "score":  50
+                                   },
+                      "round_06":  {
+                                       "reason":  "no response",
+                                       "score":  0
+                                   },
+                      "round_02":  {
+                                       "reason":  "partial compliance",
+                                       "score":  50
+                                   },
+                      "round_08":  {
+                                       "reason":  "partial compliance",
+                                       "score":  50
+                                   },
+                      "round_07":  {
+                                       "reason":  "no response",
+                                       "score":  0
+                                   },
+                      "round_03":  {
+                                       "reason":  "partial compliance",
+                                       "score":  50
+                                   },
+                      "round_04":  {
+                                       "reason":  "good compliance",
+                                       "score":  75
+                                   },
+                      "round_01":  {
+                                       "reason":  "cosplay/concision rules followed",
+                                       "score":  75
+                                   }
+                  },
+    "deductions":  [
+                       {
+                           "amount":  100,
+                           "reason":  "M6 no response, no rules applied",
+                           "round":  "round_06",
+                           "item":  "持久规则"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M7 no response, no rules applied",
+                           "round":  "round_07",
+                           "item":  "持久规则"
+                       }
+                   ]
+}

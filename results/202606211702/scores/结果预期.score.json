@@ -1,0 +1,86 @@
+{
+  "capability": "结果预期",
+  "score": 55.0,
+  "per_round": {
+    "M1_bootstrap": {
+      "score": 70,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config": {
+      "score": 62,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry": {
+      "score": 65,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug": {
+      "score": 72,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change": {
+      "score": 40,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption": {
+      "score": 55,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report": {
+      "score": 45,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume": {
+      "score": 30,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "run_summary.json",
+    "M*/step_01/replay.jsonl",
+    "M*/step_01/acceptance.json",
+    "M*/step_01/diff.patch"
+  ],
+  "reason": "Core behavior is partially implemented, but the run misses the required src package layout, cwd-independent CLI, hidden run_dag signature, and final memory/report gates.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "1.1_产出可消费性",
+      "amount": 50,
+      "reason": "acceptance.json:L42 final_gate_passed=false; acceptance_pytest fails and cwd_independent_cli cannot import mini_harness"
+    },
+    {
+      "round": "M7_memory_report",
+      "item": "1.2_执行完整性与自检",
+      "amount": 35,
+      "reason": "acceptance.json:memory_aware_report=false because report was generated under tmp rather than expected docs/artifacts path"
+    }
+  ],
+  "evidence_gaps": []
+}

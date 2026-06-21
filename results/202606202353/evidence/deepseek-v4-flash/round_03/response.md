@@ -1,0 +1,1 @@
+里程碑 M3_runner_retry 完成：重构 engine.py 为 DAG runner 模式，实现 run_stage 函数统一处理 extract/clean/report 三阶段，最多 2 次重试，结构化日志包含 stage/attempt/status，输出报告反映真实 retry_count，pytest 通过。

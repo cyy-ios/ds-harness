@@ -1,0 +1,54 @@
+﻿{
+    "capability":  "结果预期",
+    "reason":  "M4 100. M1-M3 consumability near zero. M6/M7 zero. M8 50. Average 360/8=45",
+    "rounds_scored":  8,
+    "score":  45,
+    "per_round":  {
+                      "round_05":  {
+                                       "reason":  "turn gate fail but partial output",
+                                       "score":  40
+                                   },
+                      "round_06":  {
+                                       "reason":  "no output",
+                                       "score":  0
+                                   },
+                      "round_02":  {
+                                       "reason":  "config_json_cli+cwd_independent failed",
+                                       "score":  20
+                                   },
+                      "round_08":  {
+                                       "reason":  "final gate fails but artifact exists",
+                                       "score":  50
+                                   },
+                      "round_07":  {
+                                       "reason":  "no output",
+                                       "score":  0
+                                   },
+                      "round_03":  {
+                                       "reason":  "m4_noise_cli+cli_end_to_end failed",
+                                       "score":  20
+                                   },
+                      "round_04":  {
+                                       "reason":  "M4 turn gate pass, all checks green",
+                                       "score":  100
+                                   },
+                      "round_01":  {
+                                       "reason":  "source_files absolute paths, downstream un-consumable",
+                                       "score":  30
+                                   }
+                  },
+    "deductions":  [
+                       {
+                           "amount":  100,
+                           "reason":  "source_files absolute paths break downstream consumption",
+                           "round":  "round_01",
+                           "item":  "1.1"
+                       },
+                       {
+                           "amount":  50,
+                           "reason":  "final_gate_passed=false",
+                           "round":  "round_08",
+                           "item":  "1.1"
+                       }
+                   ]
+}

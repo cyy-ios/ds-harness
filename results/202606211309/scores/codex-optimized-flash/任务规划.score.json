@@ -1,0 +1,96 @@
+{
+  "capability": "任务规划",
+  "score": 66.0,
+  "per_round": {
+    "M1_bootstrap/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/diff.patch",
+        "M1_bootstrap/step_01/response.md",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/diff.patch",
+        "M2_config/step_01/response.md",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/diff.patch",
+        "M3_runner_retry/step_01/response.md",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/diff.patch",
+        "M4_long_log_debug/step_01/response.md",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/diff.patch",
+        "M5_context_change/step_01/response.md",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/diff.patch",
+        "M6_interruption/step_01/response.md",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/diff.patch",
+        "M7_memory_report/step_01/response.md",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume/step_01": {
+      "score": 66.0,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/diff.patch",
+        "M8_compact_resume/step_01/response.md",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap..M8_compact_resume/step_01/{replay.jsonl,diff.patch,response.md,acceptance.json}",
+    "partial run output; run_summary absent due resumed run overwrite behavior"
+  ],
+  "reason": "Tool route completed all milestones with tests, but M5/M8 left core integration issues and many tmp verification files in diffs.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "1.1_路线效率",
+      "amount": 20,
+      "reason": "Ran local tests but did not run corrected final acceptance shape; tmp verification reports remain in diff."
+    }
+  ],
+  "evidence_gaps": [
+    "run_summary.json is absent because the first M1-M4 command timed out before summary and the resumed M5-M8 run did not merge a full summary."
+  ]
+}

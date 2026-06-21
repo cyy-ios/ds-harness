@@ -807,7 +807,7 @@ impl ModelClient {
                 self.state.installation_id.clone(),
             )])),
         };
-        Ok(request)
+        Ok(request.normalize_for_provider(provider))
     }
 
     /// Returns whether the Responses-over-WebSocket transport is active for this session.

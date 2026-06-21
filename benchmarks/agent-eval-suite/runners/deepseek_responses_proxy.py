@@ -32,10 +32,23 @@ def text_content(content):
     return "\n".join(filter(None, parts))
 
 
+def flush_pending_calls(messages, pending_calls):
+    if not pending_calls:
+        return []
+    message = {"role": "assistant", "content": None, "tool_calls": pending_calls}
+    with CALL_REASONING_LOCK:
+        reasoning = "".join(CALL_REASONING.get(call["id"], "") for call in pending_calls)
+    if reasoning:
+        message["reasoning_content"] = reasoning
+    messages.append(message)
+    return []
+
+
 def to_messages(body):
-    messages = []
+    system_parts = []
     if body.get("instructions"):
-        messages.append({"role": "system", "content": body["instructions"]})
+        system_parts.append(str(body["instructions"]).strip())
+    messages = []
     pending_calls = []
     for item in body.get("input", []):
         if not isinstance(item, dict):
@@ -43,30 +56,24 @@ def to_messages(body):
         kind = item.get("type")
         if kind == "message":
             role = item.get("role", "user")
-            if role == "developer":
-                role = "system"
-            messages.append({"role": role, "content": text_content(item.get("content", ""))})
+            content = text_content(item.get("content", ""))
+            if role in ("developer", "system"):
+                text = content.strip()
+                if text:
+                    system_parts.append(text)
+                continue
+            pending_calls = flush_pending_calls(messages, pending_calls)
+            messages.append({"role": role, "content": content})
         elif kind in ("function_call", "custom_tool_call"):
             call_id = item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}"
             args = item.get("arguments") or item.get("input") or "{}"
             pending_calls.append({"id": call_id, "type": "function", "function": {"name": item.get("name", "tool"), "arguments": args}})
         elif kind in ("function_call_output", "custom_tool_call_output"):
-            if pending_calls:
-                message = {"role": "assistant", "content": None, "tool_calls": pending_calls}
-                with CALL_REASONING_LOCK:
-                    reasoning = "".join(CALL_REASONING.get(call["id"], "") for call in pending_calls)
-                if reasoning:
-                    message["reasoning_content"] = reasoning
-                messages.append(message)
-                pending_calls = []
+            pending_calls = flush_pending_calls(messages, pending_calls)
             messages.append({"role": "tool", "tool_call_id": item.get("call_id"), "content": text_content(item.get("output", ""))})
-    if pending_calls:
-        message = {"role": "assistant", "content": None, "tool_calls": pending_calls}
-        with CALL_REASONING_LOCK:
-            reasoning = "".join(CALL_REASONING.get(call["id"], "") for call in pending_calls)
-        if reasoning:
-            message["reasoning_content"] = reasoning
-        messages.append(message)
+    flush_pending_calls(messages, pending_calls)
+    if system_parts:
+        return [{"role": "system", "content": "\n\n".join(system_parts)}] + messages
     return messages
 
 
@@ -101,7 +108,7 @@ class Handler(BaseHTTPRequestHandler):
         with open(os.path.join(os.path.dirname(__file__), "last-request.json"), "w", encoding="utf-8") as capture:
             json.dump(body, capture, ensure_ascii=False, indent=2)
         request_body = {
-            "model": body.get("model", "deepseek-v4-pro"),
+            "model": os.environ.get("DEEPSEEK_MODEL") or body.get("model", "deepseek-v4-pro"),
             "messages": to_messages(body),
             "stream": True,
         }

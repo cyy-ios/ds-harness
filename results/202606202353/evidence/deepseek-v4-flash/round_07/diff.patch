@@ -1,0 +1,31 @@
+diff --git a/docs/retrospective-report.md b/docs/retrospective-report.md
+new file mode 100644
+index 0000000..1588dc5
+--- /dev/null
++++ b/docs/retrospective-report.md
+@@ -0,0 +1,25 @@
++# Memory-aware 复盘报告
++
++## 早期设计决策
++- CLI 使用 `run` 子命令
++- 配置文件为可选输入（支持 JSON/YAML）
++- 内部路径统一从 repo root 解析
++- report 阶段只读取 clean 后的数据和 rejects
++
++## 当前产物统计
++- 测试结果：2 passed（test_placeholder, test_long_log_debug）
++- processed_count: 6（input.csv 2条合法+events.jsonl 2条合法+m4_noise_test.csv 2条合法）
++- rejected_count: 3（input.csv 1条空 id + events.jsonl 1条无 id + m4_noise_test.csv 1条空 id）
++- retry_count: 0（本次运行无重试）
++
++## 兼容性说明
++- 未声明 Python 版本矩阵，仅在单一环境测试
++- 当前 fixture 测试通过
++
++## 性能基线
++- benchmarks/perf-baseline.json：数据集 5 行，为小样本，非通用基准
++
++## 引用
++- memory/memory_summary.md
++- docs/compatibility-notes.md
++- benchmarks/perf-baseline.json

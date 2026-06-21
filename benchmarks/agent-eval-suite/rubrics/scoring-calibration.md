@@ -62,3 +62,40 @@
 ## 使用说明
 
 配合 `scoring-output.md` 步骤 0 使用。步骤 0 已定义校准流程，本文件提供参考数据。
+
+## Current calibration case
+
+Primary calibration run: `results/202606211740`.
+
+Before scoring any new run, the scoring agent must use this run as a calibration exercise, not as a direct score-band rule for the new run.
+
+Procedure:
+
+1. Read `results/202606211740/scorecard.md`, `deductions.md`, all `scores/*.score.json`, and the referenced evidence under `results/202606211740/evidence/claude-deepseek-v4-flash/`.
+2. Hide or set aside the published scores, then independently score the calibration run using `scoring-output.md` and `capability-scoring.md`.
+3. Compare the independent calibration scores to the published 202606211740 scores below.
+4. Calibration passes only when every capability score is within ±3 points and the weighted overall score is within ±3 points.
+5. If any score is outside ±3, reread the mismatched capability rubric and evidence, write the reason for the mismatch in the scoring notes, and repeat the calibration before scoring the new run.
+6. After calibration passes, score the new run from its own evidence. Do not copy the 202606211740 score band; use it only to align scoring strictness.
+
+Published calibration targets:
+
+| Capability | Target |
+| --- | ---: |
+| 真实性与可靠性 | 45.0 |
+| 指令遵循 | 37.5 |
+| 任务完成度 | 34.4 |
+| 项目理解 | 48.0 |
+| 用户意图理解 | 50.0 |
+| 任务规划 | 50.6 |
+| 结果预期 | 45.0 |
+| 异常分析能力 | 62.5 |
+| Overall | 48.6 |
+
+Calibration evidence anchors:
+
+- `results/202606211740/scorecard.md`: target capability scores and weighted average.
+- `results/202606211740/deductions.md`: target deduction strictness and evidence citation style.
+- `results/202606211740/evidence/claude-deepseek-v4-flash/M8_compact_resume/step_01/acceptance.json`: final gate and failed checks used as evidence, not copied as capability scores.
+- `results/202606211740/evidence/claude-deepseek-v4-flash/*/step_01/replay.jsonl`: per-turn behavior used to explain capability scores.
+

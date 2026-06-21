@@ -65,12 +65,13 @@ benchmarks/agent-eval-suite/orchestrator.md
 
 Do not start scoring from `capability-list.md`, templates, process-refinements, or historical docs.
 
-## Four supported run modes
+## Five supported run modes
 
 1. Bare model: `run_deepseek_agent_replay.py`
 2. Codex unoptimized: official Codex CLI through the DeepSeek proxy
 3. Codex optimized: `ds-codex` DeepSeek provider
 4. Codex native: official Codex CLI with a native model
+5. Claude Code DeepSeek: Claude Code CLI itself through DeepSeek Anthropic-compatible API via `run_claude_replay.py`
 
 The exact commands and acceptance rules live in `benchmarks/agent-eval-suite/orchestrator.md`.
 

@@ -1,0 +1,1279 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..03069c5
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1,5 @@
++﻿"""mini_harness - Mini data processing harness."""
++
++from mini_harness.runner import run_dag, HarnessError
++
++__all__ = ["run_dag", "HarnessError"]
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..be80d26
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,6 @@
++﻿"""Run mini_harness as a module: python -m mini_harness <subcommand>."""
++
++import sys
++from mini_harness.cli import main
++
++sys.exit(main())
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..8b3fe0a
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,73 @@
++﻿"""CLI entry point for mini_harness."""
++
++import argparse
++import sys
++
++from mini_harness.runner import run_dag, HarnessError
++from mini_harness.config import load_config, merge_config, ConfigError
++
++
++def build_parser():
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    run_parser = sub.add_parser("run", help="Run the data processing DAG")
++    run_parser.add_argument("--config", "-c", help="Path to JSON/YAML config file")
++    run_parser.add_argument("sources", nargs="*", help="Input CSV or JSONL files")
++    run_parser.add_argument("--output", "-o", help="Output report path")
++
++    return parser
++
++
++def main(argv=None):
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    if args.command == "run":
++        # Resolve sources and output
++        sources = list(args.sources) if args.sources else []
++        output = args.output
++
++        # Load config file if provided
++        if args.config:
++            try:
++                cfg = load_config(args.config)
++            except ConfigError as e:
++                print(f"Config error: {e}", file=sys.stderr)
++                return 1
++
++            cfg_sources, cfg_output = merge_config(args, cfg)
++
++            # Config fills gaps: sources if CLI gave none, output if CLI gave none
++            if not sources:
++                sources = cfg_sources
++            if not output:
++                output = cfg_output
++
++        # Validate required params
++        if not sources:
++            print("Error: no source files specified (provide via CLI or config)", file=sys.stderr)
++            return 1
++        if not output:
++            print("Error: no output path specified (provide via --output or config)", file=sys.stderr)
++            return 1
++
++        try:
++            report = run_dag(sources, output)
++            print(f"Report written to {output}")
++            print(f"  processed: {report['processed_count']}")
++            print(f"  rejected:  {report['rejected_count']}")
++            print(f"  retries:   {report['retry_count']}")
++            return 0
++        except HarnessError as e:
++            print(f"Harness error: {e}", file=sys.stderr)
++            return 1
++        except Exception as e:
++            print(f"Unexpected error: {e}", file=sys.stderr)
++            return 2
++
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/mini_harness/config.py b/mini_harness/config.py
+new file mode 100644
+index 0000000..d175a58
+--- /dev/null
++++ b/mini_harness/config.py
+@@ -0,0 +1,285 @@
++﻿"""Configuration loader for mini_harness — supports JSON and YAML (stdlib-only)."""
++
++import json
++import os
++import re
++
++
++class ConfigError(Exception):
++    """Raised when config parsing fails."""
++    pass
++
++
++def _parse_yaml(text, source="<string>"):
++    """Minimal YAML parser for the subset needed: mappings, lists, scalars."""
++    lines = text.split("\n")
++    # strip trailing whitespace from each line; keep leading indent
++    lines = [line.rstrip() for line in lines]
++
++    # Remove BOM
++    if lines and lines[0].startswith("\ufeff"):
++        lines[0] = lines[0][1:]
++
++    # Strip leading blank lines
++    while lines and not lines[0].strip():
++        lines.pop(0)
++
++    if not lines:
++        return {}
++
++    # Strip trailing blank lines
++    while lines and not lines[-1].strip():
++        lines.pop()
++
++    result, _ = _yaml_parse_block(lines, 0, 0)
++    return result
++
++
++def _yaml_parse_block(lines, start, base_indent):
++    """Parse a block of YAML lines starting at `start` with given base indent."""
++    result = {}
++    i = start
++    while i < len(lines):
++        line = lines[i]
++        if not line.strip() or line.strip().startswith("#"):
++            i += 1
++            continue
++
++        indent = len(line) - len(line.lstrip())
++        if indent < base_indent:
++            # we've gone past our block
++            break
++
++        stripped = line.strip()
++
++        # List item?
++        if stripped.startswith("- "):
++            key, val, consumed = _yaml_parse_list_item(lines, i, base_indent)
++            if key is not None:
++                result[key] = val
++                i = consumed
++                continue
++            # list without a key above it -> this is a sequence at the top scope
++            # but we handle this at the dispatch level
++            i += 1
++            continue
++
++        # Key: value pair
++        colon_idx = stripped.find(":")
++        if colon_idx == -1:
++            i += 1
++            continue
++
++        key = stripped[:colon_idx].strip()
++        rest = stripped[colon_idx + 1:].strip()
++
++        if not rest:
++            # value may be a nested block or a list
++            # Peek at next non-comment line
++            j = i + 1
++            while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith("#")):
++                j += 1
++            if j < len(lines):
++                next_line = lines[j]
++                next_indent = len(next_line) - len(next_line.lstrip())
++                if next_indent > indent:
++                    if next_line.strip().startswith("- "):
++                        # list
++                        val, consumed = _yaml_parse_list(lines, j, next_indent)
++                        result[key] = val
++                        i = consumed
++                        continue
++                    else:
++                        # nested mapping
++                        nested, consumed = _yaml_parse_block(lines, j, next_indent)
++                        result[key] = nested
++                        i = consumed
++                        continue
++            # empty value
++            result[key] = None
++            i += 1
++        else:
++            result[key] = _yaml_scalar(rest)
++            i += 1
++
++    return result, i
++
++
++def _yaml_scalar(value):
++    """Parse a YAML scalar value."""
++    value = value.strip()
++    if value.startswith("#"):
++        return None
++    # strip inline comment
++    comment_pos = _find_unquoted_hash(value)
++    if comment_pos > 0:
++        value = value[:comment_pos].strip()
++
++    if not value:
++        return None
++
++    # Quoted strings
++    if (value.startswith('"') and value.endswith('"')) or \
++       (value.startswith("'") and value.endswith("'")):
++        return value[1:-1]
++
++    # Booleans
++    if value.lower() in ("true", "yes", "on"):
++        return True
++    if value.lower() in ("false", "no", "off"):
++        return False
++
++    # Null
++    if value.lower() in ("null", "~", ""):
++        return None
++
++    # Integers
++    try:
++        return int(value)
++    except ValueError:
++        pass
++
++    # Floats
++    try:
++        return float(value)
++    except ValueError:
++        pass
++
++    return value
++
++
++def _find_unquoted_hash(text):
++    """Find # that is not inside quotes."""
++    in_dq = False
++    in_sq = False
++    for idx, ch in enumerate(text):
++        if ch == '"' and not in_sq:
++            in_dq = not in_dq
++        elif ch == "'" and not in_dq:
++            in_sq = not in_sq
++        elif ch == "#" and not in_dq and not in_sq:
++            return idx
++    return -1
++
++
++def _yaml_parse_list(lines, start, base_indent):
++    """Parse a YAML list block starting at `start`."""
++    items = []
++    i = start
++    while i < len(lines):
++        line = lines[i]
++        if not line.strip() or line.strip().startswith("#"):
++            i += 1
++            continue
++
++        indent = len(line) - len(line.lstrip())
++        if indent < base_indent:
++            break
++
++        stripped = line.strip()
++        if stripped.startswith("- "):
++            _key, val, consumed = _yaml_parse_list_item(lines, i, base_indent)
++            if (val is not None and _key is None) or consumed > i:
++                items.append(val)
++                i = consumed
++            else:
++                i += 1
++        else:
++            break
++
++    return items, i
++
++
++def _yaml_parse_list_item(lines, start, base_indent):
++    """Parse a single `- ` list item, possibly with nested key: value."""
++    line = lines[start]
++    stripped = line.strip()
++    indent = len(line) - len(line.lstrip())
++
++    if not stripped.startswith("- "):
++        return None, None, start
++
++    content = stripped[2:].strip()
++
++    # List item with inline key: value (e.g. "- key: val")
++    colon_idx = content.find(":")
++    if colon_idx > 0 and not content.startswith('"') and not content.startswith("'"):
++        # Check if this is key: value or just a string with colon
++        # If there's no space after colon, treat as string
++        key = content[:colon_idx].strip()
++        rest = content[colon_idx + 1:].strip()
++
++        if rest:
++            # simple inline key: value
++            return key, _yaml_scalar(rest), start + 1
++        else:
++            # key with nested value on next lines
++            j = start + 1
++            while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith("#")):
++                j += 1
++            if j < len(lines):
++                next_line = lines[j]
++                next_indent = len(next_line) - len(next_line.lstrip())
++                if next_indent > indent + 2:
++                    if next_line.strip().startswith("- "):
++                        list_val, consumed = _yaml_parse_list(lines, j, next_indent)
++                        return key, list_val, consumed
++                    else:
++                        nested, consumed = _yaml_parse_block(lines, j, next_indent)
++                        return key, nested, consumed
++            return key, None, j
++    elif not content:
++        # bare dash, next lines contain content
++        j = start + 1
++        while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith("#")):
++            j += 1
++        if j < len(lines):
++            next_line = lines[j]
++            next_indent = len(next_line) - len(next_line.lstrip())
++            if next_line.strip().startswith("- "):
++                items, consumed = _yaml_parse_list(lines, j, next_indent)
++                return None, items, consumed
++            else:
++                nested, consumed = _yaml_parse_block(lines, j, next_indent)
++                return None, nested, consumed
++        return None, None, j
++    else:
++        # plain string scalar
++        return None, _yaml_scalar(content), start + 1
++
++
++def load_config(path):
++    """Load a JSON or YAML config file and return a dict."""
++    if not os.path.exists(path):
++        raise ConfigError(f"Config file not found: {path}")
++
++    ext = os.path.splitext(path)[1].lower()
++    with open(path, "r", encoding="utf-8") as f:
++        text = f.read()
++
++    if ext == ".json":
++        try:
++            return json.loads(text)
++        except json.JSONDecodeError as e:
++            raise ConfigError(f"Invalid JSON in {path}: {e}") from e
++    elif ext in (".yaml", ".yml"):
++        try:
++            return _parse_yaml(text, path)
++        except Exception as e:
++            raise ConfigError(f"Invalid YAML in {path}: {e}") from e
++    else:
++        raise ConfigError(f"Unsupported config format: {ext} (use .json, .yaml, or .yml)")
++
++
++def merge_config(args, cfg):
++    """Merge CLI args (higher precedence) with config dict (lower precedence).
++
++    Returns (sources, output_path) resolved from the merge.
++    """
++    # If CLI provided explicit sources, use them; otherwise fall back to config
++    sources = cfg.get("sources") or []
++
++    # output: CLI --output wins over config
++    output = cfg.get("output")
++
++    return sources, output
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..98d4187
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,223 @@
++﻿"""Data processing DAG runner: extract -> clean -> report."""
++
++import csv
++import json
++import os
++import sys
++import io
++
++# -- repo root detection -----------------------------------------------
++_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++
++
++def _resolve(path):
++    """Resolve a path relative to the repo root."""
++    if os.path.isabs(path):
++        return path
++    return os.path.normpath(os.path.join(_REPO_ROOT, path))
++
++
++class HarnessError(Exception):
++    """Base error raised by the harness runner."""
++    pass
++
++
++# -- logging helpers ---------------------------------------------------
++
++_logs = []
++
++
++def _log(attempt, stage, status, detail=None):
++    entry = {
++        "attempt": attempt,
++        "stage": stage,
++        "status": status,
++    }
++    if detail:
++        entry["detail"] = detail
++    _logs.append(entry)
++
++
++# -- snake_case conversion ---------------------------------------------
++
++def _to_snake_case(name):
++    """Convert a field name to snake_case, handling acronyms."""
++    name = name.strip()
++    if not name:
++        return name
++    result = []
++    i = 0
++    n = len(name)
++    while i < n:
++        ch = name[i]
++        if ch.isspace() or ch == "-":
++            result.append("_")
++            i += 1
++        elif ch.isupper():
++            # look ahead: consecutive uppercase -> acronym
++            j = i
++            while j < n and name[j].isupper():
++                j += 1
++            upper_count = j - i
++            if upper_count > 1:
++                # acronym, e.g. ID, HTTP
++                if result and result[-1] != "_":
++                    result.append("_")
++                result.append(name[i:j].lower())
++                i = j
++            else:
++                # single uppercase letter
++                if result and result[-1] != "_":
++                    result.append("_")
++                result.append(ch.lower())
++                i += 1
++        else:
++            result.append(ch.lower())
++            i += 1
++    s = "".join(result)
++    while "__" in s:
++        s = s.replace("__", "_")
++    return s.strip("_")
++
++
++# -- extract stage -----------------------------------------------------
++
++def _read_csv(path):
++    records = []
++    with open(path, "r", encoding="utf-8-sig") as f:
++        lines = [line for line in f if not line.lstrip().startswith("#")]
++    reader = csv.DictReader(io.StringIO("".join(lines)))
++    for row in reader:
++        if any(v.strip() for v in row.values() if v):
++            records.append(row)
++    return records
++
++
++def _read_jsonl(path):
++    records = []
++    with open(path, "r", encoding="utf-8") as f:
++        for line in f:
++            line = line.strip()
++            if not line:
++                continue
++            records.append(json.loads(line))
++    return records
++
++
++def _extract(sources):
++    """Extract raw records from source files."""
++    records = []
++    file_names = []
++    for src in sources:
++        path = _resolve(src)
++        if not os.path.exists(path):
++            raise HarnessError(f"Source file not found: {path}")
++        file_names.append(os.path.basename(src))
++        if path.endswith(".csv"):
++            records.extend(_read_csv(path))
++        elif path.endswith(".jsonl"):
++            records.extend(_read_jsonl(path))
++        else:
++            raise HarnessError(f"Unsupported file type: {path}")
++    return records, file_names
++
++
++# -- clean stage -------------------------------------------------------
++
++def _clean(records):
++    """Clean records and separate rejects."""
++    clean_records = []
++    rejects = []
++
++    for rec in records:
++        cleaned = {k: v.strip() if isinstance(v, str) else v for k, v in rec.items()}
++        cleaned = {_to_snake_case(k): v for k, v in cleaned.items()}
++        if not any(v for v in cleaned.values() if isinstance(v, str) and v.strip()):
++            continue
++        rid = cleaned.get("id", "").strip()
++        if not rid:
++            cleaned.pop("id", None)
++            rejects.append({"record": cleaned, "reason": "missing id"})
++            continue
++        clean_records.append(cleaned)
++
++    return clean_records, rejects
++
++
++# -- report stage ------------------------------------------------------
++
++def _build_report(clean_records, rejects, retry_count, source_files):
++    """Build the report dict without writing to disk."""
++    memory_path = _resolve("memory/memory_summary.md")
++    memory_ref = ""
++    if os.path.exists(memory_path):
++        try:
++            with open(memory_path, "r", encoding="utf-8") as f:
++                memory_ref = f.read().strip()
++        except OSError:
++            memory_ref = "(failed to read)"
++
++    return {
++        "processed_count": len(clean_records),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": source_files,
++        "rejects": rejects,
++        "logs": _logs,
++        "memory_reference": memory_ref,
++    }
++
++
++def _write_report(report, output_path):
++    """Write the report dict to disk as JSON."""
++    out_path = _resolve(output_path)
++    out_dir = os.path.dirname(out_path)
++    if out_dir:
++        os.makedirs(out_dir, exist_ok=True)
++    with open(out_path, "w", encoding="utf-8") as f:
++        json.dump(report, f, ensure_ascii=False, indent=2)
++
++
++# -- DAG orchestrator --------------------------------------------------
++
++def run_dag(sources, output_path):
++    """Run the extract -> clean -> report DAG with retry logic.
++
++    Retries up to 2 times on failure. The output report reflects
++    the actual record counts, retry history, and structured logs.
++    """
++    global _logs
++    _logs = []
++
++    retry_count = 0
++    max_retries = 2  # at most 2 retries per spec
++
++    for attempt in range(1, max_retries + 2):  # attempt 1..3
++        try:
++            _log(attempt, "extract", "running")
++            records, source_files = _extract(sources)
++            _log(attempt, "extract", "ok")
++
++            _log(attempt, "clean", "running")
++            clean_records, rejects = _clean(records)
++            _log(attempt, "clean", "ok")
++
++            _log(attempt, "report", "running")
++            report = _build_report(clean_records, rejects, retry_count, source_files)
++            report["retry_count"] = retry_count
++            report["logs"] = _logs
++            _write_report(report, output_path)
++            _log(attempt, "report", "ok")
++
++            return report
++
++        except Exception as e:
++            _log(attempt, "error", "failed", detail=str(e))
++            if attempt <= max_retries:
++                retry_count += 1
++                continue
++            raise HarnessError(
++                f"DAG failed after {max_retries + 1} attempts: {e}"
++            ) from e
++
++    raise HarnessError("DAG exited unexpectedly")
+diff --git a/tmp/acceptance-report.json b/tmp/acceptance-report.json
+new file mode 100644
+index 0000000..c552b03
+--- /dev/null
++++ b/tmp/acceptance-report.json
+@@ -0,0 +1,57 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv",
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/override_report.json b/tmp/override_report.json
+new file mode 100644
+index 0000000..0f30a4e
+--- /dev/null
++++ b/tmp/override_report.json
+@@ -0,0 +1,49 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..c552b03
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,57 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv",
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/report2.json b/tmp/report2.json
+new file mode 100644
+index 0000000..57ac07d
+--- /dev/null
++++ b/tmp/report2.json
+@@ -0,0 +1,50 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "m4_noise_test.csv"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "name": "BadRow",
++        "score": "0"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/report_from_json.json b/tmp/report_from_json.json
+new file mode 100644
+index 0000000..a036d76
+--- /dev/null
++++ b/tmp/report_from_json.json
+@@ -0,0 +1,45 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/report_from_yaml.json b/tmp/report_from_yaml.json
+new file mode 100644
+index 0000000..2580cc9
+--- /dev/null
++++ b/tmp/report_from_yaml.json
+@@ -0,0 +1,52 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv",
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/report_verify.json b/tmp/report_verify.json
+new file mode 100644
+index 0000000..c552b03
+--- /dev/null
++++ b/tmp/report_verify.json
+@@ -0,0 +1,57 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv",
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/test.json b/tmp/test.json
+new file mode 100644
+index 0000000..a036d76
+--- /dev/null
++++ b/tmp/test.json
+@@ -0,0 +1,45 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/test_config.json b/tmp/test_config.json
+new file mode 100644
+index 0000000..e075300
+--- /dev/null
++++ b/tmp/test_config.json
+@@ -0,0 +1 @@
++{"sources": ["data/input.csv"], "output": "tmp/report_from_json.json"}
+\ No newline at end of file
+diff --git a/tmp/test_config.yaml b/tmp/test_config.yaml
+new file mode 100644
+index 0000000..7f2cad5
+--- /dev/null
++++ b/tmp/test_config.yaml
+@@ -0,0 +1,5 @@
++# Mini harness config
++sources:
++  - data/input.csv
++  - data/events.jsonl
++output: tmp/report_from_yaml.json
+diff --git a/tmp/verify_basic.json b/tmp/verify_basic.json
+new file mode 100644
+index 0000000..a036d76
+--- /dev/null
++++ b/tmp/verify_basic.json
+@@ -0,0 +1,45 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/verify_comprehensive.json b/tmp/verify_comprehensive.json
+new file mode 100644
+index 0000000..81d6abc
+--- /dev/null
++++ b/tmp/verify_comprehensive.json
+@@ -0,0 +1,60 @@
++{
++  "processed_count": 6,
++  "rejected_count": 3,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv",
++    "events.jsonl",
++    "m4_noise_test.csv"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "name": "BadRow",
++        "score": "0"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/verify_override.json b/tmp/verify_override.json
+new file mode 100644
+index 0000000..e28dbd6
+--- /dev/null
++++ b/tmp/verify_override.json
+@@ -0,0 +1,44 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file

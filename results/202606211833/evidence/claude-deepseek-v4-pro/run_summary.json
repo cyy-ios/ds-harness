@@ -1,0 +1,74 @@
+{
+  "runner": "claude_code_cli",
+  "variant": "claude-deepseek",
+  "model": "deepseek-v4-pro",
+  "root": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+  "evidence_root": "C:\\项目\\ds-harness\\results\\202606211833\\evidence\\claude-deepseek-v4-pro",
+  "milestones_completed": 8,
+  "results": [
+    {
+      "milestone": "M1_bootstrap",
+      "elapsed_s": 185.3,
+      "event_count": 3468,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M1_bootstrap\\step_01"
+    },
+    {
+      "milestone": "M2_config",
+      "elapsed_s": 106.9,
+      "event_count": 1105,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M2_config\\step_01"
+    },
+    {
+      "milestone": "M3_runner_retry",
+      "elapsed_s": 74.4,
+      "event_count": 1861,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M3_runner_retry\\step_01"
+    },
+    {
+      "milestone": "M4_long_log_debug",
+      "elapsed_s": 84.5,
+      "event_count": 1169,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M4_long_log_debug\\step_01"
+    },
+    {
+      "milestone": "M5_context_change",
+      "elapsed_s": 188.4,
+      "event_count": 3985,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M5_context_change\\step_01"
+    },
+    {
+      "milestone": "M6_interruption",
+      "elapsed_s": 16.4,
+      "event_count": 194,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M6_interruption\\step_01"
+    },
+    {
+      "milestone": "M7_memory_report",
+      "elapsed_s": 76.2,
+      "event_count": 211,
+      "exit_code": 0,
+      "session_id": "cf43b25e-c1ea-497c-9ea7-b316cbaaaa89",
+      "evidence_dir": "M7_memory_report\\step_01"
+    },
+    {
+      "milestone": "M8_compact_resume",
+      "elapsed_s": 135.9,
+      "event_count": 5078,
+      "exit_code": 0,
+      "session_id": "b5d21de7-c36c-4e9f-85e4-e348298ab294",
+      "evidence_dir": "M8_compact_resume\\step_01"
+    }
+  ]
+}

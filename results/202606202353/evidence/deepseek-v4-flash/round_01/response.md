@@ -1,0 +1,1 @@
+里程碑 M1_bootstrap 完成：读取 SKILL.md，创建 src/mini_harness/ 包，实现 CLI run 子命令及 extract/clean/report 三阶段 DAG 流水线，更新 pyproject.toml，pytest 通过。

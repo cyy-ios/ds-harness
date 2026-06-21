@@ -1,0 +1,808 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..28e8b8b
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1,3 @@
++"""mini_harness — minimal data processing harness."""
++
++__version__ = "0.1.0"
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..8d43374
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,6 @@
++"""Support python -m mini_harness run ..."""
++
++from mini_harness.cli import main
++
++if __name__ == "__main__":
++    main()
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..9df7b96
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,127 @@
++"""CLI entry-point — argparse-based run subcommand."""
++
++import argparse
++import logging
++import os
++import sys
++
++from mini_harness.config import find_config, load_config, merge_config
++from mini_harness.runner import run_dag, HarnessError
++from mini_harness.utils import repo_root
++
++logger = logging.getLogger(__name__)
++
++
++def build_parser() -> argparse.ArgumentParser:
++    """Build argument parser with a ``run`` subcommand."""
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    run_p = sub.add_parser("run", help="Run the extract → clean → report DAG")
++    run_p.add_argument("sources", nargs="*", help="Input file(s) — CSV / JSONL")
++    run_p.add_argument(
++        "--config", "-c", default=None,
++        help="Path to JSON/YAML config file (default: search config.{json,yaml,yml})",
++    )
++    run_p.add_argument(
++        "--output", "-o", default=None,
++        help="Output report path (overrides config default)",
++    )
++    run_p.add_argument(
++        "--show-config", action="store_true",
++        help="Print resolved configuration and exit",
++    )
++
++    return parser
++
++
++def _resolve_run_args(args: argparse.Namespace) -> dict:
++    """Merge CLI args with optional config file; return unified ``run`` kwargs.
++
++    All relative paths are resolved against the repository root so that the
++    harness works from any working directory.
++    """
++    root = repo_root()
++
++    # Resolve --config relative to repo root (if not absolute)
++    config_arg = args.config
++    if config_arg and not os.path.isabs(config_arg):
++        config_arg = str(root / config_arg)
++
++    # Load config file (explicit or default)
++    config_path = find_config(config_arg)
++    config = load_config(config_path) if config_path else None
++
++    cli_dict: dict = {}
++    if args.sources:
++        cli_dict["sources"] = [
++            str(root / s) if not os.path.isabs(s) else s
++            for s in args.sources
++        ]
++    if args.output:
++        cli_dict["output"] = (
++            str(root / args.output) if not os.path.isabs(args.output)
++            else args.output
++        )
++
++    merged = merge_config(cli_dict, config)
++
++    # Resolve config-provided paths relative to repo root
++    if merged.get("sources"):
++        merged["sources"] = [
++            str(root / s) if not os.path.isabs(s) else s
++            for s in merged["sources"]
++        ]
++    if merged.get("output"):
++        if not os.path.isabs(merged["output"]):
++            merged["output"] = str(root / merged["output"])
++    else:
++        merged["output"] = str(root / "tmp/report.json")
++
++    merged.setdefault("sources", [])
++    return merged
++
++
++def main(argv: list[str] | None = None) -> None:
++    """CLI entry-point."""
++    logging.basicConfig(
++        level=logging.INFO,
++        format="%(asctime)s [%(levelname)s] %(message)s",
++        datefmt="%H:%M:%S",
++        force=True,
++    )
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    if args.command == "run":
++        try:
++            cfg = _resolve_run_args(args)
++        except FileNotFoundError as exc:
++            logger.error("Config error: %s", exc)
++            sys.exit(1)
++
++        if args.show_config:
++            print("Resolved config:")
++            for k, v in cfg.items():
++                print(f"  {k}: {v}")
++            return
++
++        if not cfg["sources"]:
++            logger.error(
++                "No source files specified. Provide positional args or a config file."
++            )
++            sys.exit(1)
++
++        try:
++            result = run_dag(cfg["sources"], cfg["output"])
++            print(f"Report written to {cfg['output']}")
++            print(f"  processed: {result['processed_count']}, "
++                  f"rejected: {result['rejected_count']}, "
++                  f"retries: {result['retry_count']}")
++        except HarnessError as exc:
++            logger.error("Harness failed: %s", exc)
++            sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/mini_harness/config.py b/mini_harness/config.py
+new file mode 100644
+index 0000000..95f2286
+--- /dev/null
++++ b/mini_harness/config.py
+@@ -0,0 +1,243 @@
++"""Configuration loading — JSON and minimal-YAML support.
++
++Public helpers::
++
++    from mini_harness.config import load_config, find_config, merge_config
++"""
++
++import json
++import logging
++import os
++import re
++from pathlib import Path
++
++from mini_harness.utils import repo_root as _find_root
++
++logger = logging.getLogger(__name__)
++
++# Default config file names searched in order when ``--config`` is omitted
++DEFAULT_CONFIG_NAMES = ["config.json", "config.yaml", "config.yml"]
++
++
++# ---------------------------------------------------------------------------
++# Public API
++# ---------------------------------------------------------------------------
++
++def find_config(path: str | None = None) -> Path | None:
++    """Locate a config file.
++
++    If *path* is given it must exist (raises ``FileNotFoundError`` otherwise).
++    When *path* is ``None`` the first existing file from
++    ``DEFAULT_CONFIG_NAMES`` is returned (checked first in cwd, then in the
++    repo root), or ``None`` if none exist.
++    """
++    if path:
++        p = Path(path)
++        if not p.exists():
++            raise FileNotFoundError(f"Config file not found: {path}")
++        return p
++    # Check cwd first, then repo root
++    search_dirs = [Path.cwd()]
++    try:
++        search_dirs.append(_find_root())
++    except Exception:
++        pass
++    for name in DEFAULT_CONFIG_NAMES:
++        for d in dict.fromkeys(search_dirs):  # dedupe by insertion order
++            candidate = d / name
++            if candidate.exists():
++                logger.info("Using config file: %s", candidate)
++                return candidate
++    return None
++
++
++def load_config(config_path: Path) -> dict:
++    """Read a JSON or YAML config file and return the parsed dict."""
++    raw = config_path.read_text(encoding="utf-8-sig")
++    ext = config_path.suffix.lower()
++    if ext in (".yaml", ".yml"):
++        return _parse_yaml(raw)
++    # default: JSON (including .json)
++    return json.loads(raw)
++
++
++def merge_config(cli_args: dict, config: dict | None) -> dict:
++    """Merge CLI arguments (higher priority) over config values.
++
++    Returns a unified dict with ``sources`` and ``output`` keys.
++    """
++    merged = dict(config) if config else {}
++
++    # CLI positional sources override config sources
++    if cli_args.get("sources"):
++        merged["sources"] = cli_args["sources"]
++
++    # CLI --output overrides config output
++    if cli_args.get("output"):
++        merged["output"] = cli_args["output"]
++
++    return merged
++
++
++# ---------------------------------------------------------------------------
++# Minimal YAML parser
++# ---------------------------------------------------------------------------
++
++def _parse_yaml(text: str) -> dict:
++    """Parse a minimal YAML subset into a Python dict.
++
++    Supports:
++    - Top-level ``key: value`` mappings (including nested via indentation)
++    - Sequences (``- item``) as mapping values
++    - Scalar types: str, int, float, bool, None
++    - Single/double quoted strings
++    - Full-line and inline ``#`` comments
++    """
++    lines = _yaml_preprocess(text)
++    if not lines:
++        return {}
++    result, _ = _yaml_parse_map(lines, 0, 0)
++    return result if isinstance(result, dict) else {}
++
++
++def _yaml_preprocess(text: str) -> list[str]:
++    """Strip BOM, split lines, remove blank/comment-only lines."""
++    raw = text.lstrip("﻿")
++    out: list[str] = []
++    for line in raw.split("\n"):
++        stripped = line.strip()
++        if not stripped or stripped.startswith("#"):
++            continue
++        out.append(line)
++    return out
++
++
++def _yaml_parse_map(
++    lines: list[str], start: int, base_indent: int,
++) -> tuple[dict | list, int]:
++    """Parse a YAML mapping or sequence from *start*.
++
++    Returns ``(result, next_line_idx)``.
++    """
++    result: dict = {}
++    i = start
++    in_sequence = False
++
++    while i < len(lines):
++        indent = _yaml_indent(lines[i])
++        if indent < base_indent:
++            break  # back to parent level
++        if indent > base_indent:
++            # Nested content — should not happen without a parent key;
++            # skip if we land here.
++            i += 1
++            continue
++
++        raw = lines[i].strip()
++
++        # --- Sequence item (- ) ---
++        if raw.startswith("- "):
++            in_sequence = True
++            seq, i = _yaml_parse_seq(lines, i, indent)
++            return seq, i
++
++        # --- Key: value ---
++        if ":" not in raw:
++            i += 1
++            continue
++
++        colon = raw.index(":")
++        key = raw[:colon].strip()
++        value_tail = raw[colon + 1:].strip()
++
++        if value_tail:
++            result[key] = _yaml_scalar(value_tail)
++            i += 1
++        else:
++            # Value is on the next line(s) at a deeper indent
++            i += 1
++            if i < len(lines) and _yaml_indent(lines[i]) > indent:
++                next_indent = _yaml_indent(lines[i])
++                if lines[i].strip().startswith("- "):
++                    result[key], i = _yaml_parse_seq(lines, i, next_indent)
++                else:
++                    sub, i = _yaml_parse_map(lines, i, next_indent)
++                    result[key] = sub
++            else:
++                # key: with no value = None
++                result[key] = None
++
++    return (result if not in_sequence else list(result.values())), i
++
++
++def _yaml_parse_seq(
++    lines: list[str], start: int, base_indent: int,
++) -> tuple[list, int]:
++    """Parse a YAML sequence starting at *start*."""
++    seq: list = []
++    i = start
++    while i < len(lines):
++        indent = _yaml_indent(lines[i])
++        if indent < base_indent:
++            break
++        raw = lines[i].strip()
++        if not raw.startswith("-"):
++            i += 1
++            continue
++        item_text = raw[1:].lstrip()
++        if item_text:
++            seq.append(_yaml_scalar(item_text))
++        else:
++            seq.append(None)
++        i += 1
++    return seq, i
++
++
++def _yaml_indent(line: str) -> int:
++    return len(line) - len(line.lstrip())
++
++
++def _yaml_scalar(value: str) -> object:
++    """Parse a scalar YAML value."""
++    v = value.strip()
++    if not v:
++        return None
++
++    # Strip inline comment (naive — does not handle ``#`` inside quotes)
++    # For config files this is sufficient.
++    if "#" in v:
++        # Check if hash is inside quotes
++        in_dq = in_sq = False
++        for i, ch in enumerate(v):
++            if ch == '"' and not in_sq:
++                in_dq = not in_dq
++            elif ch == "'" and not in_dq:
++                in_sq = not in_sq
++            elif ch == "#" and not in_dq and not in_sq:
++                v = v[:i].rstrip()
++                break
++
++    # Quoted strings
++    if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
++        return v[1:-1]
++
++    # Booleans / null
++    low = v.lower()
++    if low in ("true", "yes", "on"):
++        return True
++    if low in ("false", "no", "off"):
++        return False
++    if low in ("null", "~"):
++        return None
++
++    # Numbers
++    try:
++        return int(v)
++    except ValueError:
++        pass
++    try:
++        return float(v)
++    except ValueError:
++        pass
++
++    return v
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..b3179bd
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,99 @@
++"""DAG orchestrator — ``run_dag`` and ``HarnessError``.
++
++Public API required by skill::
++
++    from mini_harness.runner import run_dag, HarnessError
++"""
++
++import json
++import logging
++import os
++
++from mini_harness.stages import extract, clean, report
++
++logger = logging.getLogger(__name__)
++
++MAX_RETRIES = 2
++
++
++class HarnessError(Exception):
++    """Raised when a DAG stage fails after exhausting retries."""
++
++
++def _run_stage(name, fn, *args, **kwargs):
++    """Execute a stage function with up to ``MAX_RETRIES`` retries.
++
++    Returns ``(result, retried)`` where *result* is the stage's return value
++    and *retried* is the number of retries consumed (0 on first-try success).
++    """
++    retried = 0
++    for attempt in range(1, MAX_RETRIES + 2):  # 1 … 3  (initial + 2 retries)
++        try:
++            logger.info("attempt=%d stage=%s status=running", attempt, name)
++            result = fn(*args, **kwargs)
++            logger.info("attempt=%d stage=%s status=ok", attempt, name)
++            return result, retried
++        except Exception as exc:
++            logger.error(
++                "attempt=%d stage=%s status=failed error=%s",
++                attempt, name, exc,
++            )
++            if attempt <= MAX_RETRIES:
++                retried += 1
++            else:
++                raise HarnessError(
++                    f"Stage '{name}' failed after {attempt} attempts"
++                ) from exc
++
++
++def _persist_report(result, output_path):
++    """Write the report dict to disk (JSON)."""
++    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
++    with open(output_path, "w", encoding="utf-8") as f:
++        json.dump(result, f, indent=2, ensure_ascii=False)
++
++
++def run_dag(sources: list[str], output_path: str) -> dict:
++    """Run the extract → clean → report DAG.
++
++    Parameters
++    ----------
++    sources:
++        One or more paths to input CSV/JSONL files.
++    output_path:
++        Destination for the JSON report.
++
++    Returns
++    -------
++    The report dict (also persisted to *output_path*).
++    """
++    source_files = [os.path.abspath(s) for s in sources]
++
++    # ---- extract ----
++    raw, retry_e = _run_stage("extract", extract, sources)
++
++    # ---- clean ----
++    (cleaned, rejects), retry_c = _run_stage("clean", clean, raw)
++
++    # ---- report ----
++    total_retries = retry_e + retry_c
++    result, retry_r = _run_stage(
++        "report", report,
++        cleaned, rejects, total_retries, source_files,
++    )
++    total_retries += retry_r
++
++    # Ensure retry_count in the produced report matches the real total
++    # (report() was called with total_retries before retry_r was known)
++    result["retry_count"] = total_retries
++
++    _persist_report(result, output_path)
++
++    logger.info(
++        "Report written to %s  (processed=%d rejected=%d retries=%d)",
++        output_path,
++        result["processed_count"],
++        result["rejected_count"],
++        result["retry_count"],
++    )
++    return result
+diff --git a/mini_harness/stages.py b/mini_harness/stages.py
+new file mode 100644
+index 0000000..eb920a1
+--- /dev/null
++++ b/mini_harness/stages.py
+@@ -0,0 +1,83 @@
++"""DAG stages — extract, clean, report."""
++
++import logging
++import os
++
++from mini_harness.utils import read_csv, read_jsonl, to_snake_case
++
++logger = logging.getLogger(__name__)
++
++
++def extract(paths: list[str]) -> list[dict]:
++    """Extract stage — read all source files, return raw records.
++
++    Supports ``.csv`` and ``.jsonl``; delegates by extension.
++    """
++    raw: list[dict] = []
++    for path in paths:
++        ext = os.path.splitext(path)[1].lower()
++        if ext == ".csv":
++            per_file = read_csv(path)
++        elif ext in (".jsonl", ".json"):
++            per_file = read_jsonl(path)
++        else:
++            per_file = _auto_detect(path)
++        raw.extend(per_file)
++        logger.info("Extracted %d records from %s", len(per_file), path)
++    return raw
++
++
++def _auto_detect(path: str) -> list[dict]:
++    """Try JSONL then CSV for unknown extensions."""
++    try:
++        return read_jsonl(path)
++    except Exception:
++        return read_csv(path)
++
++
++def clean(records: list[dict]) -> tuple[list[dict], list[dict]]:
++    """Clean stage — normalise field names; split by ``id`` presence.
++
++    Returns a ``(cleaned, rejects)`` pair.
++    """
++    cleaned: list[dict] = []
++    rejects: list[dict] = []
++
++    for rec in records:
++        if rec is None:
++            continue
++        # Convert all keys to snake_case
++        normalised = {
++            to_snake_case(str(k) if k is not None else ""): v
++            for k, v in rec.items()
++            if k is not None and k != ""
++        }
++        # Records without a truthy ``id`` are rejects
++        raw_id = normalised.get("id")
++        if raw_id is None or str(raw_id).strip() == "":
++            rejects.append(normalised)
++        else:
++            cleaned.append(normalised)
++
++    logger.info("Clean: %d accepted, %d rejected", len(cleaned), len(rejects))
++    return cleaned, rejects
++
++
++def report(
++    cleaned: list[dict],
++    rejects: list[dict],
++    retry_count: int,
++    source_files: list[str],
++) -> dict:
++    """Report stage — produce the final summary dict.
++
++    The output always references ``memory/memory_summary.md`` as required by
++    the data-harness skill.
++    """
++    return {
++        "processed_count": len(cleaned),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": source_files,
++        "memory_reference": "memory/memory_summary.md",
++    }
+diff --git a/mini_harness/utils.py b/mini_harness/utils.py
+new file mode 100644
+index 0000000..c97f327
+--- /dev/null
++++ b/mini_harness/utils.py
+@@ -0,0 +1,87 @@
++"""Utility helpers — file I/O, snake_case, repo root detection."""
++
++import csv
++import json
++import os
++import re
++import subprocess
++from pathlib import Path
++
++
++def repo_root() -> Path:
++    """Return the absolute repository root path.
++
++    Uses ``git rev-parse --show-toplevel`` when available; falls back to
++    navigating up from this file's location (assumes ``mini_harness/`` sits
++    at the repo root).
++    """
++    try:
++        raw = subprocess.check_output(
++            ["git", "rev-parse", "--show-toplevel"],
++            stderr=subprocess.DEVNULL,
++        )
++        return Path(raw.decode().strip())
++    except (FileNotFoundError, subprocess.SubprocessError):
++        # Fallback: go up from mini_harness/utils.py → repo root
++        return Path(__file__).resolve().parent.parent
++
++import csv
++import json
++import re
++
++
++def to_snake_case(name: str) -> str:
++    """Convert a field name to snake_case.
++
++    Handles camelCase, PascalCase, spaces, and all-caps abbreviations.
++    Examples::
++
++        >>> to_snake_case("User Name")
++        'user_name'
++        >>> to_snake_case("eventType")
++        'event_type'
++        >>> to_snake_case("ID")
++        'id'
++        >>> to_snake_case("UserName")
++        'user_name'
++    """
++    # Insert underscore between lowercase/digit and uppercase: aB → a_B
++    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
++    # Insert underscore between consecutive uppercase and uppercase+lowercase: ABc → A_Bc
++    name = re.sub(r"([A-Z])([A-Z][a-z])", r"\1_\2", name)
++    # Lower-case
++    name = name.lower()
++    # Replace non-alphanumeric runs with a single underscore
++    name = re.sub(r"[^a-z0-9_]", "_", name)
++    # Collapse multiple underscores and strip leading/trailing
++    name = re.sub(r"_+", "_", name).strip("_")
++    return name
++
++
++def read_csv(path: str) -> list[dict]:
++    """Read a CSV file, skipping comment and blank lines.
++
++    Returns a list of dicts keyed by the CSV header.
++    """
++    with open(path, newline="", encoding="utf-8-sig") as f:
++        # Pre-process: drop comment/blank lines so csv.DictReader sees clean data
++        cleaned_lines = [
++            line for line in f
++            if line.strip() and not line.strip().startswith("#")
++        ]
++        if not cleaned_lines:
++            return []
++        reader = csv.DictReader(cleaned_lines)
++        return list(reader)
++
++
++def read_jsonl(path: str) -> list[dict]:
++    """Read a JSONL file, skipping blank lines."""
++    records: list[dict] = []
++    with open(path, encoding="utf-8") as f:
++        for line in f:
++            stripped = line.strip()
++            if not stripped:
++                continue
++            records.append(json.loads(stripped))
++    return records
+diff --git a/pyproject.toml b/pyproject.toml
+index da60646..89a0b02 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,3 +1,3 @@
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
+-pythonpath = ["src"]
++pythonpath = ["src", "mini_harness", "."]
+diff --git a/tmp/acceptance-config-report.json b/tmp/acceptance-config-report.json
+new file mode 100644
+index 0000000..369dd33
+--- /dev/null
++++ b/tmp/acceptance-config-report.json
+@@ -0,0 +1,10 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md"
++}
+\ No newline at end of file
+diff --git a/tmp/acceptance-config.json b/tmp/acceptance-config.json
+new file mode 100644
+index 0000000..eb3e5c9
+--- /dev/null
++++ b/tmp/acceptance-config.json
+@@ -0,0 +1 @@
++{"sources": ["data/input.csv", "data/events.jsonl"], "output": "tmp/acceptance-config-report.json"}
+\ No newline at end of file
+diff --git a/tmp/acceptance-m4-noise-report.json b/tmp/acceptance-m4-noise-report.json
+new file mode 100644
+index 0000000..1c5aa44
+--- /dev/null
++++ b/tmp/acceptance-m4-noise-report.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\m4_noise_test.csv"
++  ],
++  "memory_reference": "memory/memory_summary.md"
++}
+\ No newline at end of file
+diff --git a/tmp/acceptance-report.json b/tmp/acceptance-report.json
+new file mode 100644
+index 0000000..369dd33
+--- /dev/null
++++ b/tmp/acceptance-report.json
+@@ -0,0 +1,10 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md"
++}
+\ No newline at end of file
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..369dd33
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,10 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md"
++}
+\ No newline at end of file
+diff --git a/tmp/report2.json b/tmp/report2.json
+new file mode 100644
+index 0000000..1c5aa44
+--- /dev/null
++++ b/tmp/report2.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\m4_noise_test.csv"
++  ],
++  "memory_reference": "memory/memory_summary.md"
++}
+\ No newline at end of file
+diff --git a/tmp/report3.json b/tmp/report3.json
+new file mode 100644
+index 0000000..2630e24
+--- /dev/null
++++ b/tmp/report3.json
+@@ -0,0 +1,11 @@
++{
++  "processed_count": 2,
++  "rejected_count": 7,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\events.jsonl",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211702-claude-ds\\data\\m4_noise_test.csv"
++  ],
++  "memory_reference": "memory/memory_summary.md"
++}
+\ No newline at end of file

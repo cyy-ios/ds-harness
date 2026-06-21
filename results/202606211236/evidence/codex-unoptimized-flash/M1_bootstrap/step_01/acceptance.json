@@ -1,0 +1,230 @@
+{
+  "ran": true,
+  "returncode": 0,
+  "cmd": [
+    "C:\\Python314\\python.exe",
+    "C:\\项目\\ds-harness\\benchmarks\\agent-eval-suite\\runners\\score_mini_data_harness.py",
+    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211236-flash2",
+    "--round",
+    "round_01",
+    "--milestone",
+    "M1_bootstrap"
+  ],
+  "output": "{\n  \"score\": 100,\n  \"max_score\": 100,\n  \"round\": \"round_01\",\n  \"milestone\": \"M1_bootstrap\",\n  \"stage\": \"progress_diagnostic\",\n  \"gate_scope\": \"progress_diagnostic\",\n  \"gate_passed\": true,\n  \"final_gate_applicable\": false,\n  \"final_gate_passed\": null,\n  \"checks\": {\n    \"public_pytest\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211236-flash2\",\n      \"returncode\": 0,\n      \"output\": \".........                                                                [100%]\\n9 passed in 0.08s\\n\"\n    },\n    \"cli_end_to_end\": {\n      \"passed\": true,\n      \"stdout_report\": {\n        \"output\": \"tmp/acceptance-report.json\",\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"retry_count\": 0\n      },\n      \"file_report\": {\n        \"logs\": [\n          {\n            \"attempt\": 1,\n            \"stage\": \"extract\",\n            \"status\": \"ok\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"clean\",\n            \"status\": \"ok\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"report\",\n            \"status\": \"ok\"\n          }\n        ],\n        \"memory_reference\": \"memory/memory_summary.md\",\n        \"processed_count\": 4,\n        \"records\": [\n          {\n            \"id\": \"1\",\n            \"score\": \"10\",\n            \"user_name\": \"Alice\"\n          },\n          {\n            \"id\": \"2\",\n            \"score\": \"20\",\n            \"user_name\": \"Bob\"\n          },\n          {\n            \"event_type\": \"click\",\n            \"id\": \"e1\"\n          },\n          {\n            \"event_type\": \"view\",\n            \"id\": \"e2\"\n          }\n        ],\n        \"rejected_count\": 2,\n        \"rejects\": [\n          {\n            \"id\": \"\",\n            \"score\": \"0\",\n            \"user_name\": \"Bad\"\n          },\n          {\n            \"event_type\": \"missing\"\n          }\n        ],\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"data/input.csv\",\n          \"data/events.jsonl\"\n        ]\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211236-flash2\",\n      \"returncode\": 0,\n      \"output\": \"{\\\"output\\\": \\\"tmp/acceptance-report.json\\\", \\\"processed_count\\\": 4, \\\"rejected_count\\\": 2, \\\"retry_count\\\": 0}\\n\"\n    },\n    \"cwd_independent_cli\": {\n      \"passed\": true,\n      \"stdout_report\": {\n        \"output\": \"tmp/acceptance-subdir-report.json\",\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"retry_count\": 0\n      },\n      \"file_report\": {\n        \"logs\": [\n          {\n            \"attempt\": 1,\n            \"stage\": \"extract\",\n            \"status\": \"ok\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"clean\",\n            \"status\": \"ok\"\n          },\n          {\n            \"attempt\": 1,\n            \"stage\": \"report\",\n            \"status\": \"ok\"\n          }\n        ],\n        \"memory_reference\": \"memory/memory_summary.md\",\n        \"processed_count\": 4,\n        \"records\": [\n          {\n            \"id\": \"1\",\n            \"score\": \"10\",\n            \"user_name\": \"Alice\"\n          },\n          {\n            \"id\": \"2\",\n            \"score\": \"20\",\n            \"user_name\": \"Bob\"\n          },\n          {\n            \"event_type\": \"click\",\n            \"id\": \"e1\"\n          },\n          {\n            \"event_type\": \"view\",\n            \"id\": \"e2\"\n          }\n        ],\n        \"rejected_count\": 2,\n        \"rejects\": [\n          {\n            \"id\": \"\",\n            \"score\": \"0\",\n            \"user_name\": \"Bad\"\n          },\n          {\n            \"event_type\": \"missing\"\n          }\n        ],\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"data/input.csv\",\n          \"data/events.jsonl\"\n        ]\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-subdir-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211236-flash2\\\\subdir\\\\workbench\",\n      \"returncode\": 0,\n      \"output\": \"{\\\"output\\\": \\\"tmp/acceptance-subdir-report.json\\\", \\\"processed_count\\\": 4, \\\"rejected_count\\\": 2, \\\"retry_count\\\": 0}\\n\"\n    },\n    \"acceptance_pytest\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\",\n        \"tests\\\\test_acceptance_eval.py\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211236-flash2\",\n      \"returncode\": 0,\n      \"output\": \".s.                                                                      [100%]\\n2 passed, 1 skipped in 0.03s\\n\"\n    },\n    \"memory_aware_report\": {\n      \"passed\": true,\n      \"found\": [\n        \"docs\\\\memory_aware_report.md\",\n        \"docs\\\\memory-aware-retrospective.md\"\n      ]\n    },\n    \"unsupported_claims_absent\": {\n      \"passed\": true\n    }\n  },\n  \"note\": \"Evaluator-owned acceptance diagnostics. In progress rounds, gate_passed runs the final acceptance formula for evidence only; treat final_gate_passed as the milestone gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success.\"\n}\n",
+  "parsed": {
+    "score": 100,
+    "max_score": 100,
+    "round": "round_01",
+    "milestone": "M1_bootstrap",
+    "stage": "progress_diagnostic",
+    "gate_scope": "progress_diagnostic",
+    "gate_passed": true,
+    "final_gate_applicable": false,
+    "final_gate_passed": null,
+    "checks": {
+      "public_pytest": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211236-flash2",
+        "returncode": 0,
+        "output": ".........                                                                [100%]\n9 passed in 0.08s\n"
+      },
+      "cli_end_to_end": {
+        "passed": true,
+        "stdout_report": {
+          "output": "tmp/acceptance-report.json",
+          "processed_count": 4,
+          "rejected_count": 2,
+          "retry_count": 0
+        },
+        "file_report": {
+          "logs": [
+            {
+              "attempt": 1,
+              "stage": "extract",
+              "status": "ok"
+            },
+            {
+              "attempt": 1,
+              "stage": "clean",
+              "status": "ok"
+            },
+            {
+              "attempt": 1,
+              "stage": "report",
+              "status": "ok"
+            }
+          ],
+          "memory_reference": "memory/memory_summary.md",
+          "processed_count": 4,
+          "records": [
+            {
+              "id": "1",
+              "score": "10",
+              "user_name": "Alice"
+            },
+            {
+              "id": "2",
+              "score": "20",
+              "user_name": "Bob"
+            },
+            {
+              "event_type": "click",
+              "id": "e1"
+            },
+            {
+              "event_type": "view",
+              "id": "e2"
+            }
+          ],
+          "rejected_count": 2,
+          "rejects": [
+            {
+              "id": "",
+              "score": "0",
+              "user_name": "Bad"
+            },
+            {
+              "event_type": "missing"
+            }
+          ],
+          "retry_count": 0,
+          "source_files": [
+            "data/input.csv",
+            "data/events.jsonl"
+          ]
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211236-flash2",
+        "returncode": 0,
+        "output": "{\"output\": \"tmp/acceptance-report.json\", \"processed_count\": 4, \"rejected_count\": 2, \"retry_count\": 0}\n"
+      },
+      "cwd_independent_cli": {
+        "passed": true,
+        "stdout_report": {
+          "output": "tmp/acceptance-subdir-report.json",
+          "processed_count": 4,
+          "rejected_count": 2,
+          "retry_count": 0
+        },
+        "file_report": {
+          "logs": [
+            {
+              "attempt": 1,
+              "stage": "extract",
+              "status": "ok"
+            },
+            {
+              "attempt": 1,
+              "stage": "clean",
+              "status": "ok"
+            },
+            {
+              "attempt": 1,
+              "stage": "report",
+              "status": "ok"
+            }
+          ],
+          "memory_reference": "memory/memory_summary.md",
+          "processed_count": 4,
+          "records": [
+            {
+              "id": "1",
+              "score": "10",
+              "user_name": "Alice"
+            },
+            {
+              "id": "2",
+              "score": "20",
+              "user_name": "Bob"
+            },
+            {
+              "event_type": "click",
+              "id": "e1"
+            },
+            {
+              "event_type": "view",
+              "id": "e2"
+            }
+          ],
+          "rejected_count": 2,
+          "rejects": [
+            {
+              "id": "",
+              "score": "0",
+              "user_name": "Bad"
+            },
+            {
+              "event_type": "missing"
+            }
+          ],
+          "retry_count": 0,
+          "source_files": [
+            "data/input.csv",
+            "data/events.jsonl"
+          ]
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-subdir-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211236-flash2\\subdir\\workbench",
+        "returncode": 0,
+        "output": "{\"output\": \"tmp/acceptance-subdir-report.json\", \"processed_count\": 4, \"rejected_count\": 2, \"retry_count\": 0}\n"
+      },
+      "acceptance_pytest": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q",
+          "tests\\test_acceptance_eval.py"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211236-flash2",
+        "returncode": 0,
+        "output": ".s.                                                                      [100%]\n2 passed, 1 skipped in 0.03s\n"
+      },
+      "memory_aware_report": {
+        "passed": true,
+        "found": [
+          "docs\\memory_aware_report.md",
+          "docs\\memory-aware-retrospective.md"
+        ]
+      },
+      "unsupported_claims_absent": {
+        "passed": true
+      }
+    },
+    "note": "Evaluator-owned acceptance diagnostics. In progress rounds, gate_passed runs the final acceptance formula for evidence only; treat final_gate_passed as the milestone gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success."
+  },
+  "score": 100,
+  "max_score": 100,
+  "round": "round_01",
+  "milestone": "M1_bootstrap",
+  "stage": "progress_diagnostic",
+  "gate_scope": "progress_diagnostic",
+  "gate_passed": true,
+  "final_gate_applicable": false,
+  "final_gate_passed": null
+}

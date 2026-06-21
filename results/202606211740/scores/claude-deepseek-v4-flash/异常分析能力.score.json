@@ -1,0 +1,55 @@
+﻿{
+    "capability":  "异常分析能力",
+    "reason":  "4 rounds had exceptions. M4 75, M3 50, M6/M7 0. Average 125/4 non-null = 62.5.",
+    "deductions":  [
+                       {
+                           "amount":  100,
+                           "reason":  "M6 zero response, no error location",
+                           "round":  "round_06",
+                           "item":  "1_定位"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M7 zero response, no error location",
+                           "round":  "round_07",
+                           "item":  "1_定位"
+                       }
+                   ],
+    "rounds_scored":  4,
+    "score":  62.5,
+    "per_round":  {
+                      "round_05":  {
+                                       "reason":  "无异常",
+                                       "score":  null
+                                   },
+                      "round_06":  {
+                                       "reason":  "M6 no diagnosis",
+                                       "score":  0
+                                   },
+                      "round_02":  {
+                                       "reason":  "无异常",
+                                       "score":  null
+                                   },
+                      "round_08":  {
+                                       "reason":  "无异常",
+                                       "score":  null
+                                   },
+                      "round_07":  {
+                                       "reason":  "M7 no diagnosis",
+                                       "score":  0
+                                   },
+                      "round_03":  {
+                                       "reason":  "located error but no root cause analysis",
+                                       "score":  50
+                                   },
+                      "round_04":  {
+                                       "reason":  "located+analyzed+repaired, verification incomplete at this round",
+                                       "score":  75
+                                   },
+                      "round_01":  {
+                                       "reason":  "无异常",
+                                       "score":  null
+                                   }
+                  },
+    "rounds_excluded":  4
+}

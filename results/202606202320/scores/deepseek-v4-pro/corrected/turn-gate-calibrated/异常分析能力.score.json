@@ -1,0 +1,97 @@
+{
+  "capability": "异常分析能力",
+  "score": 75.0,
+  "per_round": {
+    "round_01": {
+      "score": null,
+      "evidence": [
+        "round_01/replay.jsonl",
+        "round_01/acceptance.json"
+      ]
+    },
+    "round_02": {
+      "score": null,
+      "evidence": [
+        "round_02/replay.jsonl",
+        "round_02/acceptance.json"
+      ]
+    },
+    "round_03": {
+      "score": null,
+      "evidence": [
+        "round_03/replay.jsonl",
+        "round_03/acceptance.json"
+      ]
+    },
+    "round_04": {
+      "score": null,
+      "evidence": [
+        "round_04/replay.jsonl",
+        "round_04/acceptance.json"
+      ]
+    },
+    "round_05": {
+      "score": null,
+      "evidence": [
+        "round_05/replay.jsonl",
+        "round_05/acceptance.json"
+      ]
+    },
+    "round_06": {
+      "score": null,
+      "evidence": [
+        "round_06/replay.jsonl",
+        "round_06/acceptance.json"
+      ]
+    },
+    "round_07": {
+      "score": null,
+      "evidence": [
+        "round_07/replay.jsonl",
+        "round_07/acceptance.json"
+      ]
+    },
+    "round_08": {
+      "score": null,
+      "evidence": [
+        "round_08/replay.jsonl",
+        "round_08/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "round_01..08/replay.jsonl",
+    "round_01..08/commands.log",
+    "round_01..08/diff.patch",
+    "round_01..08/acceptance.json",
+    "transcripts/deepseek-v4-pro.jsonl"
+  ],
+  "reason": "Turn-gate calibrated rescore from preserved evidence: original acceptance is preserved; prompt-specific gates expose repeated per-round completion misses, with final snapshot still failing cwd-independent CLI, hidden acceptance import, and memory report.",
+  "deductions": [
+    {
+      "round": "round_01..08",
+      "item": "acceptance evidence",
+      "amount": 25,
+      "reason": "all parsed acceptance gates are false; used as evidence, not copied score"
+    },
+    {
+      "round": "round_08",
+      "item": "finalization",
+      "amount": 25,
+      "reason": "compact summary rebuilt, but round_08 lacks response.md/finish event"
+    },
+    {
+      "round": "round_02/04/05/07/08",
+      "item": "json protocol repair",
+      "amount": 10,
+      "reason": "transcript contains five invalid_json/json_repair events; repair continued run but indicates protocol instability"
+    }
+  ],
+  "evidence_gaps": [
+    "round_08 missing response.md and finish event"
+  ],
+  "turn_gate_calibrated": true,
+  "calibration_note": "Rescored without rerunning model; acceptance remains evidence, not copied as capability score."
+}

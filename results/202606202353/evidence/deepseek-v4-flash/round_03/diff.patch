@@ -1,0 +1,131 @@
+diff --git a/src/mini_harness/engine.py b/src/mini_harness/engine.py
+index 66bda86..6109b97 100644
+--- a/src/mini_harness/engine.py
++++ b/src/mini_harness/engine.py
+@@ -3,62 +3,33 @@ import json
+ import os
+ import sys
+ 
++# Global retry counter
++_retry_count = 0
++
+ def run_pipeline(input_path, output_path):
+-    stage = "extract"
+-    attempt = 0
+-    max_retries = 2
+-    log_entry = {"stage": stage, "attempt": attempt, "status": "started"}
+-    print(json.dumps(log_entry))
+-    
+-    records = []
++    global _retry_count
++    _retry_count = 0
++
++    # DAG stages
++    stages = ["extract", "clean", "report"]
++    state = {}
++
+     # extract
+-    for attempt in range(1, max_retries + 2):
+-        try:
+-            records = extract(input_path)
+-            log_entry = {"stage": "extract", "attempt": attempt, "status": "success"}
+-            print(json.dumps(log_entry))
+-            break
+-        except Exception as e:
+-            log_entry = {"stage": "extract", "attempt": attempt, "status": "failed", "error": str(e)}
+-            print(json.dumps(log_entry))
+-            if attempt > max_retries:
+-                log_entry = {"stage": "extract", "attempt": attempt, "status": "abort"}
+-                print(json.dumps(log_entry))
+-                sys.exit(1)
+-    
++    records = run_stage("extract", lambda: extract(input_path))
++    state["records"] = records
++
+     # clean
+-    for attempt in range(1, max_retries + 2):
+-        try:
+-            cleaned, rejected = clean(records)
+-            log_entry = {"stage": "clean", "attempt": attempt, "status": "success"}
+-            print(json.dumps(log_entry))
+-            break
+-        except Exception as e:
+-            log_entry = {"stage": "clean", "attempt": attempt, "status": "failed", "error": str(e)}
+-            print(json.dumps(log_entry))
+-            if attempt > max_retries:
+-                log_entry = {"stage": "clean", "attempt": attempt, "status": "abort"}
+-                print(json.dumps(log_entry))
+-                sys.exit(1)
+-    
++    cleaned, rejected = run_stage("clean", lambda: clean(state["records"]))
++    state["cleaned"] = cleaned
++    state["rejected"] = rejected
++
+     # report
+-    for attempt in range(1, max_retries + 2):
+-        try:
+-            report = generate_report(cleaned, rejected, input_path)
+-            log_entry = {"stage": "report", "attempt": attempt, "status": "success"}
+-            print(json.dumps(log_entry))
+-            break
+-        except Exception as e:
+-            log_entry = {"stage": "report", "attempt": attempt, "status": "failed", "error": str(e)}
+-            print(json.dumps(log_entry))
+-            if attempt > max_retries:
+-                log_entry = {"stage": "report", "attempt": attempt, "status": "abort"}
+-                print(json.dumps(log_entry))
+-                sys.exit(1)
+-    
++    report = run_stage("report", lambda: generate_report(state["cleaned"], state["rejected"], input_path))
++
++    # write output
+     with open(output_path, "w") as f:
+         json.dump(report, f, indent=2)
+-    
++
+     # memory summary reference
+     memory_path = "memory/memory_summary.md"
+     if os.path.exists(memory_path):
+@@ -70,6 +41,30 @@ def run_pipeline(input_path, output_path):
+         with open(output_path, "w") as f:
+             json.dump(report_data, f, indent=2)
+ 
++def run_stage(stage, func):
++    global _retry_count
++    max_retries = 2
++    last_exception = None
++    for attempt in range(1, max_retries + 2):
++        log = {"stage": stage, "attempt": attempt, "status": "started"}
++        print(json.dumps(log))
++        try:
++            result = func()
++            log = {"stage": stage, "attempt": attempt, "status": "success"}
++            print(json.dumps(log))
++            return result
++        except Exception as e:
++            last_exception = e
++            _retry_count += 1
++            log = {"stage": stage, "attempt": attempt, "status": "failed", "error": str(e)}
++            print(json.dumps(log))
++            if attempt > max_retries:
++                log = {"stage": stage, "attempt": attempt, "status": "abort"}
++                print(json.dumps(log))
++                sys.exit(1)
++    # unreachable
++    raise last_exception
++
+ def extract(input_path):
+     records = []
+     if input_path.endswith(".csv"):
+@@ -106,10 +101,9 @@ def clean(records):
+     return cleaned, rejected
+ 
+ def generate_report(cleaned, rejected, input_path):
+-    retry_count = 0  # simplified; actual retry count could be tracked globally
+     return {
+         "processed_count": len(cleaned),
+         "rejected_count": len(rejected),
+-        "retry_count": retry_count,
++        "retry_count": _retry_count,
+         "source_files": [input_path]
+     }

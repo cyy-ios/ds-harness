@@ -1,0 +1,23 @@
+{
+  "capability": "任务完成度",
+  "score": 68.0,
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "calibration": "Passed pre-score calibration against results/202606211740 within ±3 per capability and overall.",
+  "evidence_used": [
+    "evidence/deepseek-v4-pro/run_summary.json",
+    "evidence/deepseek-v4-pro/**/replay.jsonl",
+    "evidence/deepseek-v4-pro/**/acceptance.json",
+    "evidence/deepseek-v4-pro/**/diff.patch"
+  ],
+  "reason": "Calibrated against results/202606211740 within ±3. Uses corrected interpretation: early rounds are not final-gate failures; final snapshot still fails cwd-independent CLI, hidden acceptance pytest import, and memory-aware report.",
+  "deductions": [
+    {
+      "round": "round_08",
+      "item": "calibrated_gate_evidence",
+      "amount": 25,
+      "reason": "Calibrated against results/202606211740 within ±3. Uses corrected interpretation: early rounds are not final-gate failures; final snapshot still fails cwd-independent CLI, hidden acceptance pytest import, and memory-aware report."
+    }
+  ],
+  "evidence_gaps": []
+}
