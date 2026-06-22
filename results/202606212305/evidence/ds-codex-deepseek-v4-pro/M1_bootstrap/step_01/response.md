@@ -1,0 +1,1 @@
+实现完成。`python -m mini_harness run` 正常执行，报告输出 4 processed / 2 rejected / 0 retries，日志记录 extract→clean→report 三阶段，`run_dag` 和 `HarnessError` 均可从 `mini_harness.runner` 正常导入。
