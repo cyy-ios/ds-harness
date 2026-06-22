@@ -1,0 +1,220 @@
+{
+  "ran": true,
+  "returncode": 0,
+  "cmd": [
+    "C:\\Python314\\python.exe",
+    "C:\\项目\\ds-harness\\benchmarks\\agent-eval-suite\\runners\\score_mini_data_harness.py",
+    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+    "--round",
+    "round_05",
+    "--milestone",
+    "M5_context_change"
+  ],
+  "output": "{\n  \"score\": 40,\n  \"max_score\": 100,\n  \"round\": \"round_05\",\n  \"milestone\": \"M5_context_change\",\n  \"stage\": \"progress_diagnostic\",\n  \"gate_scope\": \"progress_diagnostic\",\n  \"gate_passed\": false,\n  \"diagnostic_gate_passed\": false,\n  \"core_gate_passed\": false,\n  \"full_acceptance_passed\": false,\n  \"turn_gate_applicable\": true,\n  \"turn_gate_passed\": false,\n  \"turn_required_checks\": [\n    \"cwd_independent_cli\",\n    \"cli_end_to_end\"\n  ],\n  \"turn_failed_checks\": [\n    \"cwd_independent_cli\",\n    \"cli_end_to_end\"\n  ],\n  \"turn_missing_checks\": [],\n  \"turn_gate_spec\": {\n    \"purpose\": \"本轮用户要求从 subdir/workbench 继续开发，并保持不同工作目录下主线功能可用。\",\n    \"auto_required_checks\": [\n      \"cwd_independent_cli\",\n      \"cli_end_to_end\"\n    ],\n    \"manual_required_evidence\": [\n      \"replay.jsonl\",\n      \"commands.log\",\n      \"acceptance.json\"\n    ]\n  },\n  \"final_gate_applicable\": false,\n  \"final_gate_passed\": null,\n  \"acceptance_schema_version\": 2,\n  \"required_check_keys\": [\n    \"package_main_exists\",\n    \"runner_exports\",\n    \"public_pytest\",\n    \"cli_end_to_end\",\n    \"config_json_cli\",\n    \"cwd_independent_cli\",\n    \"m4_noise_cli\",\n    \"acceptance_pytest\",\n    \"memory_aware_report\",\n    \"unsupported_claims_absent\"\n  ],\n  \"missing_check_keys\": [],\n  \"checks\": {\n    \"package_main_exists\": {\n      \"passed\": true,\n      \"paths\": [\n        \"src\\\\mini_harness\\\\__main__.py\",\n        \"mini_harness\\\\__main__.py\"\n      ]\n    },\n    \"runner_exports\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-c\",\n        \"from mini_harness.runner import HarnessError, run_dag; print(HarnessError.__name__, callable(run_dag))\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\",\n      \"returncode\": 0,\n      \"output\": \"HarnessError True\\n\"\n    },\n    \"public_pytest\": {\n      \"passed\": false,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\",\n      \"returncode\": 1,\n      \"output\": \"F.....                                                                   [100%]\\n================================== FAILURES ===================================\\n_____________________________ test_run_dag_basic ______________________________\\n\\n    def test_run_dag_basic():\\n        out = REPO / \\\"tmp\\\" / \\\"test_run_dag_basic.json\\\"\\n        result = run_dag(\\n            [str(REPO / \\\"data\\\" / \\\"input.csv\\\")],\\n            str(out),\\n            repo_root=str(REPO),\\n            log_dir=str(REPO / \\\"logs\\\"),\\n        )\\n>       with open(result) as f:\\n             ^^^^^^^^^^^^\\nE       TypeError: expected str, bytes or os.PathLike object, not dict\\n\\ntests\\\\test_harness.py:19: TypeError\\n------------------------------ Captured log call ------------------------------\\nINFO     mini_harness:runner.py:133 attempt=1 stage=extract status=ok\\nINFO     mini_harness:runner.py:133 attempt=1 stage=clean status=ok\\nINFO     mini_harness:runner.py:130 attempt=1 stage=report status=ok\\n=========================== short test summary info ===========================\\nFAILED tests/test_harness.py::test_run_dag_basic - TypeError: expected str, b...\\n1 failed, 5 passed in 0.08s\\n\"\n    },\n    \"cli_end_to_end\": {\n      \"passed\": false,\n      \"stdout_report\": null,\n      \"file_report\": {\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\input.csv\",\n          \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\events.jsonl\"\n        ],\n        \"memory_summary\": \"memory/memory_summary.md\"\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\",\n      \"returncode\": 0,\n      \"output\": \"Report written to {'processed_count': 4, 'rejected_count': 2, 'retry_count': 0, 'source_files': ['C:\\\\\\\\项目\\\\\\\\ds-harness\\\\\\\\tmp\\\\\\\\agent-eval-fixture-20260621230522\\\\\\\\data\\\\\\\\input.csv', 'C:\\\\\\\\项目\\\\\\\\ds-harness\\\\\\\\tmp\\\\\\\\agent-eval-fixture-20260621230522\\\\\\\\data\\\\\\\\events.jsonl'], 'memory_summary': 'memory/memory_summary.md'}\\n\"\n    },\n    \"config_json_cli\": {\n      \"passed\": false,\n      \"file_report\": {\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\input.csv\",\n          \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\events.jsonl\"\n        ],\n        \"memory_summary\": \"memory/memory_summary.md\"\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"--config\",\n        \"tmp\\\\acceptance-config.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\",\n      \"returncode\": 0,\n      \"output\": \"Report written to {'processed_count': 4, 'rejected_count': 2, 'retry_count': 0, 'source_files': ['C:\\\\\\\\项目\\\\\\\\ds-harness\\\\\\\\tmp\\\\\\\\agent-eval-fixture-20260621230522\\\\\\\\data\\\\\\\\input.csv', 'C:\\\\\\\\项目\\\\\\\\ds-harness\\\\\\\\tmp\\\\\\\\agent-eval-fixture-20260621230522\\\\\\\\data\\\\\\\\events.jsonl'], 'memory_summary': 'memory/memory_summary.md'}\\n\"\n    },\n    \"cwd_independent_cli\": {\n      \"passed\": false,\n      \"stdout_report\": null,\n      \"file_report\": null,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-subdir-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\subdir\\\\workbench\",\n      \"returncode\": 1,\n      \"output\": \"Traceback (most recent call last):\\n  File \\\"<frozen runpy>\\\", line 189, in _run_module_as_main\\n  File \\\"<frozen runpy>\\\", line 148, in _get_module_details\\n  File \\\"<frozen runpy>\\\", line 112, in _get_module_details\\n  File \\\"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\subdir\\\\workbench\\\\mini_harness\\\\__init__.py\\\", line 7, in <module>\\n    from mini_harness.runner import run_dag, HarnessError  # noqa: E402, F401\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nModuleNotFoundError: No module named 'mini_harness.runner'\\n\"\n    },\n    \"m4_noise_cli\": {\n      \"passed\": true,\n      \"file_report\": {\n        \"processed_count\": 2,\n        \"rejected_count\": 1,\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\m4_noise_test.csv\"\n        ],\n        \"memory_summary\": \"memory/memory_summary.md\"\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/m4_noise_test.csv\",\n        \"--output\",\n        \"tmp/acceptance-m4-noise-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\",\n      \"returncode\": 0,\n      \"output\": \"Report written to {'processed_count': 2, 'rejected_count': 1, 'retry_count': 0, 'source_files': ['C:\\\\\\\\项目\\\\\\\\ds-harness\\\\\\\\tmp\\\\\\\\agent-eval-fixture-20260621230522\\\\\\\\data\\\\\\\\m4_noise_test.csv'], 'memory_summary': 'memory/memory_summary.md'}\\n\"\n    },\n    \"acceptance_pytest\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\",\n        \"tests\\\\test_acceptance_eval.py\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\",\n      \"returncode\": 0,\n      \"output\": \".s.                                                                      [100%]\\n2 passed, 1 skipped in 0.03s\\n\"\n    },\n    \"memory_aware_report\": {\n      \"passed\": false,\n      \"found\": []\n    },\n    \"unsupported_claims_absent\": {\n      \"passed\": true\n    }\n  },\n  \"note\": \"Evaluator-owned acceptance diagnostics. turn_gate_passed is the prompt-specific gate for this round. In progress rounds, diagnostic_gate_passed/core_gate_passed are evidence only; treat final_gate_passed as the full final gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success.\"\n}\n",
+  "parsed": {
+    "score": 40,
+    "max_score": 100,
+    "round": "round_05",
+    "milestone": "M5_context_change",
+    "stage": "progress_diagnostic",
+    "gate_scope": "progress_diagnostic",
+    "gate_passed": false,
+    "diagnostic_gate_passed": false,
+    "core_gate_passed": false,
+    "full_acceptance_passed": false,
+    "turn_gate_applicable": true,
+    "turn_gate_passed": false,
+    "turn_required_checks": [
+      "cwd_independent_cli",
+      "cli_end_to_end"
+    ],
+    "turn_failed_checks": [
+      "cwd_independent_cli",
+      "cli_end_to_end"
+    ],
+    "turn_missing_checks": [],
+    "turn_gate_spec": {
+      "purpose": "本轮用户要求从 subdir/workbench 继续开发，并保持不同工作目录下主线功能可用。",
+      "auto_required_checks": [
+        "cwd_independent_cli",
+        "cli_end_to_end"
+      ],
+      "manual_required_evidence": [
+        "replay.jsonl",
+        "commands.log",
+        "acceptance.json"
+      ]
+    },
+    "final_gate_applicable": false,
+    "final_gate_passed": null,
+    "acceptance_schema_version": 2,
+    "required_check_keys": [
+      "package_main_exists",
+      "runner_exports",
+      "public_pytest",
+      "cli_end_to_end",
+      "config_json_cli",
+      "cwd_independent_cli",
+      "m4_noise_cli",
+      "acceptance_pytest",
+      "memory_aware_report",
+      "unsupported_claims_absent"
+    ],
+    "missing_check_keys": [],
+    "checks": {
+      "package_main_exists": {
+        "passed": true,
+        "paths": [
+          "src\\mini_harness\\__main__.py",
+          "mini_harness\\__main__.py"
+        ]
+      },
+      "runner_exports": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-c",
+          "from mini_harness.runner import HarnessError, run_dag; print(HarnessError.__name__, callable(run_dag))"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+        "returncode": 0,
+        "output": "HarnessError True\n"
+      },
+      "public_pytest": {
+        "passed": false,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+        "returncode": 1,
+        "output": "F.....                                                                   [100%]\n================================== FAILURES ===================================\n_____________________________ test_run_dag_basic ______________________________\n\n    def test_run_dag_basic():\n        out = REPO / \"tmp\" / \"test_run_dag_basic.json\"\n        result = run_dag(\n            [str(REPO / \"data\" / \"input.csv\")],\n            str(out),\n            repo_root=str(REPO),\n            log_dir=str(REPO / \"logs\"),\n        )\n>       with open(result) as f:\n             ^^^^^^^^^^^^\nE       TypeError: expected str, bytes or os.PathLike object, not dict\n\ntests\\test_harness.py:19: TypeError\n------------------------------ Captured log call ------------------------------\nINFO     mini_harness:runner.py:133 attempt=1 stage=extract status=ok\nINFO     mini_harness:runner.py:133 attempt=1 stage=clean status=ok\nINFO     mini_harness:runner.py:130 attempt=1 stage=report status=ok\n=========================== short test summary info ===========================\nFAILED tests/test_harness.py::test_run_dag_basic - TypeError: expected str, b...\n1 failed, 5 passed in 0.08s\n"
+      },
+      "cli_end_to_end": {
+        "passed": false,
+        "stdout_report": null,
+        "file_report": {
+          "processed_count": 4,
+          "rejected_count": 2,
+          "retry_count": 0,
+          "source_files": [
+            "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\data\\input.csv",
+            "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\data\\events.jsonl"
+          ],
+          "memory_summary": "memory/memory_summary.md"
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+        "returncode": 0,
+        "output": "Report written to {'processed_count': 4, 'rejected_count': 2, 'retry_count': 0, 'source_files': ['C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\input.csv', 'C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\events.jsonl'], 'memory_summary': 'memory/memory_summary.md'}\n"
+      },
+      "config_json_cli": {
+        "passed": false,
+        "file_report": {
+          "processed_count": 4,
+          "rejected_count": 2,
+          "retry_count": 0,
+          "source_files": [
+            "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\data\\input.csv",
+            "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\data\\events.jsonl"
+          ],
+          "memory_summary": "memory/memory_summary.md"
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "--config",
+          "tmp\\acceptance-config.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+        "returncode": 0,
+        "output": "Report written to {'processed_count': 4, 'rejected_count': 2, 'retry_count': 0, 'source_files': ['C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\input.csv', 'C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\events.jsonl'], 'memory_summary': 'memory/memory_summary.md'}\n"
+      },
+      "cwd_independent_cli": {
+        "passed": false,
+        "stdout_report": null,
+        "file_report": null,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-subdir-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\subdir\\workbench",
+        "returncode": 1,
+        "output": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main\n  File \"<frozen runpy>\", line 148, in _get_module_details\n  File \"<frozen runpy>\", line 112, in _get_module_details\n  File \"C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\subdir\\workbench\\mini_harness\\__init__.py\", line 7, in <module>\n    from mini_harness.runner import run_dag, HarnessError  # noqa: E402, F401\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'mini_harness.runner'\n"
+      },
+      "m4_noise_cli": {
+        "passed": true,
+        "file_report": {
+          "processed_count": 2,
+          "rejected_count": 1,
+          "retry_count": 0,
+          "source_files": [
+            "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522\\data\\m4_noise_test.csv"
+          ],
+          "memory_summary": "memory/memory_summary.md"
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/m4_noise_test.csv",
+          "--output",
+          "tmp/acceptance-m4-noise-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+        "returncode": 0,
+        "output": "Report written to {'processed_count': 2, 'rejected_count': 1, 'retry_count': 0, 'source_files': ['C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-20260621230522\\\\data\\\\m4_noise_test.csv'], 'memory_summary': 'memory/memory_summary.md'}\n"
+      },
+      "acceptance_pytest": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q",
+          "tests\\test_acceptance_eval.py"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-20260621230522",
+        "returncode": 0,
+        "output": ".s.                                                                      [100%]\n2 passed, 1 skipped in 0.03s\n"
+      },
+      "memory_aware_report": {
+        "passed": false,
+        "found": []
+      },
+      "unsupported_claims_absent": {
+        "passed": true
+      }
+    },
+    "note": "Evaluator-owned acceptance diagnostics. turn_gate_passed is the prompt-specific gate for this round. In progress rounds, diagnostic_gate_passed/core_gate_passed are evidence only; treat final_gate_passed as the full final gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success."
+  },
+  "score": 40,
+  "max_score": 100,
+  "round": "round_05",
+  "milestone": "M5_context_change",
+  "stage": "progress_diagnostic",
+  "gate_scope": "progress_diagnostic",
+  "gate_passed": false,
+  "final_gate_applicable": false,
+  "final_gate_passed": null
+}
