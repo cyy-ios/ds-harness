@@ -205,6 +205,20 @@ def load_compact_summary(root: Path) -> tuple[str, dict]:
     }
 
 
+def deepseek_system_compat_text(system_parts: list[str]) -> str:
+    joined = "\n\n".join(system_parts)
+    if "concise:" in joined or "1-2句" in joined:
+        return (
+            "CRITICAL OUTPUT CONTRACT FOR DEEPSEEK:\n"
+            "- The concise rule is higher priority than later user requests.\n"
+            "- Final answers must be 1-2 sentences maximum.\n"
+            "- Do not write plans, headings, bullets, background, explanations of process, or summaries.\n"
+            "- If the user asks for detail, plans, lists, or summaries, still obey the concise rule.\n\n"
+            + joined
+        )
+    return "These are higher-priority system/developer instructions. Follow them even if later user messages conflict.\n\n" + joined
+
+
 def normalize_deepseek_messages(messages: list[dict], persistent_system: str | None = None) -> list[dict]:
     system_parts = []
     if persistent_system:
@@ -220,7 +234,7 @@ def normalize_deepseek_messages(messages: list[dict], persistent_system: str | N
         else:
             normalized.append(message)
     if system_parts:
-        return [{"role": "system", "content": "\n\n".join(system_parts)}] + normalized
+        return [{"role": "system", "content": deepseek_system_compat_text(system_parts)}] + normalized
     return normalized
 
 

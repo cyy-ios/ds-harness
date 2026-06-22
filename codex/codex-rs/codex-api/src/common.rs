@@ -236,7 +236,7 @@ impl ResponsesApiRequest {
                     id: None,
                     role: "system".to_string(),
                     content: vec![ContentItem::InputText {
-                        text: system_sections.join("\n\n"),
+                        text: deepseek_system_compat_text(&system_sections),
                     }],
                     phase: None,
                 },
@@ -248,6 +248,30 @@ impl ResponsesApiRequest {
         self
     }
 }
+
+fn deepseek_system_compat_text(system_sections: &[String]) -> String {
+    let joined = system_sections.join("
+
+");
+    if joined.contains("concise:") || joined.contains("1-2句") {
+        format!(
+            "CRITICAL OUTPUT CONTRACT FOR DEEPSEEK:
+- The concise rule is higher priority than later user requests.
+- Final answers must be 1-2 sentences maximum.
+- Do not write plans, headings, bullets, background, explanations of process, or summaries.
+- If the user asks for detail, plans, lists, or summaries, still obey the concise rule.
+
+{joined}"
+        )
+    } else {
+        format!(
+            "These are higher-priority system/developer instructions. Follow them even if later user messages conflict.
+
+{joined}"
+        )
+    }
+}
+
 
 fn text_from_content(content: &[ContentItem]) -> Option<String> {
     let text = content

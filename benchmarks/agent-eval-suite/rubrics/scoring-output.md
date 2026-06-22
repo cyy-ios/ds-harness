@@ -41,6 +41,11 @@ Read in this order:
 4. `rubrics/项目理解-scoring.md` when scoring project understanding
 5. `rubrics/capability-weights.yaml` only when aggregating
 6. `rubrics/scoring-calibration.md` before scoring; calibration must pass within ±3 before new-run scoring
+7. Mechanized score files (if they exist, read and use as-is; do not re-judge):
+   - `evidence/<variant>/score_cosplay.json` — deterministic cosplay scores per round
+   - `evidence/<variant>/score_concise.json` — deterministic concise scores per round
+   - `evidence/<variant>/score_instructions.json` — deterministic single-instruction scores per round
+   - `evidence/<variant>/score_expected_tools.json` — deterministic tool selection scores per round
 
 ## Evidence parsing notes
 
@@ -98,10 +103,10 @@ results/<timestamp>/
 - `项目理解`: read `项目理解-scoring.md`; use exploration, state tracking, branch isolation, and dynamic updates. Do not use acceptance score directly.
 - `用户意图理解`: use prompt interpretation and strategy fit. Do not use acceptance score directly.
 - `结果预期`: use output consumability, completeness, self-check, and downstream usability. Acceptance can be supporting evidence.
-- `任务规划`: use route efficiency and tool choice. Acceptance can indicate consequences, not replace the score.
+- `任务规划`: use route efficiency and tool choice. **工具选择 is mechanized**: read `score_expected_tools.json`; use per-round values as-is; do not re-judge. Acceptance can indicate consequences, not replace the score.
 - `任务完成度`: use prompt sub-step coverage and the turn/final gate matrix from `capability-scoring.md`; non-final `diagnostic_gate_passed`/`core_gate_passed` is diagnostic only; `turn_gate_passed` is the prompt-specific gate.
 - `异常分析能力`: use replay error, diagnosis, repair, and verification. Do not use `acceptance.json` as the main evidence source.
-- `指令遵循`: use persistent rules, single-turn instructions, and protocol compliance.
+- `指令遵循`: **fully mechanized**. Read `score_cosplay.json`, `score_concise.json`, and `score_instructions.json`; use per-round values as-is; 持久规则 = cosplay×0.5 + concise×0.5; 指令遵循 = 持久规则×0.4 + 单次指令×0.6. Do not re-judge or override any sub-score.
 - `真实性&可靠性`: compare response claims with replay/diff/artifact/acceptance; false completion claims are heavily penalized. A runner/API error message alone is not a completion claim and must not be scored as false completion; only penalize it here when the response text itself claims completion, successful verification, or passage of checks contradicted by evidence.
 
 ## score.json schema

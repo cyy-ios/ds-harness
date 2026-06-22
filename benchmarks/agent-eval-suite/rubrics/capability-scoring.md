@@ -229,30 +229,20 @@
 | ≥30% | 25 |
 | <30% | 0 |
 
-#### 1.2 工具选择（40分）
+#### 1.2 工具选择（40分）（已机械化，禁止 agent 重判）
 
-证据：当前轮的 `replay.jsonl`（tool_call 的 tool 字段）。
+工具选择分数由 `score_expected_tools.py` 确定性计算。评分 agent 必须：
 
-专用工具对照表：
+1. 读取 `evidence/<variant>/score_expected_tools.json` → `per_round.<milestone>.score`
+2. 直接使用该值；禁止 agent 自行判断工具选择
 
-| 专用工具 | 替代的通用方式 |
-|----------|--------------|
-| Read | shell cat |
-| Glob | shell ls / dir / find |
-| Grep | shell grep / Select-String |
-| Edit | Write 全量覆盖 / echo 重定向 |
+若 `score_expected_tools.json` 不存在，运行 `python runners/score_expected_tools.py <evidence_root>` 生成。
 
-只统计出场了专用工具或其通用替代的操作。mkdir / cd / set / export / pytest / python -m 等无专用替代的操作不计入分母。
-
-**专用工具占比** = 使用专用工具的操作数 / (使用专用 + 使用通用替代的操作数)。分母为 0 时（全为无替代操作）→ 100。
-
-| 占比 | 分数 |
-|------|------|
-| =100% | 100 |
-| ≥75% | 75 |
-| ≥50% | 50 |
-| ≥25% | 25 |
-| <25% | 0 |
+机械化规则：
+- 每轮期望工具清单来自 `tasks/<task>/tool-checklist.json`
+- 工具使用率 = 实际调用的期望工具数 / 总期望工具数
+- 空清单 → 100（本轮不评估工具选择）
+- =100% → 100, ≥75% → 75, ≥50% → 50, ≥25% → 25, <25% → 0
 
 ---
 
@@ -288,34 +278,46 @@
 
 检查该轮 response 是否遵循全局注入的持久规则。
 
-证据：当前轮的 `response.md`。
+证据：cosplay 读 `score_cosplay.json`；concise 读 `score_concise.json`；单次指令读 `score_instructions.json`。
 
-#### cosplay 规则
+#### cosplay 规则（已机械化，禁止 agent 重判）
 
-检查 response 格式是否符合包裹格式要求。
+cosplay 分数由 `score_cosplay.py` 确定性计算。评分 agent 必须：
 
-100：格式完整，`臣某谨奏` 和 `叩请圣裁` 均存在。
-0：缺少任一项。
+1. 读取 `evidence/<variant>/score_cosplay.json` → `per_round.<milestone>.score`
+2. 直接使用该值；禁止 agent 自行判断 cosplay；禁止给未通过轮次打非 0 分
 
-#### concise 规则
+若 `score_cosplay.json` 不存在，运行 `python runners/score_cosplay.py <evidence_root>` 生成。
 
-检查 response 是否符合 concise 规则：是否简洁、无冗余、无客套、无废词。
+#### concise 规则（已机械化，禁止 agent 重判）
 
-100：严格遵循 concise，每句无法删减，信息密度高。
-75：基本简洁，个别处略冗余但整体信噪比高。
-50：部分冗余或客套，可明显精简。
-25：明显冗余或客套，多处可大幅删减。
-0：大量废话、客套、铺垫，信息密度极低。
+concise 分数由 `score_concise.py` 确定性计算。评分 agent 必须：
+
+1. 读取 `evidence/<variant>/score_concise.json` → `per_round.<milestone>.score`
+2. 直接使用该值；禁止 agent 自行判断 concise；禁止修改分数
+
+若 `score_concise.json` 不存在，运行 `python runners/score_concise.py <evidence_root>` 生成。
+
+机械化规则：
+- `concise = min(字符分, 段落分)`
+- 字符分：≤200→100, ≤400→75, ≤700→50, ≤1200→25, >1200→0
+- 段落分：≤2→100, ≤4→75, ≤7→50, ≤12→25, >12→0
 
 持久规则得分 = cosplay × w_cosplay + concise × w_concise（权重见 `capability-weights.yaml`）。
 
-### 单次指令
+### 单次指令（已机械化，禁止 agent 重判）
 
-证据：当前轮的 `prompt.json` + `replay.jsonl` + `diff.patch`。
+单次指令分数由 `score_instructions.py` 确定性计算。评分 agent 必须：
 
-从 prompt 提取指令清单（正面指令 + 禁止指令），逐一比对 replay/diff。
+1. 读取 `evidence/<variant>/score_instructions.json` → `per_round.<milestone>.score`
+2. 直接使用该值；禁止 agent 自行判断单次指令；禁止修改分数
 
-**正面指令完成率** = 已执行的正面指令数 / 总正面指令数。
+若 `score_instructions.json` 不存在，运行 `python runners/score_instructions.py <evidence_root>` 生成。
+
+机械化规则：
+- 指令清单来自 `tasks/mini-data-harness/instruction-checklist.json`
+- 正面完成率 = 已执行正面指令数 / 总正面指令数
+- 禁止触犯按 severity 分关键/普通
 
 | 完成率 | 禁止触犯 | 分数 |
 |--------|----------|------|

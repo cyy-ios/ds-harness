@@ -28,6 +28,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+REQUIRED_ACCEPTANCE_CHECK_KEYS = {
+    "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
+    "config_json_cli", "cwd_independent_cli", "m4_noise_cli", "acceptance_pytest",
+    "memory_aware_report", "unsupported_claims_absent",
+}
+
 # ---------------------------------------------------------------------------
 # Codex JSONL 解析 —— 映射 codex exec --json 的事件到标准证据格式
 # ---------------------------------------------------------------------------
@@ -319,12 +325,12 @@ def extract_command_log(events: list[dict]) -> str:
         if record.get("event_type") == "tool_call":
             tool = record.get("tool", "")
             inp = record.get("tool_input", {})
-            if tool in ("bash", "shell", "execute_command"):
+            if tool in ("bash", "shell", "execute_command", "command_execution"):
                 cmd = inp.get("command", "") or inp.get("cmd", "") or json.dumps(inp)
                 lines.append(f"$ {cmd}")
         elif record.get("event_type") == "tool_result":
             tool = record.get("tool", "")
-            if tool in ("bash", "shell", "execute_command"):
+            if tool in ("bash", "shell", "execute_command", "command_execution"):
                 lines.append(record.get("tool_output", ""))
                 lines.append(f"[error: {record.get('tool_error')}]")
                 lines.append("")
@@ -732,6 +738,11 @@ def _run_acceptance(repo_root: Path, *, round_id: str | None = None, milestone: 
         except json.JSONDecodeError:
             parsed = None
         if isinstance(parsed, dict):
+            checks = parsed.get("checks", {})
+            missing = sorted(REQUIRED_ACCEPTANCE_CHECK_KEYS - set(checks)) if isinstance(checks, dict) else sorted(REQUIRED_ACCEPTANCE_CHECK_KEYS)
+            if missing:
+                acceptance["schema_error"] = f"missing acceptance checks: {missing}"
+                acceptance["missing_check_keys"] = missing
             acceptance["parsed"] = parsed
             for key in [
                 "score",
@@ -961,7 +972,56 @@ def main():
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8",
     )
 
+    # ---- 机械化评分：cosplay + concise + 单次指令 + 工具选择 ----
+    _run_mechanized_scorer("score_cosplay.py", out)
+    _run_mechanized_scorer("score_concise.py", out)
+    _run_mechanized_scorer("score_instructions.py", out)
+    _run_mechanized_scorer("score_expected_tools.py", out)
+    _materialize_mechanized_replacements(out)
+
     print(f"证据已输出到 {out}")
+
+
+def _materialize_mechanized_replacements(evidence_root: Path) -> None:
+    script = Path(__file__).resolve().parent / "materialize_mechanized_scores.py"
+    if not script.exists():
+        print("  跳过 mechanized-overrides：脚本不存在")
+        return
+    try:
+        cp = subprocess.run(
+            [sys.executable, str(script), str(evidence_root)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
+        )
+        if cp.returncode == 0:
+            print("  机械化替代: mechanized-overrides.json")
+        else:
+            print(f"  警告: mechanized-overrides 返回非零 exit code {cp.returncode}: {cp.stderr[:200]}")
+    except Exception as e:
+        print(f"  警告: mechanized-overrides 执行失败: {e}")
+
+
+def _run_mechanized_scorer(script_name: str, evidence_root: Path) -> None:
+    """Run a mechanized scoring script and write its output to evidence root."""
+    script = Path(__file__).resolve().parent / script_name
+    if not script.exists():
+        print(f"  跳过 {script_name}：脚本不存在")
+        return
+    try:
+        cp = subprocess.run(
+            [sys.executable, str(script), str(evidence_root), "--per-round"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if cp.returncode == 0:
+            data = json.loads(cp.stdout)
+            out_name = script_name.replace(".py", ".json")
+            (evidence_root / out_name).write_text(
+                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8",
+            )
+            print(f"  机械化评分: {out_name} (overall={data.get('overall')})")
+        else:
+            print(f"  警告: {script_name} 返回非零 exit code {cp.returncode}: {cp.stderr[:200]}")
+    except Exception as e:
+        print(f"  警告: {script_name} 执行失败: {e}")
 
 
 if __name__ == "__main__":

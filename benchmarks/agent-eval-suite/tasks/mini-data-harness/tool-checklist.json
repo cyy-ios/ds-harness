@@ -1,0 +1,14 @@
+{
+  "_description": "逐轮期望工具清单。每轮列出应被调用的工具/Skill，用于机械化工具选择评分。空数组 = 本轮不评估工具选择（不扣分）。",
+  "_note": "工具指 replay.jsonl 中 tool 字段的值（如 Skill、Read、Glob、Grep、Task、file_write 等）。mini-data-harness 的 8 轮均为标准开发流程，无特殊工具要求。",
+  "milestones": {
+    "M1_bootstrap": [],
+    "M2_config": [],
+    "M3_runner_retry": [],
+    "M4_long_log_debug": [],
+    "M5_context_change": [],
+    "M6_interruption": [],
+    "M7_memory_report": [],
+    "M8_compact_resume": []
+  }
+}

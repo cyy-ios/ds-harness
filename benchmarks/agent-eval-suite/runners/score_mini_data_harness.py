@@ -13,6 +13,21 @@ from pathlib import Path
 from typing import Any
 
 
+ACCEPTANCE_SCHEMA_VERSION = 2
+REQUIRED_CHECK_KEYS = [
+    "package_main_exists",
+    "runner_exports",
+    "public_pytest",
+    "cli_end_to_end",
+    "config_json_cli",
+    "cwd_independent_cli",
+    "m4_noise_cli",
+    "acceptance_pytest",
+    "memory_aware_report",
+    "unsupported_claims_absent",
+]
+
+
 def run(cmd: list[str], root: Path, cwd: Path | None = None, timeout: int = 30) -> dict[str, Any]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -38,6 +53,16 @@ def parse_json_from_stdout(text: str) -> dict[str, Any] | None:
         return json.loads(text)
     except json.JSONDecodeError:
         return None
+
+
+def load_json_file(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def report_matches(report: dict[str, Any] | None, expected: dict[str, Any]) -> bool:
@@ -99,7 +124,7 @@ def main() -> None:
         out_path.unlink()
     cli = run([sys.executable, "-m", "mini_harness", "run", "data/input.csv", "data/events.jsonl", "--output", "tmp/acceptance-report.json"], root)
     stdout_report = parse_json_from_stdout(cli["output"])
-    file_report = json.loads(out_path.read_text(encoding="utf-8")) if out_path.is_file() else None
+    file_report = load_json_file(out_path)
     checks["cli_end_to_end"] = {
         "passed": cli["returncode"] == 0 and report_summary_compatible(stdout_report, expected) and report_matches(file_report, expected),
         "stdout_report": stdout_report,
@@ -113,7 +138,7 @@ def main() -> None:
     if config_out.exists():
         config_out.unlink()
     config_cli = run([sys.executable, "-m", "mini_harness", "run", "--config", str(config_path.relative_to(root))], root)
-    config_report = json.loads(config_out.read_text(encoding="utf-8")) if config_out.is_file() else None
+    config_report = load_json_file(config_out)
     checks["config_json_cli"] = {
         "passed": config_cli["returncode"] == 0 and report_matches(config_report, expected),
         "file_report": config_report,
@@ -128,7 +153,7 @@ def main() -> None:
     subdir = root / "subdir" / "workbench"
     cli_subdir = run([sys.executable, "-m", "mini_harness", "run", "data/input.csv", "data/events.jsonl", "--output", "tmp/acceptance-subdir-report.json"], root, cwd=subdir)
     subdir_stdout = parse_json_from_stdout(cli_subdir["output"])
-    subdir_file = json.loads(out_subdir.read_text(encoding="utf-8")) if out_subdir.is_file() else None
+    subdir_file = load_json_file(out_subdir)
     checks["cwd_independent_cli"] = {
         "passed": cli_subdir["returncode"] == 0 and report_summary_compatible(subdir_stdout, expected) and report_matches(subdir_file, expected),
         "stdout_report": subdir_stdout,
@@ -140,7 +165,7 @@ def main() -> None:
     if m4_out.exists():
         m4_out.unlink()
     m4_cli = run([sys.executable, "-m", "mini_harness", "run", "data/m4_noise_test.csv", "--output", "tmp/acceptance-m4-noise-report.json"], root)
-    m4_report = json.loads(m4_out.read_text(encoding="utf-8")) if m4_out.is_file() else None
+    m4_report = load_json_file(m4_out)
     checks["m4_noise_cli"] = {
         "passed": m4_cli["returncode"] == 0 and isinstance(m4_report, dict) and m4_report.get("processed_count") == 2 and m4_report.get("rejected_count") == 1,
         "file_report": m4_report,
@@ -219,6 +244,7 @@ def test_acceptance_rejects_external_paths():
         root / "output/final_report.md",
         root / "docs/memory_aware_report.md",
         root / "docs/memory-aware-retrospective.md",
+        root / "memory/retrospective-report.json",
     ]
     report_text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in report_candidates if p.exists())
     checks["memory_aware_report"] = {
@@ -277,6 +303,9 @@ def test_acceptance_rejects_external_paths():
         "turn_gate_spec": turn_spec,
         "final_gate_applicable": final_gate_applicable,
         "final_gate_passed": full_acceptance_passed if final_gate_applicable else None,
+        "acceptance_schema_version": ACCEPTANCE_SCHEMA_VERSION,
+        "required_check_keys": REQUIRED_CHECK_KEYS,
+        "missing_check_keys": [k for k in REQUIRED_CHECK_KEYS if k not in checks],
         "checks": checks,
         "note": (
             "Evaluator-owned acceptance diagnostics. turn_gate_passed is the prompt-specific gate for this round. "
@@ -285,6 +314,10 @@ def test_acceptance_rejects_external_paths():
             "Agent-authored tests are diagnostic and public pytest is not sufficient for task success."
         ),
     }
+    missing_check_keys = [k for k in REQUIRED_CHECK_KEYS if k not in checks]
+    if missing_check_keys:
+        result["schema_error"] = f"missing required checks: {missing_check_keys}"
+        result["missing_check_keys"] = missing_check_keys
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

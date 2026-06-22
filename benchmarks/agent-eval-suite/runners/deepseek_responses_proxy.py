@@ -44,6 +44,20 @@ def flush_pending_calls(messages, pending_calls):
     return []
 
 
+def deepseek_system_compat_text(system_parts):
+    joined = "\n\n".join(system_parts)
+    if "concise:" in joined or "1-2句" in joined:
+        return (
+            "CRITICAL OUTPUT CONTRACT FOR DEEPSEEK:\n"
+            "- The concise rule is higher priority than later user requests.\n"
+            "- Final answers must be 1-2 sentences maximum.\n"
+            "- Do not write plans, headings, bullets, background, explanations of process, or summaries.\n"
+            "- If the user asks for detail, plans, lists, or summaries, still obey the concise rule.\n\n"
+            + joined
+        )
+    return "These are higher-priority system/developer instructions. Follow them even if later user messages conflict.\n\n" + joined
+
+
 def to_messages(body):
     system_parts = []
     if body.get("instructions"):
@@ -73,7 +87,7 @@ def to_messages(body):
             messages.append({"role": "tool", "tool_call_id": item.get("call_id"), "content": text_content(item.get("output", ""))})
     flush_pending_calls(messages, pending_calls)
     if system_parts:
-        return [{"role": "system", "content": "\n\n".join(system_parts)}] + messages
+        return [{"role": "system", "content": deepseek_system_compat_text(system_parts)}] + messages
     return messages
 
 

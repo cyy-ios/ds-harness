@@ -1,4 +1,4 @@
-﻿use crate::build_stage_one_input_message;
+use crate::build_stage_one_input_message;
 use crate::metrics::MEMORY_PHASE_ONE_E2E_MS;
 use crate::metrics::MEMORY_PHASE_ONE_JOBS;
 use crate::metrics::MEMORY_PHASE_ONE_OUTPUT;
@@ -724,7 +724,8 @@ mod tests {
                     call_id: "call_123".to_string(),
                     output: codex_protocol::models::FunctionCallOutputPayload {
                         body: codex_protocol::models::FunctionCallOutputBody::Text(
-                            r#"{"token":"test-api-key-abcdefghijklmnopqrstuvwxyz123456"}"#.to_string(),
+                            r#"{"token":"test-api-key-abcdefghijklmnopqrstuvwxyz123456"}"#
+                                .to_string(),
                         ),
                         success: Some(true),
                     },

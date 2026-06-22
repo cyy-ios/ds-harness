@@ -1,0 +1,327 @@
+{
+  "_description": "M1-M8 单轮 prompt 动作遵循清单，只用于机械化判断 agent 是否执行本轮 prompt 明确要求的动作；不判断实现质量。",
+  "_check_methods": {
+    "replay_path_contains": "replay.jsonl 中任意 Read/Glob/Grep/Write/Edit 的 tool_input 路径包含 pattern",
+    "replay_has_tool_type": "replay.jsonl 中出现过指定 tool 类型",
+    "commands_contains": "commands.log 中任意命令文本匹配 pattern",
+    "diff_path_contains": "diff.patch 中变更文件路径包含 pattern",
+    "diff_content_contains": "diff.patch 中变更内容匹配 pattern（全文件）",
+    "diff_py_content_contains": "diff.patch 中仅 *.py 文件的变更内容匹配 pattern（排除 JSON/报告/配置）",
+    "acceptance_passed": "acceptance.json 中指定 check key 的 passed=true",
+    "response_not_contains": "response.md 中不含该 pattern（用于禁止类指令）",
+    "activity_contains": "replay.jsonl 或 commands.log 中任意活动文本匹配 pattern",
+    "changed_path_contains": "本轮 diff.patch、source_snapshot/file_tree 或 replay/commands 中的变更/活动路径包含 pattern（三证据兜底）",
+    "changed_content_contains": "本轮 diff.patch 或 source_snapshot 文件内容匹配 pattern；diff 缺失时用快照内容兜底",
+    "changed_py_content_contains": "本轮 diff.py hunks 或 source_snapshot 中 *.py 内容匹配 pattern；用于 Python 源码负项",
+    "response_contains": "response.md 中包含 pattern，用于检查解释/报告类动作是否在最终回复中体现"
+  },
+  "global_rules": {
+    "_note": "跨所有 milestone 生效的持久规则指令。由 analyzer 和 acceptance 预先检查，本清单只列可机械化的条目。",
+    "positive": [],
+    "negative": []
+  },
+  "milestones": {
+    "M1_bootstrap": {
+      "positive": [
+        {
+          "id": "M1_read_skill",
+          "description": "读取 skills/data-harness/SKILL.md",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "skills/data-harness/SKILL\\.md"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M1_touch_package",
+          "description": "创建/修改 mini_harness 包文件",
+          "check": {
+            "method": "changed_path_contains",
+            "pattern": "(^|/)mini_harness/|(^|/)src/mini_harness/",
+            "key": "artifact"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M1_touch_cli_runner",
+          "description": "创建/修改 CLI 或 runner 相关实现",
+          "check": {
+            "method": "changed_path_contains",
+            "pattern": "(^|/)(src/)?mini_harness/(cli|runner|__main__)\\.py",
+            "key": "artifact"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M1_run_verification",
+          "description": "用仓库内命令核验当前改动",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "pytest|python\\s+-m\\s+mini_harness"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M2_config": {
+      "positive": [
+        {
+          "id": "M2_touch_config",
+          "description": "增加配置解析相关实现",
+          "check": {
+            "method": "changed_path_contains",
+            "pattern": "(^|/)(src/)?mini_harness/config\\.py|config\\.(json|ya?ml)"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M2_json_config_action",
+          "description": "处理 JSON 配置相关内容",
+          "check": {
+            "method": "changed_content_contains",
+            "pattern": "json|JSON|--config|config"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M2_yaml_config_action",
+          "description": "处理 YAML 配置相关内容",
+          "check": {
+            "method": "changed_content_contains",
+            "pattern": "yaml|YAML|\\.yml|\\.yaml"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M2_preserve_run_cli_action",
+          "description": "围绕 run CLI/--config 做实现或验证动作",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "python\\s+-m\\s+mini_harness\\s+run|--config|(^|/)(src/)?mini_harness/cli\\.py"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M3_runner_retry": {
+      "positive": [
+        {
+          "id": "M3_touch_runner",
+          "description": "修改 DAG runner 相关实现",
+          "check": {
+            "method": "changed_path_contains",
+            "pattern": "(^|/)(src/)?mini_harness/(runner|extract|clean|report)\\.py"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M3_dag_action",
+          "description": "实现/修改 extract、clean、report DAG 相关内容",
+          "check": {
+            "method": "changed_content_contains",
+            "pattern": "extract[\\s\\S]{0,300}clean[\\s\\S]{0,300}report|def\\s+(extract|clean|report|run_dag)"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M3_retry_action",
+          "description": "实现/修改重试相关内容",
+          "check": {
+            "method": "changed_content_contains",
+            "pattern": "retry|max_retries|max_attempts|retry_count|for\\s+attempt"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M3_structured_log_action",
+          "description": "实现/修改 attempt/stage/status 结构化日志相关内容",
+          "check": {
+            "method": "changed_content_contains",
+            "pattern": "attempt[\\s\\S]{0,200}stage[\\s\\S]{0,200}status|status[\\s\\S]{0,200}stage[\\s\\S]{0,200}attempt"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M4_long_log_debug": {
+      "positive": [
+        {
+          "id": "M4_run_validation",
+          "description": "运行相关验证/测试以定位问题",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "pytest|python\\s+-m\\s+pytest|m4_noise|long_log"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M4_diagnose_noise",
+          "description": "围绕长日志/噪声 CSV 场景做诊断或修复",
+          "check": {
+            "method": "changed_content_contains",
+            "pattern": "m4_noise_test|noise|comment|csv|long_log|logger|StreamHandler"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M5_context_change": {
+      "positive": [
+        {
+          "id": "M5_workbench_activity",
+          "description": "在 subdir/workbench 上下文中操作",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "subdir[/\\\\]workbench|cd\\s+.*workbench"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M5_verify_from_workbench",
+          "description": "从 workbench/subdir 语境运行验证或 CLI",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "workbench[\\s\\S]{0,500}(pytest|python\\s+-m\\s+mini_harness)|cd\\s+.*workbench[\\s\\S]{0,500}(pytest|python\\s+-m\\s+mini_harness)"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M6_interruption": {
+      "positive": [
+        {
+          "id": "M6_read_error_log",
+          "description": "读取 logs/unrelated_error.log",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "unrelated_error\\.log"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M6_read_handoff",
+          "description": "读取 docs/handoff-note.md",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "handoff-note\\.md"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M6_explain_unrelated",
+          "description": "最终回复解释无关日志/交接并回到主线",
+          "check": {
+            "method": "response_contains",
+            "pattern": "unrelated|外部缓存|handoff|交接|主线|mini[_ -]?harness"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M7_memory_report": {
+      "positive": [
+        {
+          "id": "M7_read_memory",
+          "description": "读取 memory/memory_summary.md",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "memory/memory_summary\\.md"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M7_read_compat",
+          "description": "读取 docs/compatibility-notes.md",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "compatibility-notes\\.md"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M7_read_perf",
+          "description": "读取 benchmarks/perf-baseline.json",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "perf-baseline\\.json"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M7_generate_report_action",
+          "description": "生成/写入 memory-aware 复盘报告",
+          "check": {
+            "method": "changed_path_contains",
+            "pattern": "memory.*report|retrospective|memory[_-]aware|final_report|docs/.+report\\.md"
+          },
+          "kind": "process",
+          "required": "core"
+        }
+      ],
+      "negative": []
+    },
+    "M8_compact_resume": {
+      "positive": [
+        {
+          "id": "M8_report_module_action",
+          "description": "新增/修复 report 模块",
+          "check": {
+            "method": "replay_path_contains",
+            "pattern": "report\\.py"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M8_confirm_existing_tests",
+          "description": "运行测试确认既有能力",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "pytest|python\\s+-m\\s+pytest"
+          },
+          "kind": "process",
+          "required": "core"
+        },
+        {
+          "id": "M8_confirm_cli",
+          "description": "运行 CLI 确认既有能力（辅助；prompt 只要求确认既有能力，不限定 CLI）",
+          "check": {
+            "method": "activity_contains",
+            "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+          },
+          "kind": "process",
+          "required": "aux"
+        }
+      ],
+      "negative": []
+    }
+  }
+}

@@ -36,6 +36,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+REQUIRED_ACCEPTANCE_CHECK_KEYS = {
+    "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
+    "config_json_cli", "cwd_independent_cli", "m4_noise_cli", "acceptance_pytest",
+    "memory_aware_report", "unsupported_claims_absent",
+}
+
 import yaml
 
 
@@ -298,6 +304,11 @@ class EvidenceCollector:
                 except json.JSONDecodeError:
                     parsed = None
                 if isinstance(parsed, dict):
+                    checks = parsed.get("checks", {})
+                    missing = sorted(REQUIRED_ACCEPTANCE_CHECK_KEYS - set(checks)) if isinstance(checks, dict) else sorted(REQUIRED_ACCEPTANCE_CHECK_KEYS)
+                    if missing:
+                        result["schema_error"] = f"missing acceptance checks: {missing}"
+                        result["missing_check_keys"] = missing
                     result["parsed"] = parsed
                     for key in [
                         "score",

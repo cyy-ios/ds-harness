@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 
+COSPLAY_OPEN = "臣某谨奏"
+COSPLAY_CLOSE = "叩请圣裁"
+
 BASE_SIGNALS = {
     "skill_read": r"skills/data-harness/SKILL\.md",
     "pytest_run": r"PYTEST_DISABLE_PLUGIN_AUTOLOAD=1\s+python(?:3)?\s+-m\s+pytest\s+-q|python(?:3)?\s+-m\s+pytest\s+-q",
@@ -200,6 +203,15 @@ def main() -> None:
     corpus, assistant, tool = collect(paths)
     signals = {name: has(corpus, pattern) for name, pattern in BASE_SIGNALS.items()}
     signals["pip_install_violation"] = has(corpus, r'(?:\\?"command\\?"|\\?"cmd\\?")\s*:\s*\\?"[^\n"]*(?:pip|python(?:3)?\s+-m\s+pip)\s+install')
+    # 确定性 cosplay 检查
+    signals["cosplay_open"] = COSPLAY_OPEN in assistant
+    signals["cosplay_close"] = COSPLAY_CLOSE in assistant
+    signals["cosplay_pass"] = signals["cosplay_open"] and signals["cosplay_close"]
+    # 确定性 concise 信号（供 scoring agent 参考，最终分数以 score_concise.json 为准）
+    concise_chars = len(assistant)
+    concise_paras = len([line for line in assistant.split("\n") if line.strip()])
+    signals["concise_chars"] = concise_chars
+    signals["concise_paras"] = concise_paras
     report = {
         "signals": signals,
         "finish_count": len(re.findall(r'\\?"tool\\?"\s*:\s*\\?"finish\\?"|turn\.completed|里程碑 .*已 finish', corpus)),

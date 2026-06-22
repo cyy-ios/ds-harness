@@ -1408,19 +1408,13 @@ impl ModelClientSession {
         let inference_trace_attempt = inference_trace.start_attempt();
         inference_trace_attempt.add_request_headers(&mut options.extra_headers);
         inference_trace_attempt.record_started(&request);
-        let client = ApiDeepSeekChatClient::new(
-            transport,
-            client_setup.api_provider,
-            client_setup.api_auth,
-        )
-        .with_request_telemetry(Some(request_telemetry));
+        let client =
+            ApiDeepSeekChatClient::new(transport, client_setup.api_provider, client_setup.api_auth)
+                .with_request_telemetry(Some(request_telemetry));
         match client.stream_request(request, options).await {
             Ok(stream) => {
-                let (stream, _) = map_response_stream(
-                    stream,
-                    session_telemetry.clone(),
-                    inference_trace_attempt,
-                );
+                let (stream, _) =
+                    map_response_stream(stream, session_telemetry.clone(), inference_trace_attempt);
                 Ok(stream)
             }
             Err(err) => {
