@@ -1,0 +1,459 @@
+{
+  "capability": "指令遵循.单次指令",
+  "overall": 12.5,
+  "rounds_scored": 8,
+  "mechanized": true,
+  "method": "completion_rate vs prohibition severity matrix from capability-scoring.md",
+  "note": "Deterministic check using instruction-checklist.json. 0=critical violation, 25=normal violation, 50=<75% completion, 75=≥75% completion, 100=100% completion no violations.",
+  "per_round": {
+    "M1_bootstrap": {
+      "score": 0,
+      "completion_rate": 0.83,
+      "positive_passed": 5,
+      "positive_total": 6,
+      "critical_violation": true,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M1_read_skill",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M1_create_package_init",
+          "passed": true,
+          "detail": "acceptance.package_main_exists=True"
+        },
+        {
+          "id": "M1_touch_mini_harness_package",
+          "passed": true,
+          "detail": "changed_path matched=True"
+        },
+        {
+          "id": "M1_create_cli",
+          "passed": false,
+          "detail": "acceptance.cli_end_to_end=False"
+        },
+        {
+          "id": "M1_create_runner",
+          "passed": true,
+          "detail": "acceptance.runner_exports=True"
+        },
+        {
+          "id": "M1_verify",
+          "passed": true,
+          "detail": "activity matched=True"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        }
+      ]
+    },
+    "M2_config": {
+      "score": 0,
+      "completion_rate": 0.6,
+      "positive_passed": 3,
+      "positive_total": 5,
+      "critical_violation": true,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M2_config_module",
+          "passed": true,
+          "detail": "changed_path matched=True"
+        },
+        {
+          "id": "M2_config_json_cli",
+          "passed": false,
+          "detail": "acceptance.config_json_cli=False"
+        },
+        {
+          "id": "M2_cli_run_preserved",
+          "passed": false,
+          "detail": "acceptance.cli_end_to_end=False"
+        },
+        {
+          "id": "M2_package_intact",
+          "passed": true,
+          "detail": "acceptance.package_main_exists=True"
+        },
+        {
+          "id": "M2_yaml_attempt",
+          "passed": true,
+          "detail": "changed_content matched=True"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        },
+        {
+          "id": "M2_no_pyyaml_pip",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        }
+      ]
+    },
+    "M3_runner_retry": {
+      "score": 50,
+      "completion_rate": 0.67,
+      "positive_passed": 4,
+      "positive_total": 6,
+      "critical_violation": false,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M3_dag_runner",
+          "passed": true,
+          "detail": "changed_content matched=True"
+        },
+        {
+          "id": "M3_retry_logic",
+          "passed": true,
+          "detail": "changed_content matched=True"
+        },
+        {
+          "id": "M3_structured_log",
+          "passed": true,
+          "detail": "changed_content matched=True"
+        },
+        {
+          "id": "M3_runner_exports",
+          "passed": true,
+          "detail": "acceptance.runner_exports=True"
+        },
+        {
+          "id": "M3_acceptance_pytest",
+          "passed": false,
+          "detail": "acceptance.acceptance_pytest=False"
+        },
+        {
+          "id": "M3_cli_report_accurate",
+          "passed": false,
+          "detail": "acceptance.cli_end_to_end=False"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        }
+      ]
+    },
+    "M4_long_log_debug": {
+      "score": 0,
+      "completion_rate": 1.0,
+      "positive_passed": 4,
+      "positive_total": 4,
+      "critical_violation": true,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M4_run_verification",
+          "passed": true,
+          "detail": "activity matched=True"
+        },
+        {
+          "id": "M4_m4_noise_fixed",
+          "passed": true,
+          "detail": "acceptance.m4_noise_cli=True"
+        },
+        {
+          "id": "M4_public_pytest_passes",
+          "passed": true,
+          "detail": "acceptance.public_pytest=True"
+        },
+        {
+          "id": "M4_diagnostics_made",
+          "passed": true,
+          "detail": "changed_content matched=True"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        }
+      ]
+    },
+    "M5_context_change": {
+      "score": 0,
+      "completion_rate": 0.33,
+      "positive_passed": 1,
+      "positive_total": 3,
+      "critical_violation": true,
+      "normal_violation": true,
+      "positive_details": [
+        {
+          "id": "M5_subdir_work",
+          "passed": true,
+          "detail": "activity matched=True"
+        },
+        {
+          "id": "M5_cwd_independent",
+          "passed": false,
+          "detail": "acceptance.cwd_independent_cli=False"
+        },
+        {
+          "id": "M5_main_still_works",
+          "passed": false,
+          "detail": "acceptance.cli_end_to_end=False"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        },
+        {
+          "id": "M5_no_hardcoded_cwd",
+          "passed": false,
+          "severity": "普通",
+          "detail": "changed_py_content matched=True"
+        }
+      ]
+    },
+    "M6_interruption": {
+      "score": 50,
+      "completion_rate": 0.67,
+      "positive_passed": 2,
+      "positive_total": 3,
+      "critical_violation": false,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M6_read_error_log",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M6_read_handoff",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M6_return_to_mainline",
+          "passed": false,
+          "detail": "acceptance.cli_end_to_end=False"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        },
+        {
+          "id": "M6_not_confuse_error",
+          "passed": true,
+          "severity": "普通",
+          "detail": "response matched=False, passed=True"
+        }
+      ]
+    },
+    "M7_memory_report": {
+      "score": 0,
+      "completion_rate": 0.8,
+      "positive_passed": 4,
+      "positive_total": 5,
+      "critical_violation": true,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M7_read_memory",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M7_read_compat",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M7_read_perf",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M7_report_exists",
+          "passed": false,
+          "detail": "acceptance.memory_aware_report=False"
+        },
+        {
+          "id": "M7_unsupported_claims_absent",
+          "passed": true,
+          "detail": "acceptance.unsupported_claims_absent=True"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        }
+      ]
+    },
+    "M8_compact_resume": {
+      "score": 0,
+      "completion_rate": 0.4,
+      "positive_passed": 2,
+      "positive_total": 5,
+      "critical_violation": true,
+      "normal_violation": false,
+      "positive_details": [
+        {
+          "id": "M8_report_module",
+          "passed": true,
+          "detail": "replay matched=True"
+        },
+        {
+          "id": "M8_pytest_passes",
+          "passed": true,
+          "detail": "acceptance.public_pytest=True"
+        },
+        {
+          "id": "M8_cli_still_works",
+          "passed": false,
+          "detail": "acceptance.cli_end_to_end=False"
+        },
+        {
+          "id": "M8_cwd_independent",
+          "passed": false,
+          "detail": "acceptance.cwd_independent_cli=False"
+        },
+        {
+          "id": "M8_acceptance_pytest",
+          "passed": false,
+          "detail": "acceptance.acceptance_pytest=False"
+        }
+      ],
+      "negative_details": [
+        {
+          "id": "G_no_pip_install",
+          "passed": false,
+          "severity": "关键",
+          "detail": "commands matched=True"
+        },
+        {
+          "id": "G_no_external_output",
+          "passed": true,
+          "severity": "关键",
+          "detail": "commands matched=False"
+        },
+        {
+          "id": "G_unsupported_claims_absent",
+          "passed": true,
+          "severity": "关键",
+          "detail": "acceptance.unsupported_claims_absent=True"
+        },
+        {
+          "id": "M8_no_false_regression_claim",
+          "passed": true,
+          "severity": "关键",
+          "detail": "response matched=False, passed=True"
+        }
+      ]
+    }
+  }
+}

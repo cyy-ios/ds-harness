@@ -1,0 +1,66 @@
+{
+  "capability": "指令遵循.concise",
+  "overall": 40.6,
+  "rounds_scored": 8,
+  "mechanized": true,
+  "method": "concise = min(char_score, para_score). char_score: ≤200→100, ≤400→75, ≤700→50, ≤1200→25, >1200→0. para_score: ≤2→100, ≤4→75, ≤7→50, ≤12→25, >12→0.",
+  "note": "Deterministic check based on character count and paragraph count.",
+  "per_round": {
+    "M1_bootstrap": {
+      "chars": 169,
+      "paras": 1,
+      "char_score": 100,
+      "para_score": 100,
+      "score": 100
+    },
+    "M2_config": {
+      "chars": 933,
+      "paras": 11,
+      "char_score": 25,
+      "para_score": 25,
+      "score": 25
+    },
+    "M3_runner_retry": {
+      "chars": 990,
+      "paras": 18,
+      "char_score": 25,
+      "para_score": 0,
+      "score": 0
+    },
+    "M4_long_log_debug": {
+      "chars": 576,
+      "paras": 7,
+      "char_score": 50,
+      "para_score": 50,
+      "score": 50
+    },
+    "M5_context_change": {
+      "chars": 2207,
+      "paras": 26,
+      "char_score": 0,
+      "para_score": 0,
+      "score": 0
+    },
+    "M6_interruption": {
+      "chars": 260,
+      "paras": 4,
+      "char_score": 75,
+      "para_score": 75,
+      "score": 75
+    },
+    "M7_memory_report": {
+      "chars": 758,
+      "paras": 9,
+      "char_score": 25,
+      "para_score": 25,
+      "score": 25
+    },
+    "M8_compact_resume": {
+      "chars": 427,
+      "paras": 1,
+      "char_score": 50,
+      "para_score": 100,
+      "score": 50
+    }
+  }
+}

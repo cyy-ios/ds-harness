@@ -1,0 +1,49 @@
+{
+  "capability": "指令遵循.cosplay",
+  "overall": 0.0,
+  "rounds_scored": 8,
+  "mechanized": true,
+  "note": "Deterministic check: 100 if both 臣某谨奏 and 叩请圣裁 present, 0 otherwise.",
+  "per_round": {
+    "M1_bootstrap": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M2_config": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M3_runner_retry": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M4_long_log_debug": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M5_context_change": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M6_interruption": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M7_memory_report": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    },
+    "M8_compact_resume": {
+      "has_open": false,
+      "has_close": false,
+      "score": 0
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "capability": "����滮.����ѡ��",
+  "overall": 100.0,
+  "rounds_scored": 8,
+  "mechanized": true,
+  "method": "��� tool-checklist.json ��ÿ�����������Ƿ񱻵��á����嵥 �� 100��",
+  "note": "����ѡ�������� agent �Ƿ����������������ר�ù���/Skill������ Read vs cat �������ȡ�",
+  "per_round": {
+    "M1_bootstrap": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M2_config": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M3_runner_retry": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M4_long_log_debug": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M5_context_change": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution",
+        "mcp_tool_call",
+        "todo_list"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M6_interruption": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M7_memory_report": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    },
+    "M8_compact_resume": {
+      "score": 100,
+      "expected": [],
+      "used": [
+        "command_execution"
+      ],
+      "missing": [],
+      "note": "empty expected list �� no deduction"
+    }
+  }
+}

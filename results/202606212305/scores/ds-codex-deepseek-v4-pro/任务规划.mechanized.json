@@ -1,0 +1,85 @@
+{
+  "capability": "任务规划",
+  "mechanized": true,
+  "replacement": "sub_item",
+  "sub_item": "1.2_工具选择",
+  "sub_item_weight": 40,
+  "per_round": {
+    "M1_bootstrap": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M2_config": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M3_runner_retry": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M4_long_log_debug": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M5_context_change": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M6_interruption": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M7_memory_report": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    },
+    "M8_compact_resume": {
+      "score": 100.0,
+      "sub_scores": {
+        "1.2_工具选择": 100.0
+      },
+      "evidence": [
+        "score_expected_tools.json"
+      ]
+    }
+  },
+  "evidence_used": [
+    "score_expected_tools.json"
+  ],
+  "reason": "Mechanized sub-item only; route efficiency remains agent-scored and must be combined by rubric weights."
+}

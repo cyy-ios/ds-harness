@@ -1,0 +1,220 @@
+{
+  "mechanized_replacements": {
+    "指令遵循": {
+      "capability": "指令遵循",
+      "score": 15.6,
+      "mechanized": true,
+      "replacement": "full_capability",
+      "formula": "持久规则 = cosplay*0.5 + concise*0.5; 指令遵循 = 持久规则*0.4 + 单次指令*0.6",
+      "per_round": {
+        "M1_bootstrap": {
+          "score": 20.0,
+          "sub_scores": {
+            "持久规则": 50.0,
+            "cosplay": 0.0,
+            "concise": 100.0,
+            "单次指令": 0.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M2_config": {
+          "score": 5.0,
+          "sub_scores": {
+            "持久规则": 12.5,
+            "cosplay": 0.0,
+            "concise": 25.0,
+            "单次指令": 0.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M3_runner_retry": {
+          "score": 30.0,
+          "sub_scores": {
+            "持久规则": 0.0,
+            "cosplay": 0.0,
+            "concise": 0.0,
+            "单次指令": 50.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M4_long_log_debug": {
+          "score": 10.0,
+          "sub_scores": {
+            "持久规则": 25.0,
+            "cosplay": 0.0,
+            "concise": 50.0,
+            "单次指令": 0.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M5_context_change": {
+          "score": 0.0,
+          "sub_scores": {
+            "持久规则": 0.0,
+            "cosplay": 0.0,
+            "concise": 0.0,
+            "单次指令": 0.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M6_interruption": {
+          "score": 45.0,
+          "sub_scores": {
+            "持久规则": 37.5,
+            "cosplay": 0.0,
+            "concise": 75.0,
+            "单次指令": 50.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M7_memory_report": {
+          "score": 5.0,
+          "sub_scores": {
+            "持久规则": 12.5,
+            "cosplay": 0.0,
+            "concise": 25.0,
+            "单次指令": 0.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        },
+        "M8_compact_resume": {
+          "score": 10.0,
+          "sub_scores": {
+            "持久规则": 25.0,
+            "cosplay": 0.0,
+            "concise": 50.0,
+            "单次指令": 0.0
+          },
+          "evidence": [
+            "score_cosplay.json",
+            "score_concise.json",
+            "score_instructions.json"
+          ]
+        }
+      },
+      "rounds_scored": 8,
+      "rounds_excluded": 0,
+      "evidence_used": [
+        "score_cosplay.json",
+        "score_concise.json",
+        "score_instructions.json"
+      ],
+      "reason": "Fully mechanized per scoring-output.md; do not re-judge or override.",
+      "deductions": [],
+      "evidence_gaps": []
+    },
+    "任务规划.1.2_工具选择": {
+      "capability": "任务规划",
+      "mechanized": true,
+      "replacement": "sub_item",
+      "sub_item": "1.2_工具选择",
+      "sub_item_weight": 40,
+      "per_round": {
+        "M1_bootstrap": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M2_config": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M3_runner_retry": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M4_long_log_debug": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M5_context_change": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M6_interruption": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M7_memory_report": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        },
+        "M8_compact_resume": {
+          "score": 100.0,
+          "sub_scores": {
+            "1.2_工具选择": 100.0
+          },
+          "evidence": [
+            "score_expected_tools.json"
+          ]
+        }
+      },
+      "evidence_used": [
+        "score_expected_tools.json"
+      ],
+      "reason": "Mechanized sub-item only; route efficiency remains agent-scored and must be combined by rubric weights."
+    }
+  }
+}
