@@ -1,0 +1,7 @@
+{
+  "capability": "指令遵循.cosplay",
+  "overall": 0.0,
+  "rounds_scored": 8,
+  "mechanized": true,
+  "note": "Deterministic check: 100 if both 臣某谨奏 and 叩请圣裁 present, 0 otherwise."
+}

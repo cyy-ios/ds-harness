@@ -1,0 +1,8 @@
+{
+  "capability": "指令遵循.单次指令",
+  "overall": 78.1,
+  "rounds_scored": 8,
+  "mechanized": true,
+  "method": "completion_rate vs prohibition severity matrix from capability-scoring.md",
+  "note": "Deterministic check using instruction-checklist.json. 0=critical violation, 25=normal violation, 50=<75% completion, 75=≥75% completion, 100=100% completion no violations."
+}
