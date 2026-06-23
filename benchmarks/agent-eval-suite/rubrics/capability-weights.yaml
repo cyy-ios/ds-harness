@@ -1,10 +1,11 @@
 # Capability weights.
-# Overall score = sum(capability score * weight) / sum(weights).
-# If a capability is legally unscored, exclude it from the denominator.
+# Consumer: score aggregation step.
+# Base score = weighted average of base_capability_weights.
+# Final score = base score * multiplier_capabilities[真实性&可靠性] * multiplier_capabilities[指令遵循].
+# Multiplier transform `score_div_100` means capability_score / 100.
+# Child weights are recursive: each node's children are normalized among applicable (non-null) scores.
 
-weights:
-  真实性&可靠性: 20
-  指令遵循: 15
+base_capability_weights:
   任务完成度: 15
   项目理解: 10
   用户意图理解: 10
@@ -12,28 +13,45 @@ weights:
   结果预期: 10
   异常分析能力: 10
 
-sub_dimension_weights:
-  项目理解:
-    维度1_初始主动理解: 30
-    维度2_动态更新: 70
+multiplier_capabilities:
+  真实性&可靠性:
+    transform: score_div_100
   指令遵循:
-    持久规则: 40
-    单次指令: 60
+    transform: score_div_100
 
-sub_item_weights:
+children_weights:
+  真实性&可靠性:
+    1.1_信息真实性: 60
+    1.2_言行一致性: 40
+  遵循:
+    持久遵循:
+      weight: 50
+      children:
+        持久规则遵循: 40
+        持久流程遵循: 30
+        局部持久约束遵循: 30
+    单步遵循:
+      weight: 50
+      children:
+        Prompt遵循: 30
+        单步流程遵循: 70    
   项目理解:
     维度1_初始主动理解:
-      1.1_首轮探索深度: 100
-      1.2_目的理解: 0
-      1.3_子项目识别: 0
-      1.5_完成度判断: 0
-      1.6_项目类型: 0
+      weight: 30
+      children:
+        1.1_首轮探索深度: 100
+        1.2_目的理解: 0
+        1.3_子项目识别: 0
+        1.5_完成度判断: 0
+        1.6_项目类型: 0
     维度2_动态更新:
-      2.1_环节追踪: 25
-      2.2_主支线识别: 25
-      2.3_废弃方向识别: 20
-      2.4_完成研究中区分: 15
-      2.5_无关任务隔离: 15
+      weight: 70
+      children:
+        2.1_环节追踪: 25
+        2.2_主支线识别: 25
+        2.3_废弃方向识别: 20
+        2.4_完成研究中区分: 15
+        2.5_无关任务隔离: 15
   用户意图理解:
     1.1_识别请求针对的项目部分: 25
     1.2_理解请求目的和作用: 0
@@ -45,11 +63,5 @@ sub_item_weights:
   任务规划:
     1.1_路线效率: 60
     1.2_工具选择: 40
-  指令遵循:
-    持久规则:
-      cosplay: 50
-      concise: 50
-  真实性&可靠性:
-    1.1_信息真实性: 35
-    1.2_言行一致性: 30
-    1.3_知识依据与验证: 35
+
+

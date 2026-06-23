@@ -48,3 +48,7 @@ evidence/<variant>/
 - `diff.patch` can be empty when no file changed in that round; do not infer success or failure from diff alone.
 
 Scoring agents must support both directory shapes and must start from `scoring-output.md`.
+
+## Generated scoring intermediates
+
+`truthfulness_claims.json` is not raw evidence. The scoring agent writes it under `scores/<variant>/truthfulness_claims.json`; `score_truthfulness.py` reads it with the raw evidence directory and emits `scores/<variant>/真实性与可靠性.score.json`.

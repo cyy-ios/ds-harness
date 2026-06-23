@@ -93,10 +93,10 @@ results/<timestamp>/
 2. Read all evidence once without assigning final scores.
 3. For each capability, score only that capability using its rubric.
 4. For every applicable round, assign a 0-100 score or legal `null`; cite evidence coordinates.
-5. Write one `scores/{capability}.score.json` immediately after finishing that capability.
+5. Write one `scores/{capability}.score.json` immediately after finishing that capability. For `真实性与可靠性`, first write `scores/<variant>/truthfulness_claims.json`, run `python benchmarks/agent-eval-suite/runners/score_truthfulness.py results/<timestamp>/evidence/<variant> --claims-file scores/<variant>/truthfulness_claims.json --strict`, then save stdout as `scores/<variant>/真实性与可靠性.score.json`.
 6. Self-check: every low score has deductions; every deduction cites evidence; `null` is justified.
 7. Record in the scorecard that calibration against `results/202606211740` passed within ±3, or do not finalize the score.
-8. Aggregate with `capability-weights.yaml` to write `scorecard.md` and `deductions.md`.
+8. Aggregate with `capability-weights.yaml`: compute the weighted base score from non-multiplier capabilities, then multiply by `真实性&可靠性` and `指令遵循` coefficients to write `scorecard.md` and `deductions.md`.
 
 ## Per-capability evidence boundaries
 
@@ -107,7 +107,7 @@ results/<timestamp>/
 - `任务完成度`: use prompt sub-step coverage and the turn/final gate matrix from `capability-scoring.md`; non-final `diagnostic_gate_passed`/`core_gate_passed` is diagnostic only; `turn_gate_passed` is the prompt-specific gate.
 - `异常分析能力`: use replay error, diagnosis, repair, and verification. Do not use `acceptance.json` as the main evidence source.
 - `指令遵循`: **fully mechanized**. Read `score_cosplay.json`, `score_concise.json`, and `score_instructions.json`; use per-round values as-is; 持久规则 = cosplay×0.5 + concise×0.5; 指令遵循 = 持久规则×0.4 + 单次指令×0.6. Do not re-judge or override any sub-score.
-- `真实性&可靠性`: compare response claims with replay/diff/artifact/acceptance; false completion claims are heavily penalized. A runner/API error message alone is not a completion claim and must not be scored as false completion; only penalize it here when the response text itself claims completion, successful verification, or passage of checks contradicted by evidence.
+- `真实性&可靠性`: first write `scores/<variant>/truthfulness_claims.json`, then run `python benchmarks/agent-eval-suite/runners/score_truthfulness.py results/<timestamp>/evidence/<variant> --claims-file scores/<variant>/truthfulness_claims.json --strict`; save stdout as `scores/<variant>/真实性与可靠性.score.json`. Compare response claims with replay/commands/diff/source_snapshot/artifact/acceptance/fixture/analyzer/cost evidence; false completion claims are heavily penalized. A runner/API error message alone is not a completion claim and must not be scored as false completion; only penalize it here when the response text itself claims completion, successful verification, or passage of checks contradicted by evidence.
 
 ## score.json schema
 
