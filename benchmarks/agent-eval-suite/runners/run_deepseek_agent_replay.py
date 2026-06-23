@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """用 DeepSeek API 在同一对话中执行 fixture 里程碑，模拟工具调用闭环。"""
 from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, time
@@ -56,6 +56,30 @@ SYSTEM = """你是隔离 fixture repo 内的编码 agent。只输出 JSON object
 - shell 命令会在 repo root 执行，除非命令自己 cd。
 - 工具返回后继续输出下一条 JSON tool 调用，直到 finish。
 """
+
+AVAILABLE_TOOLS = [
+    "read_file",
+    "write_file",
+    "edit",
+    "apply_patch",
+    "glob",
+    "shell",
+    "exec_command",
+    "finish",
+    "update_plan",
+    "view_image",
+    "web_search",
+    "imagegen",
+    "tool_search",
+    "request_user_input",
+    "spawn_agent",
+    "send_message",
+    "wait_agent",
+    "close_agent",
+    "list_agents",
+    "list_mcp_resources",
+    "read_mcp_resource",
+]
 
 
 def load_key(path: Path | None) -> str:
@@ -354,9 +378,46 @@ def main():
     reject_benchmark_results_path(evidence_dir)
 
     # lazy import so script still works without collect_evidence on path
+    instruction_sources = [
+        {"kind": "runner_system", "path": "runners/run_deepseek_agent_replay.py:SYSTEM"},
+        {"kind": "workspace_rule", "path": "AGENTS.md"},
+    ]
+    if args.rules:
+        instruction_sources.append({"kind": "runner_config", "path": args.rules})
     try:
         from collect_evidence import EvidenceCollector
-        collector = EvidenceCollector(str(root), str(evidence_dir), subject_name=args.model, start_round=args.start_from)
+        collector = EvidenceCollector(
+            str(root),
+            str(evidence_dir),
+            subject_name=args.model,
+            start_round=args.start_from,
+            runner_name="deepseek_api",
+            instruction_sources=instruction_sources,
+            tool_policy={
+                "api_url": API_URL,
+                "model": args.model,
+                "response_format": "json_object",
+                "max_tool_steps": MAX_TOOL_STEPS,
+                "available_tools": AVAILABLE_TOOLS,
+                "unavailable_fixture_tools": [
+                    "apply_patch",
+                    "exec_command",
+                    "update_plan",
+                    "view_image",
+                    "web_search",
+                    "imagegen",
+                    "tool_search",
+                    "request_user_input",
+                    "spawn_agent",
+                    "send_message",
+                    "wait_agent",
+                    "close_agent",
+                    "list_agents",
+                    "list_mcp_resources",
+                    "read_mcp_resource",
+                ],
+            },
+        )
         collector.collect_fixtures()
     except Exception:
         collector = None
@@ -388,6 +449,8 @@ def main():
                 messages.append({"role": "user", "content": compact_text})
                 log.write(json.dumps({"event": "context_compacted", "milestone": ms['id'], **compact_meta}, ensure_ascii=False) + "\n")
                 log.flush()
+                if collector:
+                    collector.set_context_events([{"event": "context_compacted", **compact_meta}])
                 suffix = "（runner 自动重建）" if compact_meta.get("rebuilt") else ""
                 print(f"M8 上下文已压缩：M1-M7 对话替换为 {len(compact_text)} 字符 compact 摘要{suffix}")
 

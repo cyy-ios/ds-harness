@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Codex CLI replay runner —— 用 Codex CLI 跑 M1-M8，收集证据。
 
@@ -27,6 +27,8 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+
+from evidence_context import ConversationState, write_context_evidence
 
 REQUIRED_ACCEPTANCE_CHECK_KEYS = {
     "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
@@ -553,6 +555,9 @@ def collect_evidence(
     elapsed: float = 0.0,
     compact_trigger: dict | None = None,
     post_compact_milestones: list[str] | None = None,
+    conversation_state: ConversationState | None = None,
+    instruction_sources: list[dict[str, str]] | None = None,
+    tool_policy: dict[str, Any] | None = None,
 ) -> Path:
     """为一个 milestone 收集全部 10 类证据。"""
     step_dir = evidence_root / ms_id / f"step_{step_num:02d}"
@@ -576,6 +581,16 @@ def collect_evidence(
     (step_dir / "prompt.json").write_text(
         json.dumps({"id": ms_id, "prompt": ms_prompt}, ensure_ascii=False, indent=2),
         encoding="utf-8",
+    )
+    write_context_evidence(
+        step_dir,
+        runner="codex_cli",
+        milestone=ms_id,
+        prompt=ms_prompt,
+        repo_root=repo_root,
+        state=conversation_state or ConversationState(),
+        instruction_sources=instruction_sources,
+        tool_policy=tool_policy,
     )
 
     # commands.log —— shell 命令执行记录
@@ -848,6 +863,7 @@ def main():
     compact_triggered = False
     compact_triggered_at: str | None = None
     post_compact_milestones: list[str] = []
+    conversation_state = ConversationState()
 
     # 初始化 git repo + 初始快照，使 diff.patch 能捕获每轮变更
     git_dir = root / ".git"
@@ -937,7 +953,17 @@ def main():
         step_dir = collect_evidence(out, ms_id, 1, events, prompt, root,
                                     elapsed=elapsed,
                                     compact_trigger=step_compact,
-                                    post_compact_milestones=list(post_compact_milestones))
+                                    post_compact_milestones=list(post_compact_milestones),
+                                    conversation_state=conversation_state,
+                                    instruction_sources=[
+                                        {"kind": "runner_config", "path": args.instructions_file}
+                                    ] if instructions_path.exists() else [],
+                                    tool_policy={
+                                        "approval_policy": "never",
+                                        "sandbox_mode": "danger-full-access",
+                                        "variant": args.variant,
+                                        "codex_config": codex_config,
+                                    })
         print(f"  证据目录: {step_dir}")
 
         results.append({

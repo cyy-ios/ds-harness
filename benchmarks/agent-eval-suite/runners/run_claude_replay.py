@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from evidence_context import ConversationState, write_context_evidence
 from run_codex_replay import (
     _milestone_index,
     _normalize_tool_output,
@@ -285,6 +286,7 @@ def collect_evidence(
     repo_root: Path,
     elapsed: float,
     compact_meta: dict[str, Any] | None,
+    conversation_state: ConversationState | None = None,
 ) -> Path:
     step_dir = evidence_root / ms_id / "step_01"
     step_dir.mkdir(parents=True, exist_ok=True)
@@ -298,6 +300,19 @@ def collect_evidence(
     (step_dir / "prompt.json").write_text(
         json.dumps({"id": ms_id, "prompt": ms_prompt}, ensure_ascii=False, indent=2),
         encoding="utf-8",
+    )
+    write_context_evidence(
+        step_dir,
+        runner="claude_code_cli",
+        milestone=ms_id,
+        prompt=ms_prompt,
+        repo_root=repo_root,
+        state=conversation_state or ConversationState(),
+        instruction_sources=[{"kind": "runner_config", "path": ".claude/CLAUDE.md"}],
+        tool_policy={
+            "allowed_tools": CLAUDE_ALLOWED_TOOLS.split(","),
+            "model": "deepseek_anthropic_compatible",
+        },
     )
     (step_dir / "commands.log").write_text(extract_command_log(records), encoding="utf-8")
 
@@ -399,6 +414,7 @@ def main() -> None:
     compact_path = Path(args.compact_summary) if args.compact_summary else root / "docs" / "compact-summary.md"
     session_id: str | None = None
     results: list[dict[str, Any]] = []
+    conversation_state = ConversationState()
 
     for offset, ms in enumerate(milestones):
         ms_id = ms["id"]
@@ -425,7 +441,7 @@ def main() -> None:
         if raw_out:
             (raw_out / f"{ms_id}_stdout.jsonl").write_text(proc.stdout, encoding="utf-8")
             (raw_out / f"{ms_id}_stderr.log").write_text(proc.stderr, encoding="utf-8")
-        step_dir = collect_evidence(out, ms_id, events, prompt, root, elapsed, compact_meta)
+        step_dir = collect_evidence(out, ms_id, events, prompt, root, elapsed, compact_meta, conversation_state)
         print(f"  exit={proc.returncode} events={len(events)} session={session_id} evidence={step_dir}")
         results.append({
             "milestone": ms_id,

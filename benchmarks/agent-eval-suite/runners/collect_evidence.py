@@ -36,6 +36,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from evidence_context import ConversationState, write_context_evidence
+
 REQUIRED_ACCEPTANCE_CHECK_KEYS = {
     "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
     "config_json_cli", "cwd_independent_cli", "m4_noise_cli", "acceptance_pytest",
@@ -53,12 +55,18 @@ class EvidenceCollector:
         task_name: str = "mini-data-harness",
         subject_name: str = "unknown",
         start_round: int = 1,
+        runner_name: str = "api_collector",
+        instruction_sources: list[dict[str, str]] | None = None,
+        tool_policy: dict[str, Any] | None = None,
     ):
         self.root = Path(fixture_root).resolve()
         self.out = Path(output_root).resolve()
         self.out.mkdir(parents=True, exist_ok=True)
         self.task_name = task_name
         self.subject_name = subject_name
+        self.runner_name = runner_name
+        self.instruction_sources = instruction_sources
+        self.tool_policy = tool_policy or {"collector": "EvidenceCollector"}
         self.timestamp = time.strftime("%Y%m%d%H%M")
 
         # 轮次状态
@@ -72,10 +80,32 @@ class EvidenceCollector:
         self._tokens_out = 0
         self._round_start_time: float = 0.0
         self._index_entries: list[dict] = []
+        self._conversation_state = ConversationState()
+        self._pending_context_events: list[dict[str, Any]] = []
+        self._restore_conversation_state(start_round)
 
     # ------------------------------------------------------------------
     # public API（与旧版兼容）
     # ------------------------------------------------------------------
+
+    def set_context_events(self, events: list[dict[str, Any]]) -> None:
+        self._pending_context_events = list(events)
+
+    def _restore_conversation_state(self, start_round: int) -> None:
+        if start_round <= 1:
+            return
+        prev = self.out / f"round_{start_round - 1:02d}" / "conversation_state.json"
+        if not prev.exists():
+            return
+        try:
+            data = json.loads(prev.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return
+        chain = data.get("active_task_chain") or {}
+        self._conversation_state.last_milestone = chain.get("current_milestone")
+        self._conversation_state.previous_milestone = chain.get("previous_milestone")
+        self._conversation_state.active_local_constraints = list(data.get("active_local_constraints") or [])
+        self._conversation_state.active_flow_requirements = list(data.get("active_flow_requirements") or [])
 
     def collect_fixtures(self) -> None:
         """采集关键 fixture 文件到 evidence/fixture_files/。"""
@@ -124,6 +154,18 @@ class EvidenceCollector:
                 "prompt": prompt_text,
             })
             self._save_prompt(prompt_text)
+            write_context_evidence(
+                self._round_dir,
+                runner=self.runner_name,
+                milestone=milestone_id,
+                prompt=prompt_text,
+                repo_root=self.root,
+                state=self._conversation_state,
+                instruction_sources=self.instruction_sources,
+                tool_policy=self.tool_policy,
+                context_events=self._pending_context_events,
+            )
+            self._pending_context_events = []
             self._snapshot_pre()
         return self._current_round or ""
 
