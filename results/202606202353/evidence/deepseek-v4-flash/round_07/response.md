@@ -1,0 +1,1 @@
+里程碑 M7_memory_report 完成：已读取 memory/memory_summary.md、docs/compatibility-notes.md、benchmarks/perf-baseline.json，生成 docs/retrospective-report.md，包含早期设计决策、当前产物统计（processed=6, rejected=3, retry=0）、兼容性说明和性能基线引用。所有测试通过。

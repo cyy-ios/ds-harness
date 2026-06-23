@@ -47,7 +47,7 @@ python3 runners/run_codex_replay.py --root ${fixture_root} --variant optimized
 
 ### 4. 评分
 
-同裸模型流程，按 `rubrics/` 评分。
+同裸模型流程，评分入口只用 `rubrics/scoring-output.md`。
 
 ### 5. 还原持久规则
 
@@ -95,3 +95,13 @@ python3 runners/codex2replay.py round_N/turn_raw.jsonl ${fixture_root} evidence/
 2026-06-19：`codex exec -m gpt-5.5` 首轮 → `codex exec resume <thread_id>` 续轮，跨轮上下文保持验证通过。首轮创建 a.txt(hello)，续轮能读取 a.txt 并基于其内容创建 b.txt(world)。
 
 2026-06-19：两变体从 CC 触发验证通过。`unoptimized` → proxy(8898) → DeepSeek 返回正常；`optimized` → ds-codex 直连 DeepSeek 返回正常。
+
+## Claude Code CLI 本体 + DeepSeek
+
+不用 Codex；由 `run_claude_replay.py` 调用 `claude -p --model deepseek-v4-flash --output-format stream-json --permission-mode bypassPermissions`，并设置 `ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic` 与 `ANTHROPIC_AUTH_TOKEN`。
+
+```bash
+python benchmarks/agent-eval-suite/runners/run_claude_replay.py --root ${fixture_root} --out ${result_root}/evidence/claude-deepseek-v4-flash --model deepseek-v4-flash
+```
+
+变体名：`claude-deepseek-v4-flash`。

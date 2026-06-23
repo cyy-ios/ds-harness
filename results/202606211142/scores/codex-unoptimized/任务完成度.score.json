@@ -1,0 +1,88 @@
+{
+  "capability": "任务完成度",
+  "score": 88.0,
+  "per_round": {
+    "M1_bootstrap/step_01": {
+      "score": 85,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/diff.patch",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config/step_01": {
+      "score": 80,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/diff.patch",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry/step_01": {
+      "score": 80,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/diff.patch",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug/step_01": {
+      "score": 75,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/diff.patch",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change/step_01": {
+      "score": 70,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/diff.patch",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption/step_01": {
+      "score": 75,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/diff.patch",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report/step_01": {
+      "score": 75,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/diff.patch",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume/step_01": {
+      "score": 36,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/diff.patch",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap..M8_compact_resume/step_01/{replay.jsonl,diff.patch,response.md,acceptance.json}",
+    "run_summary.json"
+  ],
+  "reason": "All eight milestones completed and corrected M8 final gate passes; deductions remain for late integration and optional retry hook not exposed.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "final_integration",
+      "amount": 10,
+      "reason": "Corrected final gate passes, but optional stage_overrides retry hook is not exposed and hidden test skips it."
+    }
+  ],
+  "evidence_gaps": [
+    "commands.log is empty for Codex evidence; replay.jsonl and response.md contain the usable tool/command evidence."
+  ]
+}

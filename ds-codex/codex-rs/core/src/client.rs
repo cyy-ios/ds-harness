@@ -808,7 +808,7 @@ impl ModelClient {
                 self.state.installation_id.clone(),
             )])),
         };
-        Ok(request)
+        Ok(request.normalize_for_provider(provider))
     }
 
     /// Returns whether the Responses-over-WebSocket transport is active for this session.
@@ -1354,13 +1354,13 @@ impl ModelClientSession {
 
     #[allow(clippy::too_many_arguments)]
     #[instrument(
-        name = "model_client.stream_deepseek_chat",
+        name = "model_client.stream_deepseek_chat_api",
         level = "info",
         skip_all,
         fields(
             model = %model_info.slug,
             wire_api = %self.client.state.provider.info().wire_api,
-            transport = "deepseek_chat_http",
+            transport = "deepseek_chat",
             http.method = "POST",
             api.path = "chat/completions",
             turn.has_metadata_header = turn_metadata_header.is_some()
@@ -1384,7 +1384,7 @@ impl ModelClientSession {
             client_setup.api_auth.as_ref(),
             PendingUnauthorizedRetry::default(),
         );
-        let (request_telemetry, _sse_telemetry) = Self::build_streaming_telemetry(
+        let request_telemetry = ModelClient::build_request_telemetry(
             session_telemetry,
             request_auth_context,
             RequestRouteTelemetry::for_endpoint(RESPONSES_ENDPOINT),
@@ -1408,16 +1408,32 @@ impl ModelClientSession {
         let inference_trace_attempt = inference_trace.start_attempt();
         inference_trace_attempt.add_request_headers(&mut options.extra_headers);
         inference_trace_attempt.record_started(&request);
-        let client =
-            ApiDeepSeekChatClient::new(transport, client_setup.api_provider, client_setup.api_auth)
-                .with_request_telemetry(Some(request_telemetry));
-        let stream = client
-            .stream_request(request, options)
-            .await
-            .map_err(map_api_error)?;
-        let (stream, _) =
-            map_response_stream(stream, session_telemetry.clone(), inference_trace_attempt);
-        Ok(stream)
+        let client = ApiDeepSeekChatClient::new(
+            transport,
+            client_setup.api_provider,
+            client_setup.api_auth,
+        )
+        .with_request_telemetry(Some(request_telemetry));
+        match client.stream_request(request, options).await {
+            Ok(stream) => {
+                let (stream, _) = map_response_stream(
+                    stream,
+                    session_telemetry.clone(),
+                    inference_trace_attempt,
+                );
+                Ok(stream)
+            }
+            Err(err) => {
+                let response_debug_context = extract_response_debug_context_from_api_error(&err);
+                let err = map_api_error(err);
+                inference_trace_attempt.record_failed(
+                    &err,
+                    response_debug_context.request_id.as_deref(),
+                    /*output_items*/ &[],
+                );
+                Err(err)
+            }
+        }
     }
 
     /// Streams a turn via the Responses API over WebSocket transport.

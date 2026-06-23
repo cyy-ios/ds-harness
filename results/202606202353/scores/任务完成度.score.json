@@ -1,0 +1,72 @@
+{
+  "capability": "任务完成度",
+  "score": 25.0,
+  "per_round": {
+    "round_01": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_01/prompt.json", "round_01/replay.jsonl", "round_01/diff.patch", "round_01/acceptance.json"],
+      "note": "子步骤覆盖=100%(读SKILL/建包/CLI run/最小实现/核验 all done)。gate_passed=false。覆盖≥50% → 50分"
+    },
+    "round_02": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_02/prompt.json", "round_02/replay.jsonl", "round_02/diff.patch", "round_02/acceptance.json"],
+      "note": "子步骤覆盖=100%(JSON+YAML配置/保留CLI run/缺省+显式路径)。gate_passed=false → 50"
+    },
+    "round_03": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_03/prompt.json", "round_03/replay.jsonl", "round_03/diff.patch", "round_03/acceptance.json"],
+      "note": "子步骤覆盖=100%(DAG runner/2次重试/结构化日志/真实retry_count)。gate_passed=false → 50"
+    },
+    "round_04": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_04/prompt.json", "round_04/replay.jsonl", "round_04/diff.patch", "round_04/acceptance.json"],
+      "note": "子步骤覆盖=100%(运行验证/定位/修复 all done → 最终pytest通过)。gate_passed=false → 50"
+    },
+    "round_05": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_05/prompt.json", "round_05/replay.jsonl", "round_05/diff.patch", "round_05/acceptance.json"],
+      "note": "子步骤覆盖=100%(subdir开发/pyproject.toml配置/集成测试/保持可用)。gate_passed=false → 50"
+    },
+    "round_06": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_06/prompt.json", "round_06/replay.jsonl", "round_06/diff.patch", "round_06/acceptance.json"],
+      "note": "子步骤覆盖=100%(解释log/解释handoff → done)。但未执行'回到mini harness主线继续'。严格算覆盖率75%? 2/3条要求完成 → ≥50% → 50"
+    },
+    "round_07": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_07/prompt.json", "round_07/replay.jsonl", "round_07/diff.patch", "round_07/acceptance.json"],
+      "note": "子步骤覆盖=100%(读3个文件/生成报告/引用设计决策和统计)。gate_passed=false → 50"
+    },
+    "round_08": {
+      "score": 50,
+      "sub_scores": null,
+      "evidence": ["round_08/prompt.json", "round_08/replay.jsonl", "round_08/diff.patch", "round_08/acceptance.json"],
+      "note": "子步骤覆盖≥80%(新增report模块 done/确认既有能力 仅pytest)→≥50%。gate_passed=false → 50"
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "reason": "所有8轮子步骤覆盖均≥50%，其中多数轮覆盖=100%。但因为collect_evidence.py未传--round/--milestone，final_gate_applicable全部为false，gate_passed=false。按矩阵：覆盖≥50%+gate_passed任意→50分。Agent始终未创建__main__.py直到R08（太晚），且始终缺少HarnessError导出和stage_overrides支持，导致cli_end_to_end和acceptance_pytest持续失败。",
+  "deductions": [
+    {
+      "round": "round_01",
+      "item": "gate_passed",
+      "amount": 25,
+      "reason": "覆盖100%但gate_passed=false。cli_end_to_end失败：No module named mini_harness.__main__。round_01/acceptance.json cli_end_to_end.passed=false"
+    },
+    {
+      "round": "round_06",
+      "item": "子步骤覆盖",
+      "amount": 25,
+      "reason": "R06 prompt含3条要求(解释log/解释handoff/回到主线)，仅完成2条，未回到主线继续开发。round_06/replay.jsonl:L5 finish未做后续开发"
+    }
+  ],
+  "evidence_gaps": []
+}

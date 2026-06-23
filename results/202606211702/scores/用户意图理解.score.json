@@ -1,0 +1,88 @@
+{
+  "capability": "用户意图理解",
+  "score": 68.0,
+  "per_round": {
+    "M1_bootstrap": {
+      "score": 78,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config": {
+      "score": 74,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry": {
+      "score": 72,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug": {
+      "score": 76,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change": {
+      "score": 55,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption": {
+      "score": 68,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report": {
+      "score": 66,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume": {
+      "score": 55,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "run_summary.json",
+    "M*/step_01/replay.jsonl",
+    "M*/step_01/acceptance.json",
+    "M*/step_01/diff.patch"
+  ],
+  "reason": "Core behavior is partially implemented, but the run misses the required src package layout, cwd-independent CLI, hidden run_dag signature, and final memory/report gates.",
+  "deductions": [
+    {
+      "round": "M5_context_change",
+      "item": "1.4_策略匹配",
+      "amount": 30,
+      "reason": "acceptance.json:L13 turn_gate_passed=false for cwd-independent CLI; replay did not migrate package for subdir use"
+    },
+    {
+      "round": "M8_compact_resume",
+      "item": "1.1_定位",
+      "amount": 25,
+      "reason": "replay.jsonl:L15 identifies src/mini_harness requirement but edits mini_harness/report.py instead"
+    }
+  ],
+  "evidence_gaps": [
+    "M1-M4 public evidence was rebuilt from raw Claude stream JSONL because those step directories were absent after the run; raw logs are preserved under tmp/claude-ds-raw-202606211702."
+  ]
+}

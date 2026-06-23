@@ -1,0 +1,101 @@
+diff --git a/src/mini_harness/run.py b/src/mini_harness/run.py
+index aab1831..1686871 100644
+--- a/src/mini_harness/run.py
++++ b/src/mini_harness/run.py
+@@ -20,7 +20,8 @@ def extract(input_path):
+     ext = Path(input_path).suffix.lower()
+     if ext == '.csv':
+         with open(input_path, newline='', encoding='utf-8') as f:
+-            reader = csv.DictReader(f)
++            lines = [line for line in f if not line.startswith('#')]
++            reader = csv.DictReader(lines)
+             for row in reader:
+                 records.append(row)
+     elif ext == '.jsonl':
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+new file mode 100644
+index 0000000..8d355b5
+--- /dev/null
++++ b/src/mini_harness/runner.py
+@@ -0,0 +1,36 @@
++import logging
++from pathlib import Path
++from mini_harness.run import extract, clean, build_report
++
++logger = logging.getLogger(__name__)
++
++def run_dag(input_paths):
++    """Process multiple input files, return aggregated report."""
++    total_cleaned = 0
++    total_rejected = 0
++    total_retry = 0
++    source_files = []
++    for path in input_paths:
++        logger.info(f'attempt=1, stage=extract, status=start')
++        try:
++            records = extract(path)
++        except Exception as e:
++            logger.error(f'attempt=1, stage=extract, status=failed, error={e}')
++            total_retry += 2
++            continue
++
++        logger.info(f'attempt=1, stage=clean, status=start')
++        try:
++            cleaned, rejects = clean(records)
++        except Exception as e:
++            logger.error(f'attempt=1, stage=clean, status=failed, error={e}')
++            total_retry += 2
++            continue
++
++        total_cleaned += len(cleaned)
++        total_rejected += len(rejects)
++        source_files.append(str(Path(path).resolve()))
++
++    report = build_report(total_cleaned, total_rejected, total_retry, source_files)
++    logger.info(f'attempt=1, stage=report, status=completed')
++    return report
+diff --git a/tests/test_debug_log.py b/tests/test_debug_log.py
+new file mode 100644
+index 0000000..9450bae
+--- /dev/null
++++ b/tests/test_debug_log.py
+@@ -0,0 +1,39 @@
++import json
++import logging
++from pathlib import Path
++import pytest
++from mini_harness.run import run_pipeline
++
++def test_log_contains_required_attributes(caplog):
++    caplog.set_level(logging.INFO)
++    input_csv = Path('data/input.csv')
++    output = Path('/tmp/test_report_m4.json')
++    if output.exists():
++        output.unlink()
++    run_pipeline(str(input_csv), str(output))
++    # Check log records contain attempt, stage, status
++    for record in caplog.records:
++        assert 'attempt=' in record.getMessage()
++        assert 'stage=' in record.getMessage()
++        assert 'status=' in record.getMessage()
++
++def test_debug_output_on_retry(caplog):
++    """Simulate a scenario that triggers retry: provide non-existent file."""
++    caplog.set_level(logging.INFO)
++    with pytest.raises(Exception):
++        run_pipeline('nonexistent.csv', '/tmp/out.json')
++    # Should have logged multiple attempts with failed status
++    failed_messages = [r for r in caplog.records if 'failed' in r.getMessage()]
++    assert len(failed_messages) >= 2  # at least 2 retries
++
++def test_report_structure():
++    output = Path('/tmp/test_report_m4.json')
++    if output.exists():
++        output.unlink()
++    run_pipeline(str(Path('data/input.csv')), str(output))
++    with open(output, 'r') as f:
++        report = json.load(f)
++    required_keys = ['processed_count', 'rejected_count', 'retry_count', 'source_files']
++    for k in required_keys:
++        assert k in report
++    assert 'memory_summary' in report

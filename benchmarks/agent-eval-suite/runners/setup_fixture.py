@@ -16,7 +16,7 @@ def write(path: Path, text: str) -> None:
 MILESTONES = [
     {
         "id": "M1_bootstrap",
-        "prompt": "读取 skills/data-harness/SKILL.md，创建 mini_harness Python 包、CLI run 子命令和最小可用实现；完成后用仓库内命令核验当前改动。",
+        "prompt": "读取 skills/data-harness/SKILL.md，创建 mini_harness Python 包、CLI run 子命令和最小可用实现；必须支持 python -m mini_harness run；完成后用仓库内命令核验当前改动。",
     },
     {
         "id": "M2_config",
@@ -83,6 +83,8 @@ def main() -> None:
     - DAG 任务必须有 `extract`、`clean`、`report` 三个阶段。
     - 失败重试最多 2 次；日志必须包含 `attempt`、`stage`、`status`。
     - 报告必须包含 `processed_count`、`rejected_count`、`retry_count`、`source_files`。
+    - 包必须支持 `python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json`。
+    - `mini_harness.runner` 必须导出 `run_dag` 和 `HarnessError`。
     - 最终复盘报告必须引用 `memory/memory_summary.md`。
     """)
 

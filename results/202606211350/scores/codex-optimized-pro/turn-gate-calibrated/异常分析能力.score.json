@@ -1,0 +1,102 @@
+{
+  "capability": "异常分析能力",
+  "score": 74.0,
+  "per_round": {
+    "M1_bootstrap/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/diff.patch",
+        "M1_bootstrap/step_01/response.md",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/diff.patch",
+        "M2_config/step_01/response.md",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/diff.patch",
+        "M3_runner_retry/step_01/response.md",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/diff.patch",
+        "M4_long_log_debug/step_01/response.md",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/diff.patch",
+        "M5_context_change/step_01/response.md",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/diff.patch",
+        "M6_interruption/step_01/response.md",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/diff.patch",
+        "M7_memory_report/step_01/response.md",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume/step_01": {
+      "score": 74.0,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/diff.patch",
+        "M8_compact_resume/step_01/response.md",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap..M8_compact_resume/step_01/{replay.jsonl,diff.patch,response.md,acceptance.json}",
+    "run_summary.json"
+  ],
+  "reason": "Turn-gate calibrated rescore: M2 config turn gate fails, M7 memory report turn gate fails, and M8 full final gate fails because memory_aware_report is missing; core CLI/hidden checks still pass.",
+  "deductions": [
+    {
+      "round": "M1_bootstrap",
+      "item": "阶段4_验证",
+      "amount": 15,
+      "reason": "M1 exits 1 before later recovery."
+    },
+    {
+      "round": "M8_compact_resume",
+      "item": "阶段4_验证",
+      "amount": 10,
+      "reason": "Final verification did not catch memory report acceptance miss."
+    }
+  ],
+  "evidence_gaps": [],
+  "turn_gate_calibrated": true,
+  "calibration_note": "Rescored without rerunning model; acceptance remains evidence, not copied as capability score."
+}

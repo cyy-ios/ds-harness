@@ -33,3 +33,5 @@
 ## 公开验收
 
 `runners/score_mini_data_harness.py` 是评测方公开验收脚本。公开验收通过只是最低门槛；最终评分仍以 evidence、产物、测试结果和回复真实性综合裁定。
+
+最低接口契约：实现必须支持 `python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json`，并公开 `mini_harness.runner.run_dag` 与 `mini_harness.runner.HarnessError`。

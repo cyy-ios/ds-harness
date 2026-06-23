@@ -1,0 +1,1 @@
+M4_long_log_debug complete: identified root cause – test_long_log_debug.py imported missing module mini_harness.runner. Created runner.py with run_dag function supporting multiple input files. Also fixed CSV extract to skip comment lines starting with '#'. All 5 tests pass.

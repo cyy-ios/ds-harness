@@ -1,0 +1,94 @@
+{
+  "capability": "项目理解",
+  "score": 78.0,
+  "per_round": {
+    "M1_bootstrap/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/diff.patch",
+        "M1_bootstrap/step_01/response.md",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/diff.patch",
+        "M2_config/step_01/response.md",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/diff.patch",
+        "M3_runner_retry/step_01/response.md",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/diff.patch",
+        "M4_long_log_debug/step_01/response.md",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/diff.patch",
+        "M5_context_change/step_01/response.md",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/diff.patch",
+        "M6_interruption/step_01/response.md",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/diff.patch",
+        "M7_memory_report/step_01/response.md",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume/step_01": {
+      "score": 78.0,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/diff.patch",
+        "M8_compact_resume/step_01/response.md",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap..M8_compact_resume/step_01/{replay.jsonl,diff.patch,response.md,acceptance.json}",
+    "run_summary.json"
+  ],
+  "reason": "Aligned final src package, CLI, runner API, cwd handling, and hidden acceptance well; deductions for noisy log artifacts and M1 first turn failure.",
+  "deductions": [
+    {
+      "round": "M1_bootstrap",
+      "item": "2.1_环节追踪",
+      "amount": 15,
+      "reason": "M1 command exited 1 and initial evidence lacks a completed implementation, later recovered."
+    }
+  ],
+  "evidence_gaps": []
+}

@@ -1,0 +1,69 @@
+﻿{
+    "score":  48,
+    "capability":  "项目理解",
+    "reason":  "M1 75, dynamic avg 36.4. Weighted: 75*0.3+36.4*0.7=48",
+    "dimension_scores":  {
+                             "维度1_初始主动理解":  {
+                                                "per_round":  {
+                                                                  "round_01":  {
+                                                                                   "reason":  "Read AGENTS.md/SKILL.md, explored dirs, read code files. 2/3 checks (missed codex-level docs)",
+                                                                                   "score":  75
+                                                                               }
+                                                              },
+                                                "score":  75
+                                            },
+                             "维度2_动态更新":  {
+                                              "per_round":  {
+                                                                "round_07":  {
+                                                                                 "reason":  "M7 no response",
+                                                                                 "score":  0
+                                                                             },
+                                                                "round_02":  {
+                                                                                 "reason":  "op progression check 1/3",
+                                                                                 "score":  50
+                                                                             },
+                                                                "round_06":  {
+                                                                                 "reason":  "M6 no response",
+                                                                                 "score":  0
+                                                                             },
+                                                                "round_05":  {
+                                                                                 "reason":  "M5 context change partial",
+                                                                                 "score":  50
+                                                                             },
+                                                                "round_04":  {
+                                                                                 "reason":  "M4 turn pass, corrected noisy data",
+                                                                                 "score":  75
+                                                                             },
+                                                                "round_08":  {
+                                                                                 "reason":  "M8 resume but cwd-independent regression",
+                                                                                 "score":  25
+                                                                             },
+                                                                "round_03":  {
+                                                                                 "reason":  "M3 turn gate fail, re-explored covered areas",
+                                                                                 "score":  0
+                                                                             }
+                                                            },
+                                              "score":  36.4
+                                          }
+                         },
+    "deductions":  [
+                       {
+                           "amount":  100,
+                           "reason":  "M6 no response",
+                           "round":  "round_06",
+                           "item":  "2.1"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M7 no response",
+                           "round":  "round_07",
+                           "item":  "2.1"
+                       },
+                       {
+                           "amount":  75,
+                           "reason":  "M8 cwd-independent CLI regression from M1",
+                           "round":  "round_08",
+                           "item":  "2.1"
+                       }
+                   ]
+}

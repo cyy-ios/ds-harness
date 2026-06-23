@@ -497,3 +497,62 @@ async fn azure_default_store_attaches_ids_and_headers() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn deepseek_provider_folds_instructions_and_developer_messages_into_system() -> Result<()> {
+    let state = RecordingState::default();
+    let transport = RecordingTransport::new(state.clone());
+    let client = ResponsesClient::new(transport, provider("DeepSeek"), Arc::new(NoAuth));
+    let request = ResponsesApiRequest {
+        model: "deepseek-test".into(),
+        instructions: "base instructions".into(),
+        input: vec![
+            ResponseItem::Message {
+                id: None,
+                role: "developer".into(),
+                content: vec![ContentItem::InputText {
+                    text: "follow concise".into(),
+                }],
+                phase: None,
+            },
+            ResponseItem::Message {
+                id: None,
+                role: "user".into(),
+                content: vec![ContentItem::InputText { text: "hi".into() }],
+                phase: None,
+            },
+        ],
+        tools: Vec::new(),
+        tool_choice: "auto".into(),
+        parallel_tool_calls: false,
+        reasoning: None,
+        store: false,
+        stream: true,
+        include: Vec::new(),
+        service_tier: None,
+        prompt_cache_key: None,
+        text: None,
+        client_metadata: None,
+    };
+
+    let _stream = client
+        .stream_request(request, ResponsesOptions::default())
+        .await?;
+
+    let requests = state.take_stream_requests();
+    assert_eq!(requests.len(), 1);
+    let body = requests[0]
+        .body
+        .as_ref()
+        .and_then(RequestBody::json)
+        .expect("json body");
+    assert!(body.get("instructions").is_none());
+    assert_eq!(body["input"][0]["role"], "system");
+    assert_eq!(
+        body["input"][0]["content"][0]["text"],
+        "base instructions\n\nfollow concise"
+    );
+    assert_eq!(body["input"][1]["role"], "user");
+
+    Ok(())
+}

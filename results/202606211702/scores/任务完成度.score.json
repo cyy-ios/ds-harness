@@ -1,0 +1,86 @@
+{
+  "capability": "任务完成度",
+  "score": 48.0,
+  "per_round": {
+    "M1_bootstrap": {
+      "score": 55,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config": {
+      "score": 55,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry": {
+      "score": 60,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug": {
+      "score": 80,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change": {
+      "score": 35,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption": {
+      "score": 40,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report": {
+      "score": 35,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume": {
+      "score": 25,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "run_summary.json",
+    "M*/step_01/replay.jsonl",
+    "M*/step_01/acceptance.json",
+    "M*/step_01/diff.patch"
+  ],
+  "reason": "Core behavior is partially implemented, but the run misses the required src package layout, cwd-independent CLI, hidden run_dag signature, and final memory/report gates.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "final_gate",
+      "amount": 75,
+      "reason": "acceptance.json:L42 final_gate_passed=false; failed checks include cli_end_to_end, cwd_independent_cli, acceptance_pytest, memory_aware_report"
+    },
+    {
+      "round": "M5_context_change",
+      "item": "turn_gate",
+      "amount": 60,
+      "reason": "acceptance.json:L13 turn_gate_passed=false for cwd_independent_cli and cli_end_to_end"
+    }
+  ],
+  "evidence_gaps": []
+}

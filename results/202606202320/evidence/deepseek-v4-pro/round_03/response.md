@@ -1,0 +1,1 @@
+M3_runner_retry 完成：DAG runner 已实现 extract/clean/report 阶段，含最多 2 次重试和结构化日志。输出报告如实反映处理结果和重试计数。测试通过。

@@ -21,7 +21,7 @@ impl From<&SkillInjection> for SkillInstructions {
 
 impl ContextualUserFragment for SkillInstructions {
     fn role(&self) -> &'static str {
-        "user"
+        "developer"
     }
 
     fn markers(&self) -> (&'static str, &'static str) {
@@ -37,5 +37,23 @@ impl ContextualUserFragment for SkillInstructions {
             "\n<name>{}</name>\n<path>{}</path>\n{}\n",
             self.name, self.path, self.contents
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn skill_instructions_use_developer_role() {
+        let skill = SkillInjection {
+            name: "concise".to_string(),
+            path: "/tmp/skills/concise/SKILL.md".to_string(),
+            contents: "Reply briefly.".to_string(),
+        };
+        let instructions = SkillInstructions::from(&skill);
+
+        assert_eq!(instructions.role(), "developer");
     }
 }

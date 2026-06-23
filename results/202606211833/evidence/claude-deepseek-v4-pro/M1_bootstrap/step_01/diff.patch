@@ -1,0 +1,282 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..1c05d32
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1 @@
++"""mini_harness - minimal data processing harness fixture."""
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..2a1c719
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,4 @@
++"""Entry point for python -m mini_harness."""
++from mini_harness.cli import main
++
++main()
+diff --git a/mini_harness/clean.py b/mini_harness/clean.py
+new file mode 100644
+index 0000000..5473671
+--- /dev/null
++++ b/mini_harness/clean.py
+@@ -0,0 +1,34 @@
++"""Clean stage: normalise field names, filter rejects, remove empty rows."""
++import re
++from typing import Any
++
++
++def to_snake_case(name: str) -> str:
++    """Convert a string to snake_case."""
++    s = re.sub(r"[\s\-]+", "_", name.strip())
++    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s)
++    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", s)
++    return s.lower()
++
++
++def clean(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
++    """Clean records: snake_case keys, drop empty rows, split out records missing 'id'.
++
++    Returns (cleaned, rejects).
++    """
++    cleaned = []
++    rejects = []
++    for rec in records:
++        # Remove completely empty rows
++        if all(v is None or (isinstance(v, str) and v.strip() == "") or (isinstance(v, list) and len(v) == 0) for v in rec.values()):
++            continue
++
++        # Convert field names to snake_case
++        row = {to_snake_case(k): v for k, v in rec.items()}
++
++        # Records missing 'id' go to rejects
++        if "id" not in row or row["id"] is None or (isinstance(row["id"], str) and row["id"].strip() == ""):
++            rejects.append(row)
++        else:
++            cleaned.append(row)
++    return cleaned, rejects
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..948de53
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,31 @@
++"""CLI for mini_harness using argparse."""
++import argparse
++import sys
++
++from mini_harness.runner import run_dag, HarnessError
++
++
++def main(argv=None):
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    subparsers = parser.add_subparsers(dest="command")
++
++    run_parser = subparsers.add_parser("run", help="Run the data processing DAG")
++    run_parser.add_argument("inputs", nargs="+", help="Input files (CSV or JSONL)")
++    run_parser.add_argument("--output", "-o", required=True, help="Output report path")
++
++    args = parser.parse_args(argv)
++
++    if args.command == "run":
++        try:
++            report = run_dag(args.inputs, args.output)
++            print(report)
++        except HarnessError as e:
++            print(f"Error: {e}", file=sys.stderr)
++            sys.exit(1)
++    else:
++        parser.print_help()
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/mini_harness/extract.py b/mini_harness/extract.py
+new file mode 100644
+index 0000000..258d047
+--- /dev/null
++++ b/mini_harness/extract.py
+@@ -0,0 +1,37 @@
++"""Extract stage: read CSV and JSONL files into raw records."""
++import csv
++import json
++import os
++from typing import Any
++
++
++def extract_csv(filepath: str) -> list[dict[str, Any]]:
++    """Extract records from a CSV file."""
++    records = []
++    with open(filepath, "r", encoding="utf-8", newline="") as f:
++        reader = csv.DictReader(f)
++        for row in reader:
++            records.append(dict(row))
++    return records
++
++
++def extract_jsonl(filepath: str) -> list[dict[str, Any]]:
++    """Extract records from a JSONL file."""
++    records = []
++    with open(filepath, "r", encoding="utf-8") as f:
++        for line in f:
++            line = line.strip()
++            if line:
++                records.append(json.loads(line))
++    return records
++
++
++def extract(filepath: str) -> list[dict[str, Any]]:
++    """Extract records from a file, dispatching on extension."""
++    ext = os.path.splitext(filepath)[1].lower()
++    if ext == ".csv":
++        return extract_csv(filepath)
++    elif ext in (".jsonl", ".json"):
++        return extract_jsonl(filepath)
++    else:
++        raise ValueError(f"Unsupported file format: {ext}")
+diff --git a/mini_harness/report.py b/mini_harness/report.py
+new file mode 100644
+index 0000000..e37d07f
+--- /dev/null
++++ b/mini_harness/report.py
+@@ -0,0 +1,24 @@
++"""Report stage: produce the final JSON report."""
++import json
++import os
++from typing import Any
++
++
++def generate_report(
++    cleaned: list[dict[str, Any]],
++    rejects: list[dict[str, Any]],
++    retry_count: int,
++    source_files: list[str],
++    output_path: str,
++) -> dict[str, Any]:
++    """Generate and write the report JSON."""
++    report = {
++        "processed_count": len(cleaned),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": source_files,
++    }
++    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
++    with open(output_path, "w", encoding="utf-8") as f:
++        json.dump(report, f, indent=2)
++    return report
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..34868f7
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,68 @@
++"""DAG runner with retry logic for extract → clean → report pipeline."""
++import json
++import logging
++import os
++from typing import Any
++
++from mini_harness.extract import extract
++from mini_harness.clean import clean
++from mini_harness.report import generate_report
++
++logger = logging.getLogger("mini_harness")
++
++# Ensure memory/ directory reference — see memory/memory_summary.md for design decisions.
++MEMORY_SUMMARY_PATH = os.path.join(os.path.dirname(__file__), "..", "memory", "memory_summary.md")
++
++
++class HarnessError(Exception):
++    """Custom error for harness failures."""
++
++
++def _log_attempt(attempt: int, stage: str, status: str):
++    """Emit a structured log line with attempt, stage, and status."""
++    logger.info(json.dumps({"attempt": attempt, "stage": stage, "status": status}))
++
++
++def _run_dag_with_retry(stage_name: str, attempt: int, fn, *args, **kwargs):
++    """Run a DAG stage with up to 2 retries on failure."""
++    max_retries = 2
++    retries = 0
++    for attempt_num in range(1, max_retries + 2):  # initial + up to 2 retries
++        try:
++            _log_attempt(attempt_num, stage_name, "running")
++            result = fn(*args, **kwargs)
++            _log_attempt(attempt_num, stage_name, "ok")
++            return result, retries
++        except Exception:
++            retries += 1
++            _log_attempt(attempt_num, stage_name, "failed")
++            if attempt_num > max_retries:
++                raise HarnessError(f"Stage '{stage_name}' failed after {max_retries} retries")
++    raise HarnessError(f"Stage '{stage_name}' failed")  # unreachable
++
++
++def run_dag(input_paths: list[str], output_path: str) -> dict[str, Any]:
++    """Run the full extract → clean → report DAG.
++
++    Returns the report dict.
++    """
++    total_retries = 0
++
++    # Stage 1: Extract
++    all_records = []
++    for fp in input_paths:
++        records, r = _run_dag_with_retry("extract", 1, extract, fp)
++        total_retries += r
++        all_records.extend(records)
++
++    # Stage 2: Clean
++    clean_result, r = _run_dag_with_retry("clean", 1, clean, all_records)
++    total_retries += r
++    cleaned, rejects = clean_result
++
++    # Stage 3: Report
++    gend_result, r = _run_dag_with_retry("report", 1, generate_report, cleaned, rejects, total_retries, input_paths, output_path)
++    total_retries += r
++    report = gend_result
++
++    return report
+diff --git a/pyproject.toml b/pyproject.toml
+index da60646..a498f38 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,3 +1,3 @@
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
+-pythonpath = ["src"]
++pythonpath = ["."]
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..4b78992
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+\ No newline at end of file
+diff --git a/tmp/report2.json b/tmp/report2.json
+new file mode 100644
+index 0000000..4b78992
+--- /dev/null
++++ b/tmp/report2.json
+@@ -0,0 +1,9 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+\ No newline at end of file

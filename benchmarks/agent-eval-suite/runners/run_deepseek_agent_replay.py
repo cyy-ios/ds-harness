@@ -205,10 +205,29 @@ def load_compact_summary(root: Path) -> tuple[str, dict]:
     }
 
 
-def call_ds(messages, api_key: str, model: str) -> str:
+def normalize_deepseek_messages(messages: list[dict], persistent_system: str | None = None) -> list[dict]:
+    system_parts = []
+    if persistent_system:
+        system_parts.append(persistent_system.strip())
+    normalized = []
+    for message in messages:
+        role = message.get("role")
+        content = message.get("content", "")
+        if role in ("system", "developer"):
+            text = str(content).strip()
+            if text and text not in system_parts:
+                system_parts.append(text)
+        else:
+            normalized.append(message)
+    if system_parts:
+        return [{"role": "system", "content": "\n\n".join(system_parts)}] + normalized
+    return normalized
+
+
+def call_ds(messages, api_key: str, model: str, persistent_system: str | None = None) -> str:
     payload = {
         "model": model,
-        "messages": messages,
+        "messages": normalize_deepseek_messages(messages, persistent_system),
         "temperature": 0.2,
         "max_tokens": 4096,
         "stream": False,
@@ -311,7 +330,7 @@ def main():
     ap.add_argument('--start-from', type=int, default=1, help='First milestone index, 1-8')
     ap.add_argument('--max-milestones', type=int, default=None, help='Maximum number of milestones to run')
     ap.add_argument('--evidence-dir', default=None, help='Evidence output directory')
-    ap.add_argument('--rules', default=None, help='Optional persistent rules file injected once at session start')
+    ap.add_argument('--rules', default=None, help='Optional persistent rules file compiled into every DeepSeek request')
     ap.add_argument('--model', default=DEFAULT_MODEL, help=f'DeepSeek model name, default {DEFAULT_MODEL}')
     args = ap.parse_args()
     root = Path(args.root).resolve()
@@ -331,7 +350,7 @@ def main():
     api_key = load_key(Path(args.key_file) if args.key_file else None)
     milestones = json.loads((root/'prompts/milestones.json').read_text(encoding='utf-8'))
 
-    # 读取 persistent rules（模拟 harness CLAUDE.md 注入，session 开始时注入一次）
+    # DeepSeek 没有 Codex developer/context 层级；把持久规则编译进每轮首条 system。
     persistent_rules = ""
     if args.rules:
         rules_path = Path(args.rules)
@@ -343,7 +362,8 @@ def main():
     milestones = milestones[start_idx:]
     if args.max_milestones is not None:
         milestones = milestones[:args.max_milestones]
-    messages = [{"role":"system", "content": SYSTEM + persistent_rules + f"\nrepo_root={root}\n"}]
+    persistent_system = SYSTEM + persistent_rules + f"\nrepo_root={root}\n"
+    messages = [{"role":"system", "content": persistent_system}]
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open('w', encoding='utf-8') as log:
         for i, ms in enumerate(milestones):
@@ -361,7 +381,7 @@ def main():
             for step in range(MAX_TOOL_STEPS):
                 if collector:
                     collector.step_start(ms['id'], step, messages[-1]["content"])
-                content = call_ds(messages, api_key, args.model)
+                content = call_ds(messages, api_key, args.model, persistent_system)
                 log.write(json.dumps({"milestone": ms['id'], "step": step, "assistant": content}, ensure_ascii=False)+"\n"); log.flush()
                 try:
                     action = extract_json(content)

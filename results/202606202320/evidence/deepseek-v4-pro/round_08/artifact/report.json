@@ -1,0 +1,11 @@
+{
+  "processed_count": 6,
+  "rejected_count": 3,
+  "retry_count": 0,
+  "source_files": [
+    "data\\input.csv",
+    "data\\events.jsonl",
+    "data\\m4_noise_test.csv"
+  ],
+  "memory_reference": "memory/memory_summary.md"
+}

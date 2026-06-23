@@ -1,0 +1,93 @@
+{
+  "capability": "项目理解",
+  "score": 79.8,
+  "per_round": {
+    "round_01": {
+      "score": 100,
+      "sub_scores": {"维度1": 100, "维度2": null},
+      "evidence": ["round_01/replay.jsonl:L1-L6"],
+      "note": "维度1 only: Read SKILL.md, Glob **/*, Read pyproject.toml → 3/3"
+    },
+    "round_02": {
+      "score": 63.8,
+      "sub_scores": {"2.1": 100, "2.2": 50, "2.3": null, "2.4": null, "2.5": 0},
+      "evidence": ["round_02/replay.jsonl:L1-L10"]
+    },
+    "round_03": {
+      "score": 100,
+      "sub_scores": {"2.1": 100, "2.2": 100, "2.3": null, "2.4": null, "2.5": 0},
+      "evidence": ["round_03/replay.jsonl:L1-L5"]
+    },
+    "round_04": {
+      "score": 63.8,
+      "sub_scores": {"2.1": 100, "2.2": 50, "2.3": null, "2.4": null, "2.5": 0},
+      "evidence": ["round_04/replay.jsonl:L1-L27"]
+    },
+    "round_05": {
+      "score": 78.8,
+      "sub_scores": {"2.1": 100, "2.2": 50, "2.3": null, "2.4": null, "2.5": 100},
+      "evidence": ["round_05/replay.jsonl:L1-L17"]
+    },
+    "round_06": {
+      "score": 78.8,
+      "sub_scores": {"2.1": 0, "2.2": 100, "2.3": 100, "2.4": 100, "2.5": 100},
+      "evidence": ["round_06/replay.jsonl:L1-L5"]
+    },
+    "round_07": {
+      "score": 93.8,
+      "sub_scores": {"2.1": 100, "2.2": 100, "2.3": null, "2.4": null, "2.5": 100},
+      "evidence": ["round_07/replay.jsonl:L1-L9"]
+    },
+    "round_08": {
+      "score": 63.8,
+      "sub_scores": {"2.1": 100, "2.2": 50, "2.3": null, "2.4": null, "2.5": 50},
+      "evidence": ["round_08/replay.jsonl:L1-L37"]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "round_01/replay.jsonl:L1-L6",
+    "round_02/replay.jsonl:L1-L10",
+    "round_03/replay.jsonl:L1-L5",
+    "round_04/replay.jsonl:L1-L27",
+    "round_05/replay.jsonl:L1-L17",
+    "round_06/replay.jsonl:L1-L5",
+    "round_07/replay.jsonl:L1-L9",
+    "round_08/replay.jsonl:L1-L37"
+  ],
+  "reason": "维度1首轮探索完备（3/3）。维度2环节追踪较好，但多轮因关键词偏离被扣分（2.2收敛不足、2.5 diff污染主线模块）。中断轮次（R06）正确处理了无关任务。",
+  "deductions": [
+    {
+      "round": "round_02",
+      "item": "2.5_无关任务隔离",
+      "amount": 50,
+      "reason": "R02 diff修改了src/mini_harness/cli.py（主线模块），且后续轮引用R02产出。机械触发的偏离惩罚：prompt关键词与R01重合度<50%，但实质上是同项目续建。round_02/diff.patch:L1-L37"
+    },
+    {
+      "round": "round_03",
+      "item": "2.5_无关任务隔离",
+      "amount": 50,
+      "reason": "R03 diff修改src/mini_harness/engine.py（主线模块）。round_03/diff.patch:L1-L132"
+    },
+    {
+      "round": "round_04",
+      "item": "2.5_无关任务隔离",
+      "amount": 50,
+      "reason": "R04 diff新增src/mini_harness/runner.py并修改engine.py（主线模块）。round_04/diff.patch:L1-L133"
+    },
+    {
+      "round": "round_06",
+      "item": "2.1_环节追踪",
+      "amount": 50,
+      "reason": "R06读取logs/unrelated_error.log和docs/handoff-note.md，与mini_harness主线无路径重叠，操作递进不通过。round_06/replay.jsonl:L1-L5"
+    },
+    {
+      "round": "round_08",
+      "item": "2.5_无关任务隔离",
+      "amount": 25,
+      "reason": "R08 diff修改src/mini_harness/（主线模块），作为最后一轮后续无残留可豁免，但仍扣diff无污染项。round_08/diff.patch:L1-L88"
+    }
+  ],
+  "evidence_gaps": []
+}

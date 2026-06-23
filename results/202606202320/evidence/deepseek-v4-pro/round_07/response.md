@@ -1,0 +1,1 @@
+M7_memory_report 完成：读取 memory_summary.md、compatibility-notes.md 和 perf-baseline.json；运行管线生成当前统计（processed=6, rejected=3, retries=0）；生成 memory/memory_report.md 复盘报告，引用早期设计决策和实际产物统计。测试通过。

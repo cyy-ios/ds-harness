@@ -1,0 +1,7 @@
+{
+  "elapsed_sec": 84.47,
+  "input_tokens": 243312,
+  "output_tokens": 3987,
+  "total_tokens": 247299,
+  "tool_steps": 12
+}

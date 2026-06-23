@@ -81,6 +81,7 @@ impl<T: HttpTransport> ResponsesClient<T> {
             turn_state,
         } = options;
 
+        let request = request.normalize_for_provider(self.session.provider());
         let mut body = serde_json::to_value(&request)
             .map_err(|e| ApiError::Stream(format!("failed to encode responses request: {e}")))?;
         if request.store && self.session.provider().is_azure_responses_endpoint() {

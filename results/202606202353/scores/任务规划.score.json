@@ -1,0 +1,70 @@
+{
+  "capability": "任务规划",
+  "score": 57.9,
+  "per_round": {
+    "round_01": {
+      "score": 60,
+      "sub_scores": {"1.1": 50, "1.2": 75},
+      "evidence": ["round_01/replay.jsonl"]
+    },
+    "round_02": {
+      "score": 70,
+      "sub_scores": {"1.1": 75, "1.2": 75},
+      "evidence": ["round_02/replay.jsonl"]
+    },
+    "round_03": {
+      "score": 85,
+      "sub_scores": {"1.1": 75, "1.2": 100},
+      "evidence": ["round_03/replay.jsonl"]
+    },
+    "round_04": {
+      "score": 56,
+      "sub_scores": {"1.1": 50, "1.2": 75},
+      "evidence": ["round_04/replay.jsonl"]
+    },
+    "round_05": {
+      "score": 60,
+      "sub_scores": {"1.1": 50, "1.2": 75},
+      "evidence": ["round_05/replay.jsonl"]
+    },
+    "round_06": {
+      "score": 100,
+      "sub_scores": {"1.1": 100, "1.2": 100},
+      "evidence": ["round_06/replay.jsonl"]
+    },
+    "round_07": {
+      "score": 60,
+      "sub_scores": {"1.1": 50, "1.2": 75},
+      "evidence": ["round_07/replay.jsonl"]
+    },
+    "round_08": {
+      "score": 65,
+      "sub_scores": {"1.1": 75, "1.2": 50},
+      "evidence": ["round_08/replay.jsonl"]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "reason": "工具选择总体合格（专用工具占比≥75%），但路线效率多轮偏低——大量Read操作并非直接服务于prompt核心要求（如R01先读SKILL.md再glob再读pyproject.toml，路径有效但探索花费多步）。R04有调试迭代的绕路（多次pytest重试）。R06最高效（3步精确完成）。R08工具选择下降（shell cat等方式替代Read）。",
+  "deductions": [
+    {
+      "round": "round_01",
+      "item": "1.1_路线效率",
+      "amount": 25,
+      "reason": "R01共12 tool_calls，有效占比≈67%(<80%)。首步Read SKILL.md和Glob有效，但Read pyproject.toml和shell mkdir操作中部分不含prompt关键词。round_01/replay.jsonl全12条"
+    },
+    {
+      "round": "round_04",
+      "item": "1.1_路线效率",
+      "amount": 25,
+      "reason": "R04共约16 tool_calls，含3次调试循环(pytest失败→Read→Edit→pytest再失败→Rewrite→pytest通过)。连续绕路≥3步。round_04/replay.jsonl:L5-L27"
+    },
+    {
+      "round": "round_08",
+      "item": "1.2_工具选择",
+      "amount": 25,
+      "reason": "R08使用shell cat/glob替代Read/Glob，共2次Write/Edit中使用shell替代1次。专用工具占比≈67%(<75%)。round_08/replay.jsonl 含shell glob而非专用Glob"
+    }
+  ],
+  "evidence_gaps": []
+}

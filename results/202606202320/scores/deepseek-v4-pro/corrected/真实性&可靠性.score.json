@@ -1,0 +1,136 @@
+{
+  "capability": "真实性&可靠性",
+  "score": 58.0,
+  "per_round": {
+    "round_01": {
+      "score": null,
+      "evidence": [
+        "round_01/replay.jsonl",
+        "round_01/acceptance.json"
+      ]
+    },
+    "round_02": {
+      "score": null,
+      "evidence": [
+        "round_02/replay.jsonl",
+        "round_02/acceptance.json"
+      ]
+    },
+    "round_03": {
+      "score": null,
+      "evidence": [
+        "round_03/replay.jsonl",
+        "round_03/acceptance.json"
+      ]
+    },
+    "round_04": {
+      "score": null,
+      "evidence": [
+        "round_04/replay.jsonl",
+        "round_04/acceptance.json"
+      ]
+    },
+    "round_05": {
+      "score": null,
+      "evidence": [
+        "round_05/replay.jsonl",
+        "round_05/acceptance.json"
+      ]
+    },
+    "round_06": {
+      "score": null,
+      "evidence": [
+        "round_06/replay.jsonl",
+        "round_06/acceptance.json"
+      ]
+    },
+    "round_07": {
+      "score": null,
+      "evidence": [
+        "round_07/replay.jsonl",
+        "round_07/acceptance.json"
+      ]
+    },
+    "round_08": {
+      "score": null,
+      "evidence": [
+        "round_08/replay.jsonl",
+        "round_08/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "round_01..08/replay.jsonl",
+    "round_01..08/commands.log",
+    "round_01..08/diff.patch",
+    "round_01..08/acceptance.json",
+    "transcripts/deepseek-v4-pro.jsonl"
+  ],
+  "reason": "Corrected from 52 to 58.0: 旧 acceptance 早期轮次误判为 final gate，已按 stage/final_gate_applicable 规则重算. Only round_08 acceptance is treated as final-gate evidence; round_01..07 acceptance failures remain raw evidence but no longer impose final-gate deductions.",
+  "deductions": [
+    {
+      "round": "round_08",
+      "item": "corrected_final_gate_acceptance",
+      "amount": 15,
+      "reason": "round_08/acceptance.json remains final-gate-applicable and gate_passed=false; round_01..07 are treated as final_gate_applicable=false."
+    },
+    {
+      "round": "round_08",
+      "item": "finalization",
+      "amount": 25,
+      "reason": "compact summary rebuilt, but round_08 lacks response.md/finish event"
+    },
+    {
+      "round": "round_02/04/05/07/08",
+      "item": "json protocol repair",
+      "amount": 10,
+      "reason": "transcript contains five invalid_json/json_repair events; repair continued run but indicates protocol instability"
+    }
+  ],
+  "evidence_gaps": [
+    "round_08 missing response.md and finish event",
+    "Original acceptance.json lacks explicit stage/final_gate_applicable fields; corrected score infers them from round index without rerun."
+  ],
+  "original_score": 52,
+  "correction": {
+    "note": "旧 acceptance 早期轮次误判为 final gate，已按 stage/final_gate_applicable 规则重算",
+    "method": "No rerun. Preserved original acceptance.json and reinterpreted existing evidence with round_01..07 as stage=intermediate/final_gate_applicable=false and round_08 as stage=final/final_gate_applicable=true.",
+    "acceptance_files_preserved": true,
+    "round_scope": {
+      "round_01": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_02": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_03": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_04": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_05": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_06": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_07": {
+        "stage": "intermediate",
+        "final_gate_applicable": false
+      },
+      "round_08": {
+        "stage": "final",
+        "final_gate_applicable": true
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+M5_context_change complete: added get_project_root() and resolve_path() to make mini_harness work from any working directory. Updated runner.py to use resolve_path for multi-file DAG. Updated subdir/workbench/pyproject.toml to include correct testpaths and pythonpath. All 5 tests pass from subdir/workbench.

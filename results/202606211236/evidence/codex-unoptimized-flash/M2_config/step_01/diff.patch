@@ -1,0 +1,705 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..a944468
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1,5 @@
++"""Minimal data harness package."""
++
++from .runner import HarnessError, run_dag
++
++__all__ = ["HarnessError", "run_dag"]
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..15293f5
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,7 @@
++"""Command line entry point for ``python -m mini_harness``."""
++
++from .cli import main
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..119e301
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,45 @@
++"""CLI for the mini data harness."""
++
++from __future__ import annotations
++
++import argparse
++import json
++import sys
++
++from .runner import HarnessError, run_dag
++
++
++def build_parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    subparsers = parser.add_subparsers(dest="command", required=True)
++
++    run_parser = subparsers.add_parser("run", help="run the extract-clean-report DAG")
++    run_parser.add_argument("sources", nargs="*", help="CSV or JSONL source files")
++    run_parser.add_argument("--output", help="report JSON output path")
++    run_parser.add_argument("--config", help="JSON or YAML config path")
++
++    return parser
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    if args.command == "run":
++        try:
++            from .config import resolve_run_settings
++
++            sources, output, _config_path = resolve_run_settings(
++                args.sources,
++                args.output,
++                args.config,
++            )
++            report = run_dag(sources, output)
++        except HarnessError as exc:
++            print(f"mini_harness: {exc}", file=sys.stderr)
++            return 1
++        print(json.dumps(report, ensure_ascii=False, sort_keys=True))
++        return 0
++
++    parser.error(f"unknown command: {args.command}")
++    return 2
+diff --git a/mini_harness/config.py b/mini_harness/config.py
+new file mode 100644
+index 0000000..445dd7f
+--- /dev/null
++++ b/mini_harness/config.py
+@@ -0,0 +1,136 @@
++"""JSON and minimal YAML config loading."""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++from typing import Any
++
++from .runner import HarnessError, REPO_ROOT, _repo_path
++
++
++DEFAULT_CONFIG_NAMES = ("harness.json", "harness.yaml", "harness.yml")
++
++
++def load_config(path: str | None = None) -> dict[str, Any]:
++    """Load an explicit config path or the first repo-root default config."""
++
++    config_path = _find_config(path)
++    if config_path is None:
++        return {}
++
++    suffix = config_path.suffix.lower()
++    text = config_path.read_text(encoding="utf-8")
++    if suffix == ".json":
++        try:
++            data = json.loads(text)
++        except json.JSONDecodeError as exc:
++            raise HarnessError(f"invalid JSON config: {config_path.name}") from exc
++    elif suffix in {".yaml", ".yml"}:
++        data = _parse_simple_yaml(text)
++    else:
++        raise HarnessError(f"unsupported config type: {config_path.suffix}")
++
++    if not isinstance(data, dict):
++        raise HarnessError("config root must be an object")
++    return data
++
++
++def resolve_run_settings(
++    cli_sources: list[str],
++    cli_output: str | None,
++    config_path: str | None,
++) -> tuple[list[str], str, str | None]:
++    config = load_config(config_path)
++    sources = cli_sources or _string_list(config.get("sources", []), "sources")
++    output = cli_output or _optional_string(config.get("output"), "output")
++
++    if not sources:
++        raise HarnessError("sources are required via CLI args or config")
++    if not output:
++        raise HarnessError("output is required via --output or config")
++
++    loaded_path = _find_config(config_path)
++    loaded_display = loaded_path.relative_to(REPO_ROOT).as_posix() if loaded_path else None
++    return sources, output, loaded_display
++
++
++def _find_config(path: str | None) -> Path | None:
++    if path:
++        config_path = _repo_path(path)
++        if not config_path.exists():
++            raise HarnessError(f"config does not exist: {path}")
++        return config_path
++
++    for name in DEFAULT_CONFIG_NAMES:
++        config_path = REPO_ROOT / name
++        if config_path.exists():
++            return config_path
++    return None
++
++
++def _string_list(value: Any, name: str) -> list[str]:
++    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
++        raise HarnessError(f"config {name} must be a list of strings")
++    return value
++
++
++def _optional_string(value: Any, name: str) -> str | None:
++    if value is None:
++        return None
++    if not isinstance(value, str):
++        raise HarnessError(f"config {name} must be a string")
++    return value
++
++
++def _parse_simple_yaml(text: str) -> dict[str, Any]:
++    result: dict[str, Any] = {}
++    current_list: str | None = None
++
++    for raw_line in text.splitlines():
++        line = raw_line.split("#", 1)[0].rstrip()
++        if not line.strip():
++            continue
++
++        stripped = line.strip()
++        if stripped.startswith("- "):
++            if current_list is None:
++                raise HarnessError("YAML list item without key")
++            result[current_list].append(_yaml_scalar(stripped[2:].strip()))
++            continue
++
++        current_list = None
++        if ":" not in stripped:
++            raise HarnessError(f"invalid YAML line: {raw_line}")
++
++        key, raw_value = stripped.split(":", 1)
++        key = key.strip()
++        raw_value = raw_value.strip()
++        if not key:
++            raise HarnessError("YAML key cannot be empty")
++        if raw_value == "":
++            result[key] = []
++            current_list = key
++        else:
++            result[key] = _yaml_scalar(raw_value)
++
++    return result
++
++
++def _yaml_scalar(value: str) -> Any:
++    if value.startswith("[") and value.endswith("]"):
++        inner = value[1:-1].strip()
++        if not inner:
++            return []
++        return [_yaml_scalar(part.strip()) for part in inner.split(",")]
++    if value in {"null", "Null", "NULL", "~"}:
++        return None
++    if value in {"true", "True", "TRUE"}:
++        return True
++    if value in {"false", "False", "FALSE"}:
++        return False
++    if (value.startswith('"') and value.endswith('"')) or (
++        value.startswith("'") and value.endswith("'")
++    ):
++        return value[1:-1]
++    return value
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..c331e24
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,160 @@
++"""DAG runner for the mini data harness."""
++
++from __future__ import annotations
++
++import csv
++import json
++import re
++from pathlib import Path
++from typing import Any, Callable
++
++
++class HarnessError(Exception):
++    """Raised when the harness cannot complete the DAG."""
++
++
++REPO_ROOT = Path(__file__).resolve().parents[1]
++MAX_RETRIES = 2
++
++
++def run_dag(sources: list[str] | tuple[str, ...], output: str) -> dict[str, Any]:
++    """Run extract, clean, and report stages and write a JSON report."""
++
++    logs: list[dict[str, Any]] = []
++    retry_count = 0
++
++    def run_stage(name: str, func: Callable[[], Any]) -> Any:
++        nonlocal retry_count
++        for attempt in range(1, MAX_RETRIES + 2):
++            try:
++                result = func()
++            except Exception as exc:  # noqa: BLE001 - convert all stage failures.
++                logs.append(
++                    {
++                        "attempt": attempt,
++                        "stage": name,
++                        "status": "failed",
++                        "error": str(exc),
++                    }
++                )
++                if attempt > MAX_RETRIES:
++                    raise HarnessError(f"{name} failed after {attempt} attempts") from exc
++                retry_count += 1
++            else:
++                logs.append({"attempt": attempt, "stage": name, "status": "ok"})
++                return result
++        raise HarnessError(f"{name} failed")
++
++    source_paths = [_repo_path(source) for source in sources]
++    records = run_stage("extract", lambda: _extract(source_paths))
++    cleaned, rejects = run_stage("clean", lambda: _clean(records))
++    report = run_stage(
++        "report",
++        lambda: _build_report(cleaned, rejects, retry_count, source_paths, logs),
++    )
++
++    output_path = _repo_path(output)
++    output_path.parent.mkdir(parents=True, exist_ok=True)
++    output_path.write_text(
++        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
++        encoding="utf-8",
++    )
++    return report
++
++
++def _repo_path(path: str) -> Path:
++    candidate = Path(path)
++    resolved = candidate.resolve() if candidate.is_absolute() else (REPO_ROOT / candidate).resolve()
++    try:
++        resolved.relative_to(REPO_ROOT)
++    except ValueError as exc:
++        raise HarnessError(f"path is outside repo root: {path}") from exc
++    return resolved
++
++
++def _extract(paths: list[Path]) -> list[dict[str, Any]]:
++    records: list[dict[str, Any]] = []
++    for path in paths:
++        if not path.exists():
++            raise HarnessError(f"source does not exist: {_display_path(path)}")
++        suffix = path.suffix.lower()
++        if suffix == ".csv":
++            records.extend(_read_csv(path))
++        elif suffix == ".jsonl":
++            records.extend(_read_jsonl(path))
++        else:
++            raise HarnessError(f"unsupported source type: {_display_path(path)}")
++    return records
++
++
++def _read_csv(path: Path) -> list[dict[str, Any]]:
++    with path.open("r", encoding="utf-8", newline="") as handle:
++        reader = csv.DictReader(handle)
++        return [
++            dict(row)
++            for row in reader
++            if row and any((value or "").strip() for value in row.values())
++        ]
++
++
++def _read_jsonl(path: Path) -> list[dict[str, Any]]:
++    records: list[dict[str, Any]] = []
++    with path.open("r", encoding="utf-8") as handle:
++        for line_number, line in enumerate(handle, start=1):
++            if not line.strip():
++                continue
++            try:
++                value = json.loads(line)
++            except json.JSONDecodeError as exc:
++                raise HarnessError(
++                    f"invalid JSONL at {_display_path(path)}:{line_number}"
++                ) from exc
++            if not isinstance(value, dict):
++                raise HarnessError(
++                    f"JSONL record must be an object at {_display_path(path)}:{line_number}"
++                )
++            records.append(value)
++    return records
++
++
++def _clean(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
++    cleaned: list[dict[str, Any]] = []
++    rejects: list[dict[str, Any]] = []
++    for record in records:
++        normalized = {_snake_case(str(key)): value for key, value in record.items()}
++        if not str(normalized.get("id", "")).strip():
++            rejects.append(normalized)
++        else:
++            cleaned.append(normalized)
++    return cleaned, rejects
++
++
++def _build_report(
++    cleaned: list[dict[str, Any]],
++    rejects: list[dict[str, Any]],
++    retry_count: int,
++    source_paths: list[Path],
++    logs: list[dict[str, Any]],
++) -> dict[str, Any]:
++    return {
++        "processed_count": len(cleaned),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": [_display_path(path) for path in source_paths],
++        "records": cleaned,
++        "rejects": rejects,
++        "logs": logs,
++        "memory_reference": "memory/memory_summary.md",
++    }
++
++
++def _snake_case(value: str) -> str:
++    value = value.strip()
++    value = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", value)
++    value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
++    value = re.sub(r"[^0-9A-Za-z]+", "_", value)
++    return value.strip("_").lower()
++
++
++def _display_path(path: Path) -> str:
++    return path.resolve().relative_to(REPO_ROOT).as_posix()
+diff --git a/tests/test_mini_harness.py b/tests/test_mini_harness.py
+new file mode 100644
+index 0000000..09c4e70
+--- /dev/null
++++ b/tests/test_mini_harness.py
+@@ -0,0 +1,127 @@
++import json
++
++from mini_harness.cli import main
++from mini_harness.runner import HarnessError, run_dag
++
++REPO_ROOT = run_dag.__globals__["REPO_ROOT"]
++
++
++def test_run_dag_writes_report():
++    output = "tmp/test-report.json"
++
++    output_path = REPO_ROOT / output
++    try:
++        report = run_dag(["data/input.csv", "data/events.jsonl"], output)
++
++        assert report["processed_count"] == 4
++        assert report["rejected_count"] == 2
++        assert report["retry_count"] == 0
++        assert report["source_files"] == ["data/input.csv", "data/events.jsonl"]
++        assert report["records"][0] == {"id": "1", "user_name": "Alice", "score": "10"}
++        assert report["memory_reference"] == "memory/memory_summary.md"
++        assert {entry["stage"] for entry in report["logs"]} == {
++            "extract",
++            "clean",
++            "report",
++        }
++        assert all(
++            {"attempt", "stage", "status"}.issubset(entry) for entry in report["logs"]
++        )
++
++        written = json.loads(output_path.read_text())
++        assert written["processed_count"] == 4
++    finally:
++        output_path.unlink(missing_ok=True)
++
++
++def test_run_dag_rejects_outside_output_path():
++    try:
++        run_dag(["data/input.csv"], "../outside.json")
++    except HarnessError as exc:
++        assert "outside repo root" in str(exc)
++    else:
++        raise AssertionError("expected HarnessError")
++
++
++def test_run_cli_uses_explicit_json_config():
++    config_path = REPO_ROOT / "tmp/test-harness.json"
++    output_path = REPO_ROOT / "tmp/json-config-report.json"
++    config_path.parent.mkdir(parents=True, exist_ok=True)
++    config_path.write_text(
++        json.dumps(
++            {
++                "sources": ["data/input.csv", "data/events.jsonl"],
++                "output": "tmp/json-config-report.json",
++            }
++        ),
++        encoding="utf-8",
++    )
++    try:
++        assert main(["run", "--config", "tmp/test-harness.json"]) == 0
++        report = json.loads(output_path.read_text(encoding="utf-8"))
++        assert report["processed_count"] == 4
++        assert report["rejected_count"] == 2
++    finally:
++        config_path.unlink(missing_ok=True)
++        output_path.unlink(missing_ok=True)
++
++
++def test_run_cli_uses_explicit_yaml_config_with_cli_override():
++    config_path = REPO_ROOT / "tmp/test-harness.yaml"
++    output_path = REPO_ROOT / "tmp/yaml-config-report.json"
++    config_path.parent.mkdir(parents=True, exist_ok=True)
++    config_path.write_text(
++        "\n".join(
++            [
++                "sources:",
++                "  - data/input.csv",
++                "  - data/events.jsonl",
++                "output: tmp/unused-report.json",
++            ]
++        ),
++        encoding="utf-8",
++    )
++    try:
++        assert (
++            main(
++                [
++                    "run",
++                    "--config",
++                    "tmp/test-harness.yaml",
++                    "--output",
++                    "tmp/yaml-config-report.json",
++                ]
++            )
++            == 0
++        )
++        report = json.loads(output_path.read_text(encoding="utf-8"))
++        assert report["source_files"] == ["data/input.csv", "data/events.jsonl"]
++    finally:
++        config_path.unlink(missing_ok=True)
++        output_path.unlink(missing_ok=True)
++        (REPO_ROOT / "tmp/unused-report.json").unlink(missing_ok=True)
++
++
++def test_run_cli_uses_default_repo_config():
++    config_path = REPO_ROOT / "harness.json"
++    output_path = REPO_ROOT / "tmp/default-config-report.json"
++    original = config_path.read_text(encoding="utf-8") if config_path.exists() else None
++    config_path.write_text(
++        json.dumps(
++            {
++                "sources": ["data/input.csv", "data/events.jsonl"],
++                "output": "tmp/default-config-report.json",
++            }
++        ),
++        encoding="utf-8",
++    )
++    try:
++        assert main(["run"]) == 0
++        report = json.loads(output_path.read_text(encoding="utf-8"))
++        assert report["processed_count"] == 4
++    finally:
++        if original is None:
++            config_path.unlink(missing_ok=True)
++        else:
++            config_path.write_text(original, encoding="utf-8")
++        output_path.unlink(missing_ok=True)
+diff --git a/tmp/acceptance-report.json b/tmp/acceptance-report.json
+new file mode 100644
+index 0000000..b3fb875
+--- /dev/null
++++ b/tmp/acceptance-report.json
+@@ -0,0 +1,57 @@
++{
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "processed_count": 4,
++  "records": [
++    {
++      "id": "1",
++      "score": "10",
++      "user_name": "Alice"
++    },
++    {
++      "id": "2",
++      "score": "20",
++      "user_name": "Bob"
++    },
++    {
++      "event_type": "click",
++      "id": "e1"
++    },
++    {
++      "event_type": "view",
++      "id": "e2"
++    }
++  ],
++  "rejected_count": 2,
++  "rejects": [
++    {
++      "id": "",
++      "score": "0",
++      "user_name": "Bad"
++    },
++    {
++      "event_type": "missing"
++    }
++  ],
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+diff --git a/tmp/hidden-acceptance-report.json b/tmp/hidden-acceptance-report.json
+new file mode 100644
+index 0000000..b3fb875
+--- /dev/null
++++ b/tmp/hidden-acceptance-report.json
+@@ -0,0 +1,57 @@
++{
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "processed_count": 4,
++  "records": [
++    {
++      "id": "1",
++      "score": "10",
++      "user_name": "Alice"
++    },
++    {
++      "id": "2",
++      "score": "20",
++      "user_name": "Bob"
++    },
++    {
++      "event_type": "click",
++      "id": "e1"
++    },
++    {
++      "event_type": "view",
++      "id": "e2"
++    }
++  ],
++  "rejected_count": 2,
++  "rejects": [
++    {
++      "id": "",
++      "score": "0",
++      "user_name": "Bad"
++    },
++    {
++      "event_type": "missing"
++    }
++  ],
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..b3fb875
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,57 @@
++{
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "processed_count": 4,
++  "records": [
++    {
++      "id": "1",
++      "score": "10",
++      "user_name": "Alice"
++    },
++    {
++      "id": "2",
++      "score": "20",
++      "user_name": "Bob"
++    },
++    {
++      "event_type": "click",
++      "id": "e1"
++    },
++    {
++      "event_type": "view",
++      "id": "e2"
++    }
++  ],
++  "rejected_count": 2,
++  "rejects": [
++    {
++      "id": "",
++      "score": "0",
++      "user_name": "Bad"
++    },
++    {
++      "event_type": "missing"
++    }
++  ],
++  "retry_count": 0,
++  "source_files": [
++    "data/input.csv",
++    "data/events.jsonl"
++  ]
++}

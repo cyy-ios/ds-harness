@@ -1,0 +1,425 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..03069c5
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1,5 @@
++﻿"""mini_harness - Mini data processing harness."""
++
++from mini_harness.runner import run_dag, HarnessError
++
++__all__ = ["run_dag", "HarnessError"]
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..be80d26
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,6 @@
++﻿"""Run mini_harness as a module: python -m mini_harness <subcommand>."""
++
++import sys
++from mini_harness.cli import main
++
++sys.exit(main())
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..b2d6f5a
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,43 @@
++﻿"""CLI entry point for mini_harness."""
++
++import argparse
++import sys
++
++from mini_harness.runner import run_dag, HarnessError
++
++
++def build_parser():
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    run_parser = sub.add_parser("run", help="Run the data processing DAG")
++    run_parser.add_argument("sources", nargs="+", help="Input CSV or JSONL files")
++    run_parser.add_argument("--output", "-o", required=True, help="Output report path")
++
++    return parser
++
++
++def main(argv=None):
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    if args.command == "run":
++        try:
++            report = run_dag(args.sources, args.output)
++            print(f"Report written to {args.output}")
++            print(f"  processed: {report['processed_count']}")
++            print(f"  rejected:  {report['rejected_count']}")
++            print(f"  retries:   {report['retry_count']}")
++            return 0
++        except HarnessError as e:
++            print(f"Harness error: {e}", file=sys.stderr)
++            return 1
++        except Exception as e:
++            print(f"Unexpected error: {e}", file=sys.stderr)
++            return 2
++
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..60cdf98
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,226 @@
++﻿"""Data processing DAG runner: extract -> clean -> report."""
++
++import csv
++import json
++import os
++import sys
++import io
++
++# -- repo root detection -----------------------------------------------
++_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++
++
++def _resolve(path):
++    """Resolve a path relative to the repo root."""
++    if os.path.isabs(path):
++        return path
++    return os.path.normpath(os.path.join(_REPO_ROOT, path))
++
++
++class HarnessError(Exception):
++    """Base error raised by the harness runner."""
++    pass
++
++
++# -- logging helpers ---------------------------------------------------
++
++_logs = []
++
++
++def _log(attempt, stage, status, detail=None):
++    entry = {
++        "attempt": attempt,
++        "stage": stage,
++        "status": status,
++    }
++    if detail:
++        entry["detail"] = detail
++    _logs.append(entry)
++
++
++# -- snake_case conversion ---------------------------------------------
++
++def _to_snake_case(name):
++    """Convert a field name to snake_case, handling acronyms."""
++    name = name.strip()
++    if not name:
++        return name
++    result = []
++    i = 0
++    n = len(name)
++    while i < n:
++        ch = name[i]
++        if ch.isspace() or ch == "-":
++            result.append("_")
++            i += 1
++        elif ch.isupper():
++            # look ahead: consecutive uppercase -> acronym
++            j = i
++            while j < n and name[j].isupper():
++                j += 1
++            upper_count = j - i
++            if upper_count > 1:
++                # acronym, e.g. ID, HTTP
++                if result and result[-1] != "_":
++                    result.append("_")
++                result.append(name[i:j].lower())
++                i = j
++            else:
++                # single uppercase letter
++                if result and result[-1] != "_":
++                    result.append("_")
++                result.append(ch.lower())
++                i += 1
++        else:
++            result.append(ch.lower())
++            i += 1
++    s = "".join(result)
++    while "__" in s:
++        s = s.replace("__", "_")
++    return s.strip("_")
++
++
++# -- extract stage -----------------------------------------------------
++
++def _read_csv(path):
++    records = []
++    with open(path, "r", encoding="utf-8-sig") as f:
++        lines = [line for line in f if not line.lstrip().startswith("#")]
++    reader = csv.DictReader(io.StringIO("".join(lines)))
++    for row in reader:
++        if any(v.strip() for v in row.values() if v):
++            records.append(row)
++    return records
++
++
++def _read_jsonl(path):
++    records = []
++    with open(path, "r", encoding="utf-8") as f:
++        for line in f:
++            line = line.strip()
++            if not line:
++                continue
++            records.append(json.loads(line))
++    return records
++
++
++def _extract(sources):
++    """Extract raw records from source files."""
++    records = []
++    file_names = []
++    for src in sources:
++        path = _resolve(src)
++        if not os.path.exists(path):
++            raise HarnessError(f"Source file not found: {path}")
++        file_names.append(os.path.basename(src))
++        if path.endswith(".csv"):
++            records.extend(_read_csv(path))
++        elif path.endswith(".jsonl"):
++            records.extend(_read_jsonl(path))
++        else:
++            raise HarnessError(f"Unsupported file type: {path}")
++    return records, file_names
++
++
++# -- clean stage -------------------------------------------------------
++
++def _clean(records):
++    """Clean records and separate rejects."""
++    clean_records = []
++    rejects = []
++
++    for rec in records:
++        cleaned = {k: v.strip() if isinstance(v, str) else v for k, v in rec.items()}
++        cleaned = {_to_snake_case(k): v for k, v in cleaned.items()}
++        if not any(v for v in cleaned.values() if isinstance(v, str) and v.strip()):
++            continue
++        rid = cleaned.get("id", "").strip()
++        if not rid:
++            cleaned.pop("id", None)
++            rejects.append({"record": cleaned, "reason": "missing id"})
++            continue
++        clean_records.append(cleaned)
++
++    return clean_records, rejects
++
++
++# -- report stage ------------------------------------------------------
++
++def _report(clean_records, rejects, retry_count, source_files, output_path):
++    """Build and write the final report."""
++    memory_path = _resolve("memory/memory_summary.md")
++    memory_ref = ""
++    if os.path.exists(memory_path):
++        try:
++            with open(memory_path, "r", encoding="utf-8") as f:
++                memory_ref = f.read().strip()
++        except OSError:
++            memory_ref = "(failed to read)"
++
++    report = {
++        "processed_count": len(clean_records),
++        "rejected_count": len(rejects),
++        "retry_count": retry_count,
++        "source_files": source_files,
++        "rejects": rejects,
++        "logs": _logs,
++        "memory_reference": memory_ref,
++    }
++
++    out_path = _resolve(output_path)
++    out_dir = os.path.dirname(out_path)
++    if out_dir:
++        os.makedirs(out_dir, exist_ok=True)
++    with open(out_path, "w", encoding="utf-8") as f:
++        json.dump(report, f, ensure_ascii=False, indent=2)
++
++    return report
++
++
++# -- DAG orchestrator --------------------------------------------------
++
++def run_dag(sources, output_path):
++    """Run the extract -> clean -> report DAG with retry logic."""
++    global _logs
++    _logs = []
++
++    retry_count = 0
++    max_attempts = 3
++
++    for attempt in range(1, max_attempts + 1):
++        attempt_ok = True
++        records = None
++        clean_records = None
++        rejects = None
++        source_files = None
++
++        try:
++            _log(attempt, "extract", "running")
++            records, source_files = _extract(sources)
++            _log(attempt, "extract", "ok")
++
++            _log(attempt, "clean", "running")
++            clean_records, rejects = _clean(records)
++            _log(attempt, "clean", "ok")
++
++            _log(attempt, "report", "running")
++            report = _report(clean_records, rejects, retry_count, source_files, output_path)
++            _log(attempt, "report", "ok")
++
++        except Exception as e:
++            _log(attempt, "error", "failed", detail=str(e))
++            attempt_ok = False
++            if attempt < max_attempts:
++                retry_count += 1
++                continue
++            raise HarnessError(f"DAG failed after {max_attempts} attempts: {e}") from e
++
++        if attempt_ok:
++            report["retry_count"] = retry_count
++            report["logs"] = _logs
++            out_path = _resolve(output_path)
++            with open(out_path, "w", encoding="utf-8") as f:
++                json.dump(report, f, ensure_ascii=False, indent=2)
++            return report
++
++    raise HarnessError("DAG exited unexpectedly")
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..c552b03
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,57 @@
++{
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "input.csv",
++    "events.jsonl"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "user_name": "Bad",
++        "score": "0"
++      },
++      "reason": "missing id"
++    },
++    {
++      "record": {
++        "event_type": "missing"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file
+diff --git a/tmp/report2.json b/tmp/report2.json
+new file mode 100644
+index 0000000..57ac07d
+--- /dev/null
++++ b/tmp/report2.json
+@@ -0,0 +1,50 @@
++{
++  "processed_count": 2,
++  "rejected_count": 1,
++  "retry_count": 0,
++  "source_files": [
++    "m4_noise_test.csv"
++  ],
++  "rejects": [
++    {
++      "record": {
++        "name": "BadRow",
++        "score": "0"
++      },
++      "reason": "missing id"
++    }
++  ],
++  "logs": [
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "extract",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "clean",
++      "status": "ok"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "running"
++    },
++    {
++      "attempt": 1,
++      "stage": "report",
++      "status": "ok"
++    }
++  ],
++  "memory_reference": "# Memory Summary\n\n早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。\n历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。\n最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。"
++}
+\ No newline at end of file

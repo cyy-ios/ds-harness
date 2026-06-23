@@ -1,0 +1,270 @@
+diff --git a/mini_harness/__init__.py b/mini_harness/__init__.py
+new file mode 100644
+index 0000000..46c62ae
+--- /dev/null
++++ b/mini_harness/__init__.py
+@@ -0,0 +1,3 @@
++from mini_harness.runner import run_dag, HarnessError
++
++__all__ = ["run_dag", "HarnessError"]
+diff --git a/mini_harness/__main__.py b/mini_harness/__main__.py
+new file mode 100644
+index 0000000..ef78305
+--- /dev/null
++++ b/mini_harness/__main__.py
+@@ -0,0 +1,4 @@
++from mini_harness.cli import main
++
++if __name__ == "__main__":
++    main()
+diff --git a/mini_harness/cli.py b/mini_harness/cli.py
+new file mode 100644
+index 0000000..a0d45dd
+--- /dev/null
++++ b/mini_harness/cli.py
+@@ -0,0 +1,37 @@
++"""CLI entry point for mini_harness."""
++
++import argparse
++import logging
++import sys
++
++from mini_harness.runner import run_dag
++
++
++def build_parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(prog="mini_harness")
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    run_parser = sub.add_parser("run", help="Run the DAG pipeline")
++    run_parser.add_argument("sources", nargs="+", help="Input CSV or JSONL files")
++    run_parser.add_argument("--output", default="tmp/report.json", help="Output report path")
++    run_parser.add_argument("--verbose", "-v", action="store_true", help="Enable DEBUG logging")
++
++    return parser
++
++
++def main(argv: list[str] | None = None) -> None:
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    logging.basicConfig(
++        level=logging.DEBUG if args.verbose else logging.INFO,
++        format="%(levelname)s %(name)s %(message)s",
++        stream=sys.stderr,
++    )
++
++    if args.command == "run":
++        report = run_dag(sources=args.sources, output=args.output)
++        print(f"Report written to {args.output}")
++        print(f"  processed: {report['processed_count']}, rejected: {report['rejected_count']}")
++    else:
++        parser.print_help()
+diff --git a/mini_harness/runner.py b/mini_harness/runner.py
+new file mode 100644
+index 0000000..a054a9c
+--- /dev/null
++++ b/mini_harness/runner.py
+@@ -0,0 +1,117 @@
++"""DAG runner: extract → clean → report with retry logic."""
++
++import logging
++import os
++import json
++from datetime import datetime
++from typing import Any
++
++from mini_harness.utils import read_csv, read_jsonl, clean_record
++
++logger = logging.getLogger("mini_harness")
++
++
++class HarnessError(Exception):
++    """Base exception for harness pipeline errors."""
++
++
++def run_dag(
++    sources: list[str],
++    output: str = "tmp/report.json",
++    max_retries: int = 2,
++    memory_ref: str = "memory/memory_summary.md",
++) -> dict[str, Any]:
++    """Run the full DAG pipeline: extract → clean → report.
++
++    Args:
++        sources: List of file paths (CSV or JSONL).
++        output: Path to write the final report JSON.
++        max_retries: Max retries per stage (default 2).
++        memory_ref: Path to memory summary to reference in report.
++    """
++    # --- extract ---
++    extract_ok = False
++    all_records: list[dict] = []
++    source_files: list[str] = []
++    for attempt in range(1, max_retries + 2):  # first try + retries
++        try:
++            logger.info("extract attempt=%d stage=extract status=running", attempt)
++            all_records.clear()
++            source_files.clear()
++            for path in sources:
++                if not os.path.isfile(path):
++                    raise HarnessError(f"Source not found: {path}")
++                if path.endswith(".csv"):
++                    rows = read_csv(path)
++                elif path.endswith(".jsonl"):
++                    rows = read_jsonl(path)
++                else:
++                    raise HarnessError(f"Unsupported format: {path}")
++                source_files.append(os.path.abspath(path))
++                all_records.extend(rows)
++            extract_ok = True
++            logger.info("extract attempt=%d stage=extract status=ok sources=%d", attempt, len(source_files))
++            break
++        except Exception as e:
++            logger.warning("extract attempt=%d stage=extract status=failed error=%s", attempt, e)
++            if attempt > max_retries:
++                raise HarnessError(f"Extract failed after {attempt} attempts") from e
++
++    # --- clean ---
++    clean_ok = False
++    processed: list[dict] = []
++    rejected: list[dict] = []
++    for attempt in range(1, max_retries + 2):
++        try:
++            logger.info("clean attempt=%d stage=clean status=running", attempt)
++            processed.clear()
++            rejected.clear()
++            for record in all_records:
++                # Remove blank lines (empty dicts)
++                if not record:
++                    continue
++                cleaned = clean_record(record)
++                if not cleaned.get("id") or cleaned["id"].strip() == "":
++                    rejected.append(cleaned)
++                else:
++                    processed.append(cleaned)
++            clean_ok = True
++            logger.info("clean attempt=%d stage=clean status=ok processed=%d rejected=%d", attempt, len(processed), len(rejected))
++            break
++        except Exception as e:
++            logger.warning("clean attempt=%d stage=clean status=failed error=%s", attempt, e)
++            if attempt > max_retries:
++                raise HarnessError(f"Clean failed after {attempt} attempts") from e
++
++    # --- report ---
++    retry_count = 0
++    report_ok = False
++    for attempt in range(1, max_retries + 2):
++        try:
++            logger.info("report attempt=%d stage=report status=running", attempt)
++            os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
++            report = {
++                "pipeline": "mini_harness",
++                "generated_at": datetime.now().isoformat(),
++                "processed_count": len(processed),
++                "rejected_count": len(rejected),
++                "retry_count": retry_count,
++                "source_files": source_files,
++                "memory_reference": memory_ref,
++                "stages": {
++                    "extract": {"status": "ok", "sources": len(source_files)},
++                    "clean": {"status": "ok", "processed": len(processed), "rejected": len(rejected)},
++                    "report": {"status": "ok"},
++                },
++            }
++            with open(output, "w", encoding="utf-8") as f:
++                json.dump(report, f, indent=2, ensure_ascii=False)
++            report_ok = True
++            logger.info("report attempt=%d stage=report status=ok output=%s", attempt, output)
++            break
++        except Exception as e:
++            logger.warning("report attempt=%d stage=report status=failed error=%s", attempt, e)
++            if attempt > max_retries:
++                raise HarnessError(f"Report failed after {attempt} attempts") from e
++
++    return report
+diff --git a/mini_harness/utils.py b/mini_harness/utils.py
+new file mode 100644
+index 0000000..b3d707b
+--- /dev/null
++++ b/mini_harness/utils.py
+@@ -0,0 +1,46 @@
++import csv
++import json
++import io
++import re
++
++
++def read_csv(path: str) -> list[dict[str, str]]:
++    """Read a CSV file, return list of row-dicts. Empty lines are returned as empty dicts."""
++    rows: list[dict[str, str]] = []
++    with open(path, newline="", encoding="utf-8") as f:
++        reader = csv.DictReader(f)
++        for row in reader:
++            # If every value is empty/None, treat as blank line
++            if row and all(v is None or v.strip() == "" for v in row.values()):
++                rows.append({})
++            else:
++                # Normalize None to empty string
++                rows.append({k: (v if v is not None else "") for k, v in row.items()})
++    return rows
++
++
++def read_jsonl(path: str) -> list[dict[str, str]]:
++    """Read a JSONL file, return list of dicts. Blank lines become empty dicts."""
++    rows: list[dict[str, str]] = []
++    with open(path, encoding="utf-8") as f:
++        for line in f:
++            stripped = line.strip()
++            if not stripped:
++                rows.append({})
++                continue
++            rows.append(json.loads(stripped))
++    return rows
++
++
++def snake_case(name: str) -> str:
++    """Convert a field name to snake_case."""
++    name = name.strip()
++    name = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
++    name = re.sub(r"([a-z\d])([A-Z])", r"\1_\2", name)
++    name = re.sub(r"[-\s]+", "_", name)
++    return name.lower()
++
++
++def clean_record(record: dict) -> dict:
++    """Return a new dict with all keys converted to snake_case."""
++    return {snake_case(k): v for k, v in record.items()}
+diff --git a/tmp/report.json b/tmp/report.json
+new file mode 100644
+index 0000000..20b4c05
+--- /dev/null
++++ b/tmp/report.json
+@@ -0,0 +1,26 @@
++{
++  "pipeline": "mini_harness",
++  "generated_at": "2026-06-21T17:42:58.728188",
++  "processed_count": 4,
++  "rejected_count": 2,
++  "retry_count": 0,
++  "source_files": [
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\input.csv",
++    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740\\data\\events.jsonl"
++  ],
++  "memory_reference": "memory/memory_summary.md",
++  "stages": {
++    "extract": {
++      "status": "ok",
++      "sources": 2
++    },
++    "clean": {
++      "status": "ok",
++      "processed": 4,
++      "rejected": 2
++    },
++    "report": {
++      "status": "ok"
++    }
++  }
++}
+\ No newline at end of file

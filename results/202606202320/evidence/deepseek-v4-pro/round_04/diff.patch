@@ -1,0 +1,65 @@
+diff --git a/src/mini_harness/pipeline.py b/src/mini_harness/pipeline.py
+index 9570eda..a730fcf 100644
+--- a/src/mini_harness/pipeline.py
++++ b/src/mini_harness/pipeline.py
+@@ -23,7 +23,11 @@ def extract(file_path):
+ def extract_csv(path):
+     records = []
+     with open(path, newline='', encoding='utf-8') as f:
+-        reader = csv.DictReader(f)
++        # skip comment lines (starting with #)
++        lines = [line for line in f if not line.lstrip().startswith('#')]
++        # join back to string for DictReader
++        import io
++        reader = csv.DictReader(io.StringIO(''.join(lines)))
+         for row in reader:
+             records.append(row)
+     return records
+@@ -51,7 +55,7 @@ def clean(records):
+     Clean records:
+     - Remove empty rows
+     - Convert field names to snake_case
+-    - Reject records missing 'id'
++    - Reject records missing or empty 'id'
+     """
+     processed = []
+     rejects = []
+@@ -59,7 +63,7 @@ def clean(records):
+         if not any(v for v in record.values() if v.strip()):
+             continue  # empty row
+         cleaned = {snake_case(k): v for k, v in record.items()}
+-        if 'id' not in cleaned:
++        if 'id' not in cleaned or not str(cleaned.get('id', '')).strip():
+             rejects.append(cleaned)
+         else:
+             processed.append(cleaned)
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+new file mode 100644
+index 0000000..5aa634a
+--- /dev/null
++++ b/src/mini_harness/runner.py
+@@ -0,0 +1,24 @@
++import logging
++from mini_harness.pipeline import extract, clean, snake_case
++from pathlib import Path
++
++logger = logging.getLogger(__name__)
++
++def run_dag(input_files):
++    """
++    Minimal DAG runner: extract -> clean -> return stats.
++    Does not generate report file; returns dict with counts.
++    """
++    all_processed = []
++    all_rejects = []
++    for file_path in input_files:
++        logger.info("Processing %s", file_path)
++        records = extract(file_path)
++        processed, rejects = clean(records)
++        all_processed.extend(processed)
++        all_rejects.extend(rejects)
++    return {
++        "processed_count": len(all_processed),
++        "rejected_count": len(all_rejects),
++        "source_files": input_files
++    }

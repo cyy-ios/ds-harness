@@ -1,0 +1,1 @@
+M5_context_change 完成：调整 subdir/workbench 的 pyproject.toml 添加 pythonpath，新增跨目录访问测试，确保主线功能在 workbench 目录下仍然可用。所有测试在根目录和 workbench 均通过。

@@ -1,6 +1,8 @@
 use crate::error::ApiError;
+use crate::provider::Provider;
 use codex_protocol::config_types::ReasoningSummary as ReasoningSummaryConfig;
 use codex_protocol::config_types::Verbosity as VerbosityConfig;
+use codex_protocol::models::ContentItem;
 use codex_protocol::models::ResponseItem;
 use codex_protocol::openai_models::ReasoningEffort as ReasoningEffortConfig;
 use codex_protocol::protocol::ModelVerification;
@@ -200,6 +202,65 @@ pub struct ResponsesApiRequest {
     pub text: Option<TextControls>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_metadata: Option<HashMap<String, String>>,
+}
+
+impl ResponsesApiRequest {
+    pub fn normalize_for_provider(mut self, provider: &Provider) -> Self {
+        if !provider.needs_system_prompt_compat() {
+            return self;
+        }
+
+        let mut system_sections = Vec::new();
+        if !self.instructions.trim().is_empty() {
+            system_sections.push(self.instructions.clone());
+        }
+
+        let mut input = Vec::with_capacity(self.input.len() + 1);
+        for item in self.input {
+            match item {
+                ResponseItem::Message { role, content, .. }
+                    if matches!(role.as_str(), "developer" | "system") =>
+                {
+                    if let Some(text) = text_from_content(&content) {
+                        system_sections.push(text);
+                    }
+                }
+                item => input.push(item),
+            }
+        }
+
+        if !system_sections.is_empty() {
+            input.insert(
+                0,
+                ResponseItem::Message {
+                    id: None,
+                    role: "system".to_string(),
+                    content: vec![ContentItem::InputText {
+                        text: system_sections.join("\n\n"),
+                    }],
+                    phase: None,
+                },
+            );
+        }
+
+        self.instructions.clear();
+        self.input = input;
+        self
+    }
+}
+
+fn text_from_content(content: &[ContentItem]) -> Option<String> {
+    let text = content
+        .iter()
+        .filter_map(|item| match item {
+            ContentItem::InputText { text } | ContentItem::OutputText { text } => {
+                Some(text.as_str())
+            }
+            ContentItem::InputImage { .. } => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    (!text.trim().is_empty()).then_some(text)
 }
 
 impl From<&ResponsesApiRequest> for ResponseCreateWsRequest {

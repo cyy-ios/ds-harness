@@ -1,0 +1,70 @@
+﻿{
+    "capability":  "用户意图理解",
+    "reason":  "M4 perfect (100). M1 75. M6/M7 zero. Average 375/8=47 rounded to 50",
+    "rounds_scored":  8,
+    "score":  50,
+    "per_round":  {
+                      "round_05":  {
+                                       "evidence":  [
+                                                        "M5/replay.jsonl"
+                                                    ],
+                                       "score":  50
+                                   },
+                      "round_06":  {
+                                       "evidence":  [
+                                                        "M6/replay.jsonl"
+                                                    ],
+                                       "score":  0
+                                   },
+                      "round_02":  {
+                                       "evidence":  [
+                                                        "M2/replay.jsonl"
+                                                    ],
+                                       "score":  50
+                                   },
+                      "round_08":  {
+                                       "evidence":  [
+                                                        "M8/replay.jsonl"
+                                                    ],
+                                       "score":  50
+                                   },
+                      "round_07":  {
+                                       "evidence":  [
+                                                        "M7/replay.jsonl"
+                                                    ],
+                                       "score":  0
+                                   },
+                      "round_03":  {
+                                       "evidence":  [
+                                                        "M3/replay.jsonl"
+                                                    ],
+                                       "score":  50
+                                   },
+                      "round_04":  {
+                                       "evidence":  [
+                                                        "M4/replay.jsonl"
+                                                    ],
+                                       "score":  100
+                                   },
+                      "round_01":  {
+                                       "evidence":  [
+                                                        "M1/replay.jsonl"
+                                                    ],
+                                       "score":  75
+                                   }
+                  },
+    "deductions":  [
+                       {
+                           "amount":  100,
+                           "reason":  "M6 no response, no intent processing",
+                           "round":  "round_06",
+                           "item":  "1.1"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M7 no response, no intent processing",
+                           "round":  "round_07",
+                           "item":  "1.1"
+                       }
+                   ]
+}

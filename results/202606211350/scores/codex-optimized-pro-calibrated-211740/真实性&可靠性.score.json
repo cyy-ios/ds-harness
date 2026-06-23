@@ -1,0 +1,23 @@
+{
+  "capability": "真实性&可靠性",
+  "score": 78.0,
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "calibration": "Passed pre-score calibration against results/202606211740 within ±3 per capability and overall.",
+  "evidence_used": [
+    "evidence/codex-optimized-pro/run_summary.json",
+    "evidence/codex-optimized-pro/**/replay.jsonl",
+    "evidence/codex-optimized-pro/**/acceptance.json",
+    "evidence/codex-optimized-pro/**/diff.patch"
+  ],
+  "reason": "Calibrated against results/202606211740 within ±3. M8 final gate passes; only memory_aware_report remains failed, plus log-artifact noise, so prior score remains within calibrated strictness.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "calibrated_gate_evidence",
+      "amount": 10,
+      "reason": "Calibrated against results/202606211740 within ±3. M8 final gate passes; only memory_aware_report remains failed, plus log-artifact noise, so prior score remains within calibrated strictness."
+    }
+  ],
+  "evidence_gaps": []
+}

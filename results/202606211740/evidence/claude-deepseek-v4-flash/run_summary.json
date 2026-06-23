@@ -1,0 +1,42 @@
+{
+  "runner": "claude_code_cli",
+  "variant": "claude-deepseek",
+  "model": "deepseek-v4-flash",
+  "root": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211740",
+  "evidence_root": "C:\\项目\\ds-harness\\results\\202606211740\\evidence\\claude-deepseek-v4-flash",
+  "milestones_completed": 4,
+  "results": [
+    {
+      "milestone": "M5_context_change",
+      "elapsed_s": 376.1,
+      "event_count": 19427,
+      "exit_code": 1,
+      "session_id": "7abc2607-aa67-4ad7-ad51-7c5d6cf3012a",
+      "evidence_dir": "M5_context_change\\step_01"
+    },
+    {
+      "milestone": "M6_interruption",
+      "elapsed_s": 1.8,
+      "event_count": 1,
+      "exit_code": 1,
+      "session_id": "7abc2607-aa67-4ad7-ad51-7c5d6cf3012a",
+      "evidence_dir": "M6_interruption\\step_01"
+    },
+    {
+      "milestone": "M7_memory_report",
+      "elapsed_s": 1.7,
+      "event_count": 1,
+      "exit_code": 1,
+      "session_id": "7abc2607-aa67-4ad7-ad51-7c5d6cf3012a",
+      "evidence_dir": "M7_memory_report\\step_01"
+    },
+    {
+      "milestone": "M8_compact_resume",
+      "elapsed_s": 195.3,
+      "event_count": 4252,
+      "exit_code": 1,
+      "session_id": "72bf6617-8c3b-48af-ae01-9e36207463b9",
+      "evidence_dir": "M8_compact_resume\\step_01"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+diff --git a/src/mini_harness/pipeline.py b/src/mini_harness/pipeline.py
+index 46a4418..9570eda 100644
+--- a/src/mini_harness/pipeline.py
++++ b/src/mini_harness/pipeline.py
+@@ -88,9 +88,11 @@ def run_pipeline(input_files, config=None):
+     all_processed = []
+     all_rejects = []
+     total_retries = 0
++    failed_files = []
+ 
+     for file_path in input_files:
+         attempt = 0
++        records = None
+         while attempt <= max_retries:
+             stage = "extract"
+             try:
+@@ -103,7 +105,12 @@ def run_pipeline(input_files, config=None):
+                 attempt += 1
+                 total_retries += 1
+                 if attempt > max_retries:
+-                    raise RuntimeError(f"Failed to extract {file_path} after {max_retries} retries: {e}")
++                    logger.error("Stage: %s, File: %s, Status: failed after %d retries, skipping.", stage, file_path, max_retries)
++                    failed_files.append(file_path)
++                    records = None
++                    break
++        if records is None:
++            continue  # skip cleaning for failed files
+         stage = "clean"
+         logger.info("Stage: %s, Attempt: %d, File: %s, Status: start", stage, attempt, file_path)
+         processed, rejects = clean(records)
+@@ -115,3 +122,5 @@ def run_pipeline(input_files, config=None):
+     logger.info("Stage: %s, Status: start", stage)
+     report(all_processed, all_rejects, total_retries, input_files, config.get("output", "report.json"))
+     logger.info("Stage: %s, Status: success", stage)
++    if failed_files:
++        logger.warning("Some files failed: %s", failed_files)

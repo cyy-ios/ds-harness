@@ -1,0 +1,7 @@
+# comment header
+ID,Name,Score
+c1,Charlie,30
+# inline comment
+,BadRow,0
+c2,Diana,40
+# footer comment

@@ -1,4 +1,4 @@
-# Project Map
+﻿# Project Map
 
 This map is the repository-level navigation contract. Use `AGENTS.md` as the first entry point and this file for folder ownership.
 
@@ -7,7 +7,7 @@ This map is the repository-level navigation contract. Use `AGENTS.md` as the fir
 | Path | Purpose | Read when |
 | --- | --- | --- |
 | `benchmarks/agent-eval-suite/` | Main agent evaluation suite: workflow, fixtures, runners, rubrics, reports. | Running or changing evaluations. |
-| `results/` | Canonical public run outputs. Each run timestamp contains `evidence/`, `scores/`, `deductions/`, and `scorecard.md`. | Comparing or auditing completed runs. |
+| `results/` | Canonical public run outputs. Each run timestamp contains `evidence/`, `scores/`, `deductions/`, and `scorecard.md`; `model-scoreboard.md` records accepted model/model+harness scores. | Comparing completed runs or checking benchmark scores. |
 | `scripts/` | Repository-level validation and maintenance scripts. | Checking layout or repo hygiene. |
 | `docs/` | Stable project documentation, current status, decisions, and history. | Understanding project structure or non-runtime decisions. |
 | `docs/process-refinements/` | Historical optimization/adaptation/scoring records. | Explaining how the project evolved; not an execution entry. |
@@ -41,15 +41,37 @@ AGENTS.md
   -> benchmarks/agent-eval-suite/orchestrator.md
       -> tasks/mini-data-harness/scenario.md
       -> runners/run_*_replay.py
-      -> rubrics/evidence-spec.md + scoring-output.md
+      -> rubrics/evidence-spec.md (evidence contract)
+      -> rubrics/scoring-output.md (only scoring entry)
       -> results/<timestamp>/
 ```
 
-## Four supported run modes
+## Scoreboard rule
+
+Use `results/model-scoreboard.md` for the curated model/model+harness score table. Do not infer the scoreboard from every historical `results/<timestamp>/`; only runs listed there are accepted benchmark entries.
+
+## Scoring document chain
+
+Scoring has one entry point:
+
+```text
+benchmarks/agent-eval-suite/orchestrator.md
+  -> rubrics/scoring-output.md
+      -> capability-scoring.md
+          -> 项目理解-scoring.md
+      -> capability-weights.yaml
+      -> scoring-calibration.md
+```
+
+Do not start scoring from `capability-list.md`, templates, process-refinements, or historical docs.
+
+## Five supported run modes
 
 1. Bare model: `run_deepseek_agent_replay.py`
 2. Codex unoptimized: official Codex CLI through the DeepSeek proxy
 3. Codex optimized: `ds-codex` DeepSeek provider
 4. Codex native: official Codex CLI with a native model
+5. Claude Code DeepSeek: Claude Code CLI itself through DeepSeek Anthropic-compatible API via `run_claude_replay.py`
 
 The exact commands and acceptance rules live in `benchmarks/agent-eval-suite/orchestrator.md`.
+

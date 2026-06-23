@@ -1,0 +1,96 @@
+{
+  "capability": "任务规划",
+  "score": 70.0,
+  "per_round": {
+    "M1_bootstrap/step_01": {
+      "score": 75,
+      "evidence": [
+        "M1_bootstrap/step_01/replay.jsonl",
+        "M1_bootstrap/step_01/diff.patch",
+        "M1_bootstrap/step_01/acceptance.json"
+      ]
+    },
+    "M2_config/step_01": {
+      "score": 72,
+      "evidence": [
+        "M2_config/step_01/replay.jsonl",
+        "M2_config/step_01/diff.patch",
+        "M2_config/step_01/acceptance.json"
+      ]
+    },
+    "M3_runner_retry/step_01": {
+      "score": 72,
+      "evidence": [
+        "M3_runner_retry/step_01/replay.jsonl",
+        "M3_runner_retry/step_01/diff.patch",
+        "M3_runner_retry/step_01/acceptance.json"
+      ]
+    },
+    "M4_long_log_debug/step_01": {
+      "score": 70,
+      "evidence": [
+        "M4_long_log_debug/step_01/replay.jsonl",
+        "M4_long_log_debug/step_01/diff.patch",
+        "M4_long_log_debug/step_01/acceptance.json"
+      ]
+    },
+    "M5_context_change/step_01": {
+      "score": 62,
+      "evidence": [
+        "M5_context_change/step_01/replay.jsonl",
+        "M5_context_change/step_01/diff.patch",
+        "M5_context_change/step_01/acceptance.json"
+      ]
+    },
+    "M6_interruption/step_01": {
+      "score": 76,
+      "evidence": [
+        "M6_interruption/step_01/replay.jsonl",
+        "M6_interruption/step_01/diff.patch",
+        "M6_interruption/step_01/acceptance.json"
+      ]
+    },
+    "M7_memory_report/step_01": {
+      "score": 72,
+      "evidence": [
+        "M7_memory_report/step_01/replay.jsonl",
+        "M7_memory_report/step_01/diff.patch",
+        "M7_memory_report/step_01/acceptance.json"
+      ]
+    },
+    "M8_compact_resume/step_01": {
+      "score": 61,
+      "evidence": [
+        "M8_compact_resume/step_01/replay.jsonl",
+        "M8_compact_resume/step_01/diff.patch",
+        "M8_compact_resume/step_01/acceptance.json"
+      ]
+    }
+  },
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "evidence_used": [
+    "M1_bootstrap..M8_compact_resume/step_01/{replay.jsonl,diff.patch,response.md,acceptance.json}",
+    "run_summary.json"
+  ],
+  "reason": "Turn-gate calibrated rescore v2: per-round states were reconstructed from fresh fixture plus each cumulative diff.patch, avoiding final-state pollution. M1/M2/M3/M5/M6/M7/M8 turn gates pass; M4 fails m4_noise_cli; M8 full final gate passes.",
+  "deductions": [
+    {
+      "round": "M5_context_change",
+      "item": "1.1_路线效率",
+      "amount": 20,
+      "reason": "Response shows repeated sitecustomize/proxy-package attempts before stable cwd handling."
+    },
+    {
+      "round": "M8_compact_resume",
+      "item": "1.1_路线效率",
+      "amount": 15,
+      "reason": "Late synchronization from root package into src package expanded final diff."
+    }
+  ],
+  "evidence_gaps": [
+    "commands.log is empty for Codex evidence; replay.jsonl and response.md contain the usable tool/command evidence."
+  ],
+  "turn_gate_calibrated": "v2_no_final_state_pollution",
+  "calibration_note": "Turn-gate calibrated rescore v2: per-round states were reconstructed from fresh fixture plus each cumulative diff.patch, avoiding final-state pollution. M1/M2/M3/M5/M6/M7/M8 turn gates pass; M4 fails m4_noise_cli; M8 full final gate passes."
+}

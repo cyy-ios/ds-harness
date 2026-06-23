@@ -1,0 +1,191 @@
+{
+  "ran": true,
+  "returncode": 0,
+  "cmd": [
+    "C:\\Python314\\python.exe",
+    "C:\\项目\\ds-harness\\benchmarks\\agent-eval-suite\\runners\\score_mini_data_harness.py",
+    "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+    "--round",
+    "round_01",
+    "--milestone",
+    "M1_bootstrap"
+  ],
+  "output": "{\n  \"score\": 45,\n  \"max_score\": 100,\n  \"round\": \"round_01\",\n  \"milestone\": \"M1_bootstrap\",\n  \"stage\": \"progress_diagnostic\",\n  \"gate_scope\": \"progress_diagnostic\",\n  \"gate_passed\": false,\n  \"diagnostic_gate_passed\": false,\n  \"core_gate_passed\": false,\n  \"full_acceptance_passed\": false,\n  \"turn_gate_applicable\": true,\n  \"turn_gate_passed\": true,\n  \"turn_required_checks\": [\n    \"package_main_exists\",\n    \"runner_exports\",\n    \"cli_end_to_end\"\n  ],\n  \"turn_failed_checks\": [],\n  \"turn_missing_checks\": [],\n  \"turn_gate_spec\": {\n    \"purpose\": \"本轮用户要求创建包、CLI run 子命令、最小可用实现，并完成仓库内核验。\",\n    \"auto_required_checks\": [\n      \"package_main_exists\",\n      \"runner_exports\",\n      \"cli_end_to_end\"\n    ],\n    \"manual_required_evidence\": [\n      \"response.md\",\n      \"replay.jsonl\",\n      \"commands.log\"\n    ],\n    \"manual_rules\": [\n      \"确认 agent 读取了 skills/data-harness/SKILL.md 或等价任务说明。\",\n      \"确认本轮 response 没有把未验证内容说成已验证。\"\n    ]\n  },\n  \"final_gate_applicable\": false,\n  \"final_gate_passed\": null,\n  \"checks\": {\n    \"package_main_exists\": {\n      \"passed\": true,\n      \"paths\": [\n        \"src\\\\mini_harness\\\\__main__.py\",\n        \"mini_harness\\\\__main__.py\"\n      ]\n    },\n    \"runner_exports\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-c\",\n        \"from mini_harness.runner import HarnessError, run_dag; print(HarnessError.__name__, callable(run_dag))\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\",\n      \"returncode\": 0,\n      \"output\": \"HarnessError True\\n\"\n    },\n    \"public_pytest\": {\n      \"passed\": true,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\",\n      \"returncode\": 0,\n      \"output\": \".                                                                        [100%]\\n1 passed in 0.01s\\n\"\n    },\n    \"cli_end_to_end\": {\n      \"passed\": true,\n      \"stdout_report\": null,\n      \"file_report\": {\n        \"processed_count\": 4,\n        \"rejected_count\": 2,\n        \"retry_count\": 0,\n        \"source_files\": [\n          \"data/input.csv\",\n          \"data/events.jsonl\"\n        ]\n      },\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\",\n      \"returncode\": 0,\n      \"output\": \"{'processed_count': 4, 'rejected_count': 2, 'retry_count': 0, 'source_files': ['data/input.csv', 'data/events.jsonl']}\\n\"\n    },\n    \"config_json_cli\": {\n      \"passed\": false,\n      \"file_report\": null,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"--config\",\n        \"tmp\\\\acceptance-config.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\",\n      \"returncode\": 2,\n      \"output\": \"usage: mini_harness run [-h] --output OUTPUT inputs [inputs ...]\\nmini_harness run: error: the following arguments are required: --output/-o\\n\"\n    },\n    \"cwd_independent_cli\": {\n      \"passed\": false,\n      \"stdout_report\": null,\n      \"file_report\": null,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/input.csv\",\n        \"data/events.jsonl\",\n        \"--output\",\n        \"tmp/acceptance-subdir-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\\\\subdir\\\\workbench\",\n      \"returncode\": 1,\n      \"output\": \"C:\\\\Python314\\\\python.exe: No module named mini_harness\\n\"\n    },\n    \"m4_noise_cli\": {\n      \"passed\": false,\n      \"file_report\": null,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"mini_harness\",\n        \"run\",\n        \"data/m4_noise_test.csv\",\n        \"--output\",\n        \"tmp/acceptance-m4-noise-report.json\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\",\n      \"returncode\": 1,\n      \"output\": \"Error: Stage 'clean' failed after 2 retries\\n\"\n    },\n    \"acceptance_pytest\": {\n      \"passed\": false,\n      \"cmd\": [\n        \"C:\\\\Python314\\\\python.exe\",\n        \"-m\",\n        \"pytest\",\n        \"-q\",\n        \"tests\\\\test_acceptance_eval.py\"\n      ],\n      \"cwd\": \"C:\\\\项目\\\\ds-harness\\\\tmp\\\\agent-eval-fixture-202606211833-claude-ds-pro\",\n      \"returncode\": 1,\n      \"output\": \"FsF                                                                      [100%]\\n================================== FAILURES ===================================\\n________________ test_acceptance_data_semantics_and_snake_case ________________\\n\\n    def test_acceptance_data_semantics_and_snake_case():\\n>       result = _call_run_dag([\\\"data/input.csv\\\", \\\"data/events.jsonl\\\"])\\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\\ntests\\\\test_acceptance_eval.py:31: \\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\\n\\npaths = ['data/input.csv', 'data/events.jsonl'], kwargs = {}\\nsig = <Signature (input_paths: list[str], output_path: str) -> dict[str, typing.Any]>\\ncall_kwargs = {}\\n\\n    def _call_run_dag(paths, **kwargs):\\n        sig = inspect.signature(run_dag)\\n        call_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}\\n        if \\\"output\\\" in sig.parameters and \\\"output\\\" not in call_kwargs:\\n            call_kwargs[\\\"output\\\"] = \\\"tmp/hidden-acceptance-report.json\\\"\\n>       return run_dag(paths, **call_kwargs)\\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nE       TypeError: run_dag() missing 1 required positional argument: 'output_path'\\n\\ntests\\\\test_acceptance_eval.py:22: TypeError\\n___________________ test_acceptance_rejects_external_paths ____________________\\n\\n    def test_acceptance_rejects_external_paths():\\n        with pytest.raises((HarnessError, ValueError, OSError, RuntimeError)):\\n>           _call_run_dag([\\\"/tmp/not-in-fixture.csv\\\"])\\n\\ntests\\\\test_acceptance_eval.py:58: \\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\\n\\npaths = ['/tmp/not-in-fixture.csv'], kwargs = {}\\nsig = <Signature (input_paths: list[str], output_path: str) -> dict[str, typing.Any]>\\ncall_kwargs = {}\\n\\n    def _call_run_dag(paths, **kwargs):\\n        sig = inspect.signature(run_dag)\\n        call_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}\\n        if \\\"output\\\" in sig.parameters and \\\"output\\\" not in call_kwargs:\\n            call_kwargs[\\\"output\\\"] = \\\"tmp/hidden-acceptance-report.json\\\"\\n>       return run_dag(paths, **call_kwargs)\\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nE       TypeError: run_dag() missing 1 required positional argument: 'output_path'\\n\\ntests\\\\test_acceptance_eval.py:22: TypeError\\n=========================== short test summary info ===========================\\nFAILED tests/test_acceptance_eval.py::test_acceptance_data_semantics_and_snake_case\\nFAILED tests/test_acceptance_eval.py::test_acceptance_rejects_external_paths\\n2 failed, 1 skipped in 0.11s\\n\"\n    },\n    \"memory_aware_report\": {\n      \"passed\": false,\n      \"found\": []\n    },\n    \"unsupported_claims_absent\": {\n      \"passed\": true\n    }\n  },\n  \"note\": \"Evaluator-owned acceptance diagnostics. turn_gate_passed is the prompt-specific gate for this round. In progress rounds, diagnostic_gate_passed/core_gate_passed are evidence only; treat final_gate_passed as the full final gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success.\"\n}\n",
+  "parsed": {
+    "score": 45,
+    "max_score": 100,
+    "round": "round_01",
+    "milestone": "M1_bootstrap",
+    "stage": "progress_diagnostic",
+    "gate_scope": "progress_diagnostic",
+    "gate_passed": false,
+    "diagnostic_gate_passed": false,
+    "core_gate_passed": false,
+    "full_acceptance_passed": false,
+    "turn_gate_applicable": true,
+    "turn_gate_passed": true,
+    "turn_required_checks": [
+      "package_main_exists",
+      "runner_exports",
+      "cli_end_to_end"
+    ],
+    "turn_failed_checks": [],
+    "turn_missing_checks": [],
+    "turn_gate_spec": {
+      "purpose": "本轮用户要求创建包、CLI run 子命令、最小可用实现，并完成仓库内核验。",
+      "auto_required_checks": [
+        "package_main_exists",
+        "runner_exports",
+        "cli_end_to_end"
+      ],
+      "manual_required_evidence": [
+        "response.md",
+        "replay.jsonl",
+        "commands.log"
+      ],
+      "manual_rules": [
+        "确认 agent 读取了 skills/data-harness/SKILL.md 或等价任务说明。",
+        "确认本轮 response 没有把未验证内容说成已验证。"
+      ]
+    },
+    "final_gate_applicable": false,
+    "final_gate_passed": null,
+    "checks": {
+      "package_main_exists": {
+        "passed": true,
+        "paths": [
+          "src\\mini_harness\\__main__.py",
+          "mini_harness\\__main__.py"
+        ]
+      },
+      "runner_exports": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-c",
+          "from mini_harness.runner import HarnessError, run_dag; print(HarnessError.__name__, callable(run_dag))"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+        "returncode": 0,
+        "output": "HarnessError True\n"
+      },
+      "public_pytest": {
+        "passed": true,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+        "returncode": 0,
+        "output": ".                                                                        [100%]\n1 passed in 0.01s\n"
+      },
+      "cli_end_to_end": {
+        "passed": true,
+        "stdout_report": null,
+        "file_report": {
+          "processed_count": 4,
+          "rejected_count": 2,
+          "retry_count": 0,
+          "source_files": [
+            "data/input.csv",
+            "data/events.jsonl"
+          ]
+        },
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+        "returncode": 0,
+        "output": "{'processed_count': 4, 'rejected_count': 2, 'retry_count': 0, 'source_files': ['data/input.csv', 'data/events.jsonl']}\n"
+      },
+      "config_json_cli": {
+        "passed": false,
+        "file_report": null,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "--config",
+          "tmp\\acceptance-config.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+        "returncode": 2,
+        "output": "usage: mini_harness run [-h] --output OUTPUT inputs [inputs ...]\nmini_harness run: error: the following arguments are required: --output/-o\n"
+      },
+      "cwd_independent_cli": {
+        "passed": false,
+        "stdout_report": null,
+        "file_report": null,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/input.csv",
+          "data/events.jsonl",
+          "--output",
+          "tmp/acceptance-subdir-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro\\subdir\\workbench",
+        "returncode": 1,
+        "output": "C:\\Python314\\python.exe: No module named mini_harness\n"
+      },
+      "m4_noise_cli": {
+        "passed": false,
+        "file_report": null,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "mini_harness",
+          "run",
+          "data/m4_noise_test.csv",
+          "--output",
+          "tmp/acceptance-m4-noise-report.json"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+        "returncode": 1,
+        "output": "Error: Stage 'clean' failed after 2 retries\n"
+      },
+      "acceptance_pytest": {
+        "passed": false,
+        "cmd": [
+          "C:\\Python314\\python.exe",
+          "-m",
+          "pytest",
+          "-q",
+          "tests\\test_acceptance_eval.py"
+        ],
+        "cwd": "C:\\项目\\ds-harness\\tmp\\agent-eval-fixture-202606211833-claude-ds-pro",
+        "returncode": 1,
+        "output": "FsF                                                                      [100%]\n================================== FAILURES ===================================\n________________ test_acceptance_data_semantics_and_snake_case ________________\n\n    def test_acceptance_data_semantics_and_snake_case():\n>       result = _call_run_dag([\"data/input.csv\", \"data/events.jsonl\"])\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_acceptance_eval.py:31: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npaths = ['data/input.csv', 'data/events.jsonl'], kwargs = {}\nsig = <Signature (input_paths: list[str], output_path: str) -> dict[str, typing.Any]>\ncall_kwargs = {}\n\n    def _call_run_dag(paths, **kwargs):\n        sig = inspect.signature(run_dag)\n        call_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}\n        if \"output\" in sig.parameters and \"output\" not in call_kwargs:\n            call_kwargs[\"output\"] = \"tmp/hidden-acceptance-report.json\"\n>       return run_dag(paths, **call_kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: run_dag() missing 1 required positional argument: 'output_path'\n\ntests\\test_acceptance_eval.py:22: TypeError\n___________________ test_acceptance_rejects_external_paths ____________________\n\n    def test_acceptance_rejects_external_paths():\n        with pytest.raises((HarnessError, ValueError, OSError, RuntimeError)):\n>           _call_run_dag([\"/tmp/not-in-fixture.csv\"])\n\ntests\\test_acceptance_eval.py:58: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npaths = ['/tmp/not-in-fixture.csv'], kwargs = {}\nsig = <Signature (input_paths: list[str], output_path: str) -> dict[str, typing.Any]>\ncall_kwargs = {}\n\n    def _call_run_dag(paths, **kwargs):\n        sig = inspect.signature(run_dag)\n        call_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}\n        if \"output\" in sig.parameters and \"output\" not in call_kwargs:\n            call_kwargs[\"output\"] = \"tmp/hidden-acceptance-report.json\"\n>       return run_dag(paths, **call_kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: run_dag() missing 1 required positional argument: 'output_path'\n\ntests\\test_acceptance_eval.py:22: TypeError\n=========================== short test summary info ===========================\nFAILED tests/test_acceptance_eval.py::test_acceptance_data_semantics_and_snake_case\nFAILED tests/test_acceptance_eval.py::test_acceptance_rejects_external_paths\n2 failed, 1 skipped in 0.11s\n"
+      },
+      "memory_aware_report": {
+        "passed": false,
+        "found": []
+      },
+      "unsupported_claims_absent": {
+        "passed": true
+      }
+    },
+    "note": "Evaluator-owned acceptance diagnostics. turn_gate_passed is the prompt-specific gate for this round. In progress rounds, diagnostic_gate_passed/core_gate_passed are evidence only; treat final_gate_passed as the full final gate only when final_gate_applicable is true. Agent-authored tests are diagnostic and public pytest is not sufficient for task success."
+  },
+  "score": 45,
+  "max_score": 100,
+  "round": "round_01",
+  "milestone": "M1_bootstrap",
+  "stage": "progress_diagnostic",
+  "gate_scope": "progress_diagnostic",
+  "gate_passed": false,
+  "final_gate_applicable": false,
+  "final_gate_passed": null
+}

@@ -1,0 +1,1 @@
+M1_bootstrap complete: created mini_harness Python package under src/, including __init__.py, cli.py (with 'run' subcommand), and run.py (basic DAG: extract, clean, report). All existing tests pass.

@@ -1,0 +1,114 @@
+diff --git a/src/mini_harness/run.py b/src/mini_harness/run.py
+index 19a8171..aab1831 100644
+--- a/src/mini_harness/run.py
++++ b/src/mini_harness/run.py
+@@ -1,9 +1,7 @@
+ import csv
+ import json
+ import logging
+-import os
+ import re
+-import sys
+ from pathlib import Path
+ 
+ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+@@ -11,9 +9,9 @@ logger = logging.getLogger(__name__)
+ 
+ 
+ def to_snake_case(name):
+-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+-    s2 = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1)
+-    return re.sub('[^a-zA-Z0-9]', '_', s2).lower()
++    s1 = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', name)
++    s2 = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1)
++    return re.sub(r'[^a-zA-Z0-9]', '_', s2).lower()
+ 
+ 
+ def extract(input_path):
+@@ -41,15 +39,12 @@ def clean(records):
+     cleaned = []
+     rejects = []
+     for rec in records:
+-        # Remove empty rows (all values empty or None)
+         if not rec or all(v is None or (isinstance(v, str) and v.strip() == '') for v in rec.values()):
+             continue
+-        # Convert keys to snake_case
+         new_rec = {}
+         for k, v in rec.items():
+             new_key = to_snake_case(k)
+             new_rec[new_key] = v
+-        # Check for 'id' field, if missing -> reject
+         if 'id' not in new_rec or new_rec['id'] is None or (isinstance(new_rec['id'], str) and new_rec['id'].strip() == ''):
+             rejects.append(new_rec)
+         else:
+@@ -57,24 +52,31 @@ def clean(records):
+     return cleaned, rejects
+ 
+ 
+-def report_summary(cleaned_count, rejected_count, retry_count, source_files):
+-    """Return a summary dict."""
+-    summary = {
++def build_report(cleaned_count, rejected_count, retry_count, source_files):
++    """Return report dict with required fields."""
++    report = {
+         'processed_count': cleaned_count,
+         'rejected_count': rejected_count,
+         'retry_count': retry_count,
+         'source_files': source_files
+     }
+-    return summary
++    # Include memory summary reference
++    memory_path = Path('memory/memory_summary.md')
++    if memory_path.exists():
++        with open(memory_path, 'r', encoding='utf-8') as mf:
++            report['memory_summary'] = mf.read()
++    else:
++        report['memory_summary'] = 'memory/memory_summary.md not found'
++    return report
+ 
+ 
+ def run_pipeline(input_path, output_path):
+-    """Execute the DAG: extract -> clean -> report, with retry."""
++    """Execute DAG: extract -> clean -> report, with up to 2 retries."""
+     max_retries = 2
+-    attempt = 1
+-    success = False
+-    retry_count = 0
++    result = None
++
+     for attempt in range(1, max_retries + 1):
++        retry_count = attempt - 1  # number of previous failed attempts
+         logger.info(f'attempt={attempt}, stage=extract, status=start')
+         try:
+             records = extract(input_path)
+@@ -95,24 +97,18 @@ def run_pipeline(input_path, output_path):
+ 
+         logger.info(f'attempt={attempt}, stage=report, status=start')
+         try:
+-            summary = report_summary(len(cleaned), len(rejects), retry_count, [input_path])
+-            # Include memory summary reference
+-            memory_path = Path('memory/memory_summary.md')
+-            if memory_path.exists():
+-                with open(memory_path, 'r', encoding='utf-8') as mf:
+-                    summary['memory_summary'] = mf.read()
+-            else:
+-                summary['memory_summary'] = 'memory/memory_summary.md not found'
++            report = build_report(len(cleaned), len(rejects), retry_count, [str(input_path)])
+             with open(output_path, 'w', encoding='utf-8') as f:
+-                json.dump(summary, f, indent=2)
+-            success = True
++                json.dump(report, f, indent=2)
+             logger.info(f'attempt={attempt}, stage=report, status=completed')
++            result = report
+             break
+         except Exception as e:
+             logger.error(f'attempt={attempt}, stage=report, status=failed, error={e}')
+-            retry_count += 1
+             if attempt == max_retries:
+                 raise
+             continue
+-    if not success:
++
++    if result is None:
+         raise RuntimeError('Pipeline failed after max retries')
++    return result

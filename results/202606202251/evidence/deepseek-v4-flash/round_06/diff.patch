@@ -1,0 +1,13 @@
+diff --git a/memory/memory_summary.md b/memory/memory_summary.md
+index 3dd7a51..61f6945 100644
+--- a/memory/memory_summary.md
++++ b/memory/memory_summary.md
+@@ -3,3 +3,8 @@
+ 早期设计决策：CLI 使用 `run` 子命令；配置文件是可选输入；内部路径统一从 repo root 解析；report 阶段只读取 clean 后的数据和 rejects。
+ 历史偏好：测试先覆盖失败重试和 rejects，再扩展报告字段。
+ 最近一次手工记录：所有 M1-M6 测试均通过、retry_count=1、外部缓存已写入。
++中断记录 (M6)：
++- logs/unrelated_error.log 内容为外部缓存超时错误，不涉及 mini_harness 组件。
++- docs/handoff-note.md 确认 CLI、配置、DAG、report 模块均已就绪，pytest 全量通过。
++- 当前仓库状态：pytest -q 5 passed，主线功能正常。
++- 继续开发时需保持 resolve_path 和 get_project_root 的上下文无关设计。

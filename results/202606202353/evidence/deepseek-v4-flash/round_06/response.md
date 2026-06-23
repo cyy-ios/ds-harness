@@ -1,0 +1,1 @@
+里程碑 M6_interruption 完成：已读取并理解 logs/unrelated_error.log（外部缓存超时错误，与 mini harness 无关）和 docs/handoff-note.md（交接草稿，说明 CLI/配置/DAG/report 模块已完成，需核验）。回到主线。

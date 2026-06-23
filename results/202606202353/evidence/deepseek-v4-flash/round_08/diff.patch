@@ -1,0 +1,87 @@
+diff --git a/src/mini_harness/__main__.py b/src/mini_harness/__main__.py
+new file mode 100644
+index 0000000..ef78305
+--- /dev/null
++++ b/src/mini_harness/__main__.py
+@@ -0,0 +1,4 @@
++from mini_harness.cli import main
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/mini_harness/cli.py b/src/mini_harness/cli.py
+index 8bd18b9..35d91ec 100644
+--- a/src/mini_harness/cli.py
++++ b/src/mini_harness/cli.py
+@@ -7,23 +7,30 @@ def main():
+     subparsers = parser.add_subparsers(dest="command")
+     run_parser = subparsers.add_parser("run", help="Run the full data pipeline")
+     run_parser.add_argument("--config", "-c", help="Path to config file (JSON/YAML)")
+-    run_parser.add_argument("--input", "-i", help="Input file (CSV or JSONL)")
++    run_parser.add_argument("--input", "-i", nargs="*", help="Input file(s) (CSV or JSONL)")
+     run_parser.add_argument("--output", "-o", help="Output report path")
++    run_parser.add_argument("files", nargs="*", help="Input files (positional)")
+     args = parser.parse_args()
+     if args.command == "run":
+-        from mini_harness.engine import run_pipeline
++        from mini_harness.runner import run_dag
+         # load config if provided
+         config = {}
+         if args.config:
+             config = load_config(args.config)
+-        # resolve input
+-        input_path = args.input or config.get("input")
+-        if not input_path:
+-            print("Error: --input is required (directly or via config)", file=sys.stderr)
++        # resolve input files: positional > --input > config
++        input_files = args.files if args.files else args.input if args.input else config.get("input")
++        if not input_files:
++            print("Error: input files are required (via positional, --input, or config)", file=sys.stderr)
+             sys.exit(1)
++        if isinstance(input_files, str):
++            input_files = [input_files]
+         # resolve output: CLI > config > default
+         output_path = args.output or config.get("output", "report.json")
+-        run_pipeline(input_path, output_path)
++        result = run_dag(input_files)
++        import json
++        with open(output_path, "w") as f:
++            json.dump(result, f, indent=2)
++        print(f"Report written to {output_path}")
+ 
+ if __name__ == "__main__":
+     main()
+diff --git a/src/mini_harness/report.py b/src/mini_harness/report.py
+new file mode 100644
+index 0000000..c474769
+--- /dev/null
++++ b/src/mini_harness/report.py
+@@ -0,0 +1,14 @@
++import json
++import os
++
++def generate_report(cleaned: list, rejected: list, source_files: list, retry_count: int) -> dict:
++    report = {
++        "processed_count": len(cleaned),
++        "rejected_count": len(rejected),
++        "retry_count": retry_count,
++        "source_files": source_files
++    }
++    memory_path = "memory/memory_summary.md"
++    if os.path.exists(memory_path):
++        report["memory_summary_reference"] = memory_path
++    return report
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+index 6b0cbeb..9068615 100644
+--- a/src/mini_harness/runner.py
++++ b/src/mini_harness/runner.py
+@@ -6,6 +6,10 @@ import sys
+ 
+ logger = logging.getLogger(__name__)
+ 
++class HarnessError(Exception):
++    """Custom exception for harness errors."""
++    pass
++
+ def run_dag(file_paths):
+     all_cleaned = []
+     all_rejected = []

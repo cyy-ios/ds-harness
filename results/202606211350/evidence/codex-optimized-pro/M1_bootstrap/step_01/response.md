@@ -1,0 +1,1 @@
+Now I have full context. Let me create the `mini_harness` package.

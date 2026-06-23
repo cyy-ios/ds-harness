@@ -1,0 +1,1 @@
+M1_bootstrap 完成：读取了 SKILL.md，创建了 mini_harness Python 包（包括 CLI run 子命令和管道实现），通过了项目内现有测试核验。

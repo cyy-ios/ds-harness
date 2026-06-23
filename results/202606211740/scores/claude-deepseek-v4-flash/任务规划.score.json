@@ -1,0 +1,54 @@
+﻿{
+    "capability":  "任务规划",
+    "reason":  "Tool choice mostly correct (~75). Route efficiency moderate. M6/M7 zero. Weighted average 50.6.",
+    "rounds_scored":  8,
+    "score":  50.6,
+    "per_round":  {
+                      "round_05":  {
+                                       "reason":  "route 50 tool 75",
+                                       "score":  62
+                                   },
+                      "round_06":  {
+                                       "reason":  "no action",
+                                       "score":  0
+                                   },
+                      "round_02":  {
+                                       "reason":  "route 50 tool 75",
+                                       "score":  62
+                                   },
+                      "round_08":  {
+                                       "reason":  "route 50 tool 75",
+                                       "score":  62
+                                   },
+                      "round_07":  {
+                                       "reason":  "no action",
+                                       "score":  0
+                                   },
+                      "round_03":  {
+                                       "reason":  "route 50 tool 50",
+                                       "score":  50
+                                   },
+                      "round_04":  {
+                                       "reason":  "route 75 tool 75",
+                                       "score":  75
+                                   },
+                      "round_01":  {
+                                       "reason":  "route 50 tool 75",
+                                       "score":  62
+                                   }
+                  },
+    "deductions":  [
+                       {
+                           "amount":  100,
+                           "reason":  "M6 no planning action",
+                           "round":  "round_06",
+                           "item":  "1.1"
+                       },
+                       {
+                           "amount":  100,
+                           "reason":  "M7 no planning action",
+                           "round":  "round_07",
+                           "item":  "1.1"
+                       }
+                   ]
+}

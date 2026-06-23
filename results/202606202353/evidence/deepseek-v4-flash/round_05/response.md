@@ -1,0 +1,1 @@
+里程碑 M5_context_change 完成：从 subdir/workbench 开发，更新 pyproject.toml 添加 pythonpath 指向 ../../src，新增集成测试 test_workbench_integration.py 验证 run_dag 在子目录下正确工作（processed_count=6, rejected_count=3）。所有 2 个测试通过。

@@ -72,6 +72,17 @@ python benchmarks/agent-eval-suite/runners/run_codex_replay.py   --root ${fixtur
 
 前置：Codex CLI 已登录或已配置所需 OpenAI / Codex 凭据。
 
+
+### 2.5 Claude Code CLI 本体：直连 DeepSeek Anthropic API
+
+用于测试 Claude Code CLI 本体接 DeepSeek V4 Flash（不经过 Codex）。runner 会设置 `ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic` 和 `ANTHROPIC_AUTH_TOKEN`，并按 CC 规则用 `.claude/CLAUDE.md` 注入持久规则。
+
+```bash
+python benchmarks/agent-eval-suite/runners/run_claude_replay.py   --root ${fixture_root}   --out ${result_root}/evidence/claude-deepseek-v4-flash   --model deepseek-v4-flash
+```
+
+密钥来源：`DEEPSEEK_API_KEY`、`DEEPSEEK_API_KEY_FILE`，或本地工作站 `C:\Users\cuiyi\token\deepseek-api-key.txt`；runner 只读取，不打印 token。
+
 ## 3. Evidence 产物
 
 每个 runner 负责生成 evidence：
@@ -93,14 +104,18 @@ evidence/<variant>/
     cost.json
 ```
 
-裸模型 runner 使用 `collect_evidence.py` 的 `round_01..08` 结构；Codex runner 使用 `M*_*/step_01` 结构。评分时两种结构都必须支持。
+裸模型 runner 使用 `collect_evidence.py` 的 `round_01..08` 结构；Codex runner 使用 `M*_*/step_01` 结构。评分时两种结构都必须支持，文件语义见 `rubrics/evidence-spec.md`。
 
 ## 4. 评分
 
+评分前必须先按 `rubrics/scoring-calibration.md` 做预校准：独立重评 `results/202606211740`，每个能力分和加权总分都与目标分差 ≤3 后，才能开始给新 run 评分；校准 run 只用于对齐松紧，不能直接套用分数区间。
+
+评分独立性硬规则：被测 agent 只做一件事——执行 M1-M8 被测试任务并产出 evidence；禁止要求、提示或允许被测 agent 自评分、生成 scorecard、生成 deductions、评价自己能力或汇总正式分数。评分必须在被测 run 完成后，由主导 agent 或独立评分 agent 基于 evidence 执行。被测 agent 与评分 agent 不能是同一个执行体、同一个会话或同一个模型输出链路。若被测 agent 意外生成评分类文件或评分性总结，必须从正式评分输入中排除，只能作为指令遵循/真实性问题的证据。
+
 评分 agent 按 `benchmarks/agent-eval-suite/rubrics/scoring-output.md` 执行。主规则：`acceptance.json` 是证据，不是 8 个能力的分数。
 
-1. 读取对应 `evidence/<variant>/` 的全部轮次。
-2. 读取 `rubrics/capability-scoring.md`、`rubrics/项目理解-scoring.md`、`rubrics/capability-weights.yaml`、`rubrics/scoring-calibration.md`。
+1. 先打开 `rubrics/scoring-output.md`；它是唯一评分入口，并定义后续引用链。
+2. 按 `scoring-output.md` 的 read order 读取 evidence 和下级 rubric。
 3. 按 8 个能力独立评分，分别生成 `scores/*.score.json`。
 4. `score_mini_data_harness.py` / `acceptance.json` 只能作为 evidence 和 deductions 来源；禁止把 acceptance `score` 复制为能力分或逐轮分。
 5. 汇总生成 `scorecard.md` 和 `deductions.md`。

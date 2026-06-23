@@ -1,0 +1,130 @@
+diff --git a/src/mini_harness/run.py b/src/mini_harness/run.py
+index 1686871..23a1fd4 100644
+--- a/src/mini_harness/run.py
++++ b/src/mini_harness/run.py
+@@ -7,6 +7,28 @@ from pathlib import Path
+ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+ logger = logging.getLogger(__name__)
+ 
++_PROJECT_ROOT = None
++
++def get_project_root():
++    global _PROJECT_ROOT
++    if _PROJECT_ROOT is None:
++        # Traverse upward from cwd looking for src/mini_harness
++        path = Path.cwd().resolve()
++        for parent in [path] + list(path.parents):
++            if (parent / 'src' / 'mini_harness').is_dir():
++                _PROJECT_ROOT = parent
++                break
++        if _PROJECT_ROOT is None:
++            # Fallback: traverse from this file's location
++            path = Path(__file__).resolve().parent
++            for parent in [path] + list(path.parents):
++                if (parent / 'src' / 'mini_harness').is_dir():
++                    _PROJECT_ROOT = parent
++                    break
++        if _PROJECT_ROOT is None:
++            _PROJECT_ROOT = Path.cwd()
++    return _PROJECT_ROOT
++
+ 
+ def to_snake_case(name):
+     s1 = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', name)
+@@ -61,8 +83,7 @@ def build_report(cleaned_count, rejected_count, retry_count, source_files):
+         'retry_count': retry_count,
+         'source_files': source_files
+     }
+-    # Include memory summary reference
+-    memory_path = Path('memory/memory_summary.md')
++    memory_path = get_project_root() / 'memory' / 'memory_summary.md'
+     if memory_path.exists():
+         with open(memory_path, 'r', encoding='utf-8') as mf:
+             report['memory_summary'] = mf.read()
+@@ -71,16 +92,33 @@ def build_report(cleaned_count, rejected_count, retry_count, source_files):
+     return report
+ 
+ 
++def resolve_path(path_str):
++    """Resolve path: if not absolute and doesn't exist, try relative to project root."""
++    p = Path(path_str)
++    if p.is_absolute():
++        return str(p.resolve())
++    # First try as relative to cwd
++    if p.exists():
++        return str(p.resolve())
++    # Then try relative to project root
++    candidate = get_project_root() / p
++    if candidate.exists():
++        return str(candidate.resolve())
++    # Fallback: return resolved cwd relative (will likely fail later)
++    return str(p.resolve())
++
++
+ def run_pipeline(input_path, output_path):
+     """Execute DAG: extract -> clean -> report, with up to 2 retries."""
++    resolved_input = resolve_path(input_path)
+     max_retries = 2
+     result = None
+ 
+     for attempt in range(1, max_retries + 1):
+-        retry_count = attempt - 1  # number of previous failed attempts
++        retry_count = attempt - 1
+         logger.info(f'attempt={attempt}, stage=extract, status=start')
+         try:
+-            records = extract(input_path)
++            records = extract(resolved_input)
+         except Exception as e:
+             logger.error(f'attempt={attempt}, stage=extract, status=failed, error={e}')
+             if attempt == max_retries:
+@@ -98,7 +136,7 @@ def run_pipeline(input_path, output_path):
+ 
+         logger.info(f'attempt={attempt}, stage=report, status=start')
+         try:
+-            report = build_report(len(cleaned), len(rejects), retry_count, [str(input_path)])
++            report = build_report(len(cleaned), len(rejects), retry_count, [resolved_input])
+             with open(output_path, 'w', encoding='utf-8') as f:
+                 json.dump(report, f, indent=2)
+             logger.info(f'attempt={attempt}, stage=report, status=completed')
+diff --git a/src/mini_harness/runner.py b/src/mini_harness/runner.py
+index 8d355b5..51158dd 100644
+--- a/src/mini_harness/runner.py
++++ b/src/mini_harness/runner.py
+@@ -1,6 +1,6 @@
+ import logging
+ from pathlib import Path
+-from mini_harness.run import extract, clean, build_report
++from mini_harness.run import extract, clean, build_report, resolve_path
+ 
+ logger = logging.getLogger(__name__)
+ 
+@@ -11,9 +11,10 @@ def run_dag(input_paths):
+     total_retry = 0
+     source_files = []
+     for path in input_paths:
++        resolved = resolve_path(path)
+         logger.info(f'attempt=1, stage=extract, status=start')
+         try:
+-            records = extract(path)
++            records = extract(resolved)
+         except Exception as e:
+             logger.error(f'attempt=1, stage=extract, status=failed, error={e}')
+             total_retry += 2
+@@ -29,7 +30,7 @@ def run_dag(input_paths):
+ 
+         total_cleaned += len(cleaned)
+         total_rejected += len(rejects)
+-        source_files.append(str(Path(path).resolve()))
++        source_files.append(resolved)
+ 
+     report = build_report(total_cleaned, total_rejected, total_retry, source_files)
+     logger.info(f'attempt=1, stage=report, status=completed')
+diff --git a/subdir/workbench/pyproject.toml b/subdir/workbench/pyproject.toml
+index 89c6835..e427838 100644
+--- a/subdir/workbench/pyproject.toml
++++ b/subdir/workbench/pyproject.toml
+@@ -1,2 +1,3 @@
+ [tool.pytest.ini_options]
+-testpaths = ["tests"]
++testpaths = ["../../tests"]
++pythonpath = ["../../src"]

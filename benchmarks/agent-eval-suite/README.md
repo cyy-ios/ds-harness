@@ -11,9 +11,11 @@
 - `runners/run_deepseek_agent_replay.py`：裸模型 API runner。
 - `runners/run_codex_replay.py`：Codex 产品 runner，覆盖 unoptimized / optimized / native。
 - `runners/collect_evidence.py`：裸模型 evidence 采集器。
-- `rubrics/scoring-output.md`：评分与报告输出契约。
+- `rubrics/scoring-output.md`：唯一评分入口；其他 rubric 只由它引用。
 
 废弃：`benchmarks/agent-eval-suite/results/`、条件占位目录、空 runbook。
+
+- `runners/run_claude_replay.py`: Claude Code CLI 本体接 DeepSeek Anthropic API runner。
 
 ## Scoring boundary
 

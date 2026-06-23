@@ -1,0 +1,29 @@
+{
+  "capability": "结果预期",
+  "score": 60.0,
+  "rounds_scored": 8,
+  "rounds_excluded": 0,
+  "calibration": "Passed pre-score calibration against results/202606211740 within ±3 per capability and overall.",
+  "evidence_used": [
+    "evidence/claude-deepseek-v4-pro/run_summary.json",
+    "evidence/claude-deepseek-v4-pro/M*/step_01/replay.jsonl",
+    "evidence/claude-deepseek-v4-pro/M*/step_01/acceptance.json",
+    "evidence/claude-deepseek-v4-pro/M*/step_01/diff.patch"
+  ],
+  "reason": "Calibrated against results/202606211740 within ±3 before target scoring. Pro run is materially better than CC+DS Flash: M1/M2/M6 turn gates pass, final package/root CLI/config/M4/memory checks pass, but M8 final gate still fails on cwd_independent_cli and hidden acceptance_pytest; M3/M4/M5/M7 turn gates fail.",
+  "deductions": [
+    {
+      "round": "M8_compact_resume",
+      "item": "final_gate_evidence",
+      "amount": 35,
+      "reason": "acceptance.json final_gate_passed=false; cwd_independent_cli and acceptance_pytest fail."
+    },
+    {
+      "round": "M3-M5/M7",
+      "item": "turn_gate_evidence",
+      "amount": 25,
+      "reason": "turn_gate_passed=false in M3, M4, M5, and M7 acceptance evidence."
+    }
+  ],
+  "evidence_gaps": []
+}
