@@ -68,7 +68,7 @@ def main():
     overall = sum(scores) / len(scores) if scores else 0
 
     result = {
-        "capability": "指令遵循.cosplay",
+        "capability": "遵循.cosplay",
         "overall": round(overall, 1),
         "rounds_scored": len(per_round),
         "mechanized": True,

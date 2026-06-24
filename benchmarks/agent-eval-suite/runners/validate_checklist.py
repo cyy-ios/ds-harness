@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """用历史 evidence 验证 instruction-checklist.json 的检查项是否有异常。"""
 from __future__ import annotations
 
@@ -335,7 +335,7 @@ def main():
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
         print(f"\n{'='*60}")
-        print("注意: 以上为纯机械化检查结果；Core 用于单步 prompt 指令遵循，aux/global 仅作诊断。")
+        print("注意: 以上为纯机械化检查结果；Core 用于单步 prompt 遵循，aux/global 仅作诊断。")
 
     if args.fail_on_core and not payload["ok"]:
         sys.exit(2)

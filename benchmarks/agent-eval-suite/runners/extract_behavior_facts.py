@@ -229,14 +229,41 @@ def _extract_artifacts(round_dir: Path) -> list[dict[str, Any]]:
     return artifacts
 
 
+def _response_text(round_dir: Path) -> str:
+    return _read_text(round_dir / "response.md")
+
+
 def _extract_final_claims(round_dir: Path) -> list[dict[str, Any]]:
-    text = _read_text(round_dir / "response.md")
+    text = _response_text(round_dir)
     claims = []
     parts = [p.strip() for p in re.split(r"[\n。]+", text) if p.strip()]
     for index, part in enumerate(parts):
         claims.append({"index": index, "text": part[:1000], "source": "response.md"})
     return claims
 
+
+def _failed_steps(commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out = []
+    for cmd in commands:
+        code = cmd.get("exit_code")
+        if code not in (None, 0, "0"):
+            out.append(cmd)
+    return out
+
+
+def _post_failure_actions(commands: list[dict[str, Any]], tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    failed_indexes = [int(c.get("index", -1)) for c in commands if c.get("exit_code") not in (None, 0, "0")]
+    if not failed_indexes:
+        return []
+    first_failed = min(failed_indexes)
+    actions: list[dict[str, Any]] = []
+    for cmd in commands:
+        if int(cmd.get("index", -1)) > first_failed:
+            actions.append({"kind": "command", **cmd})
+    for call in tool_calls:
+        if int(call.get("index", -1)) > first_failed and call.get("tool") in {"write_file", "file_write", "edit", "file_edit", "apply_patch", "shell", "exec_command", "command_execution"}:
+            actions.append({"kind": "tool_call", **call})
+    return sorted(actions, key=lambda x: int(x.get("index", 0)))
 
 def _milestone(round_dir: Path) -> str:
     prompt_path = round_dir / "prompt.json"
@@ -256,16 +283,21 @@ def extract_behavior_facts_for_round(round_dir: str | Path) -> dict[str, Any]:
     tool_calls, replay_commands, operation_order = _extract_replay(round_path)
     commands = _extract_commands(round_path, replay_commands)
     edited_files = _extract_replay_edited_files(tool_calls, _extract_diff_files(round_path))
+    final_response = _response_text(round_path)
+    failed = _failed_steps(commands)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "milestone": _milestone(round_path),
         "round_dir": round_path.name,
         "tool_calls": tool_calls,
         "commands": commands,
         "edited_files": edited_files,
         "artifacts": _extract_artifacts(round_path),
+        "final_response": final_response[:4000],
         "final_claims": _extract_final_claims(round_path),
         "operation_order": operation_order,
+        "failed_steps": failed,
+        "post_failure_actions": _post_failure_actions(commands, tool_calls),
         "source_refs": [
             name
             for name in ("replay.jsonl", "commands.log", "diff.patch", "artifact", "response.md")
@@ -302,7 +334,7 @@ def main() -> None:
         per_round[result["milestone"]] = result
         if args.write:
             (round_dir / "behavior_facts.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"schema_version": 1, "rounds": len(per_round), "per_round": per_round}, ensure_ascii=False, indent=2))
+    print(json.dumps({"schema_version": 2, "rounds": len(per_round), "per_round": per_round}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

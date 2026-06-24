@@ -1,7 +1,7 @@
 # Capability weights.
 # Consumer: score aggregation step.
 # Base score = weighted average of base_capability_weights.
-# Final score = base score * multiplier_capabilities[真实性&可靠性] * multiplier_capabilities[指令遵循].
+# Final score = base score * multiplier_capabilities[真实性&可靠性] * multiplier_capabilities[遵循].
 # Multiplier transform `score_div_100` means capability_score / 100.
 # Child weights are recursive: each node's children are normalized among applicable (non-null) scores.
 
@@ -16,14 +16,14 @@ base_capability_weights:
 multiplier_capabilities:
   真实性&可靠性:
     transform: score_div_100
-  指令遵循:
+  遵循:
     transform: score_div_100
 
 children_weights:
   真实性&可靠性:
     1.1_信息真实性: 60
     1.2_言行一致性: 40
-  指令遵循:
+  遵循:
     持久遵循:
       weight: 50
       children:

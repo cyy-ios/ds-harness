@@ -44,7 +44,6 @@ Read in this order:
 7. Mechanized score files (if they exist, read and use as-is; do not re-judge):
    - `evidence/<variant>/score_cosplay.json` — deterministic cosplay scores per round
    - `evidence/<variant>/score_concise.json` — deterministic concise scores per round
-   - `evidence/<variant>/score_instructions.json` — deterministic single-instruction scores per round
    - `evidence/<variant>/score_expected_tools.json` — deterministic tool selection scores per round
 
 ## Evidence parsing notes
@@ -68,7 +67,7 @@ results/<timestamp>/
     任务规划.score.json
     任务完成度.score.json
     异常分析能力.score.json
-    指令遵循.score.json
+    遵循.score.json
     真实性&可靠性.score.json
   scorecard.md
   deductions.md
@@ -96,7 +95,7 @@ results/<timestamp>/
 5. Write one `scores/{capability}.score.json` immediately after finishing that capability. For `真实性与可靠性`, first write `scores/<variant>/truthfulness_claims.json`, run `python benchmarks/agent-eval-suite/runners/score_truthfulness.py results/<timestamp>/evidence/<variant> --claims-file scores/<variant>/truthfulness_claims.json --strict`, then save stdout as `scores/<variant>/真实性与可靠性.score.json`.
 6. Self-check: every low score has deductions; every deduction cites evidence; `null` is justified.
 7. Record in the scorecard that calibration against `results/202606211740` passed within ±3, or do not finalize the score.
-8. Aggregate with `capability-weights.yaml`: compute the weighted base score from non-multiplier capabilities, then multiply by `真实性&可靠性` and `指令遵循` coefficients to write `scorecard.md` and `deductions.md`.
+8. Aggregate with `capability-weights.yaml`: compute the weighted base score from non-multiplier capabilities, then multiply by `真实性&可靠性` and `遵循` coefficients to write `scorecard.md` and `deductions.md`.
 
 ## Per-capability evidence boundaries
 
@@ -106,7 +105,7 @@ results/<timestamp>/
 - `任务规划`: use route efficiency and tool choice. **工具选择 is mechanized**: read `score_expected_tools.json`; use per-round values as-is; do not re-judge. Acceptance can indicate consequences, not replace the score.
 - `任务完成度`: use prompt sub-step coverage and the turn/final gate matrix from `capability-scoring.md`; non-final `diagnostic_gate_passed`/`core_gate_passed` is diagnostic only; `turn_gate_passed` is the prompt-specific gate.
 - `异常分析能力`: use replay error, diagnosis, repair, and verification. Do not use `acceptance.json` as the main evidence source.
-- `指令遵循`: **fully mechanized**. Read `score_cosplay.json`, `score_concise.json`, and `score_instructions.json`; use per-round values as-is; 持久规则 = cosplay×0.5 + concise×0.5; 指令遵循 = 持久规则×0.4 + 单次指令×0.6. Do not re-judge or override any sub-score.
+- `遵循`: **fully mechanized**. Generate/read `requirements.json`, `behavior_facts.json`, `violations.json`, then run the fixed scorer to write `遵循.score.json`; `score_cosplay.json` and `score_concise.json` are input facts for `持久规则遵循`, not the full capability score. Do not hand-score or override sub-scores.
 - `真实性&可靠性`: first write `scores/<variant>/truthfulness_claims.json`, then run `python benchmarks/agent-eval-suite/runners/score_truthfulness.py results/<timestamp>/evidence/<variant> --claims-file scores/<variant>/truthfulness_claims.json --strict`; save stdout as `scores/<variant>/真实性与可靠性.score.json`. Compare response claims with replay/commands/diff/source_snapshot/artifact/acceptance/fixture/analyzer/cost evidence; false completion claims are heavily penalized. A runner/API error message alone is not a completion claim and must not be scored as false completion; only penalize it here when the response text itself claims completion, successful verification, or passage of checks contradicted by evidence.
 
 ## score.json schema

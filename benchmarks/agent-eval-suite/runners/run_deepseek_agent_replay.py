@@ -360,6 +360,18 @@ def reject_benchmark_results_path(path: Path) -> None:
             f"Write run artifacts under <ds-harness>/results/<timestamp>/ instead."
         )
 
+
+def _materialize_mechanized_scores(evidence_dir: Path) -> None:
+    script = Path(__file__).resolve().parent / "materialize_mechanized_scores.py"
+    if not script.exists():
+        return
+    try:
+        cp = subprocess.run([sys.executable, str(script), str(evidence_dir)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+        if cp.returncode != 0:
+            print(f"warning: materialize mechanized scores failed: {cp.stderr[:300]}")
+    except Exception as exc:
+        print(f"warning: materialize mechanized scores failed: {exc}")
+
 def main():
     ap = argparse.ArgumentParser(description='Run bare DeepSeek model through the M1-M8 fixture loop.')
     ap.add_argument('--root', required=True)
@@ -509,6 +521,7 @@ def test_run_dag_amidst_noise(caplog):
             time.sleep(0.2)
     if collector:
         collector.finalize()
+        _materialize_mechanized_scores(evidence_dir)
     print(out)
 
 if __name__ == '__main__':

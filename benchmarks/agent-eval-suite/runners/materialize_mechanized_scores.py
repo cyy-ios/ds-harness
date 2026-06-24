@@ -5,18 +5,19 @@ import sys
 from pathlib import Path
 
 RUNNERS = Path(__file__).resolve().parent
+sys.path.insert(0, str(RUNNERS))
+
+from score_following import score_following  # noqa: E402
 
 MECHANIZED_FILES = {
     "cosplay": "score_cosplay.json",
     "concise": "score_concise.json",
-    "single_instruction": "score_instructions.json",
     "tool_selection": "score_expected_tools.json",
 }
 
 SCORERS = {
     "score_cosplay.json": "score_cosplay.py",
     "score_concise.json": "score_concise.py",
-    "score_instructions.json": "score_instructions.py",
     "score_expected_tools.json": "score_expected_tools.py",
 }
 
@@ -44,10 +45,6 @@ def ensure_mechanized_file(evidence_root: Path, filename: str) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def average(values: list[float]) -> float:
-    return round(sum(values) / len(values), 1) if values else 0.0
-
-
 def round_score(data: dict, round_id: str) -> float:
     return float(data["per_round"][round_id]["score"])
 
@@ -56,57 +53,19 @@ def materialize(evidence_root: Path, scores_dir: Path | None) -> dict:
     for filename in MECHANIZED_FILES.values():
         ensure_mechanized_file(evidence_root, filename)
 
-    cosplay = read_json(evidence_root / MECHANIZED_FILES["cosplay"])
-    concise = read_json(evidence_root / MECHANIZED_FILES["concise"])
-    single = read_json(evidence_root / MECHANIZED_FILES["single_instruction"])
+    following_score = score_following(evidence_root, write_intermediates=True)
+    (evidence_root / "遵循.score.json").write_text(
+        json.dumps(following_score, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
     tools = read_json(evidence_root / MECHANIZED_FILES["tool_selection"])
-
-    rounds = sorted(set(cosplay["per_round"]) & set(concise["per_round"]) & set(single["per_round"]))
-    instruction_per_round = {}
-    for round_id in rounds:
-        persistent = (round_score(cosplay, round_id) + round_score(concise, round_id)) / 2
-        score = persistent * 0.4 + round_score(single, round_id) * 0.6
-        instruction_per_round[round_id] = {
-            "score": round(score, 1),
-            "sub_scores": {
-                "持久规则": round(persistent, 1),
-                "cosplay": round_score(cosplay, round_id),
-                "concise": round_score(concise, round_id),
-                "单次指令": round_score(single, round_id),
-            },
-            "evidence": [
-                "score_cosplay.json",
-                "score_concise.json",
-                "score_instructions.json",
-            ],
-        }
-
-    instruction_score = {
-        "capability": "指令遵循",
-        "score": average([v["score"] for v in instruction_per_round.values()]),
-        "mechanized": True,
-        "replacement": "full_capability",
-        "formula": "持久规则 = cosplay*0.5 + concise*0.5; 指令遵循 = 持久规则*0.4 + 单次指令*0.6",
-        "per_round": instruction_per_round,
-        "rounds_scored": len(instruction_per_round),
-        "rounds_excluded": 0,
-        "evidence_used": [
-            "score_cosplay.json",
-            "score_concise.json",
-            "score_instructions.json",
-        ],
-        "reason": "Fully mechanized per scoring-output.md; do not re-judge or override.",
-        "deductions": [],
-        "evidence_gaps": [],
-    }
-
     tool_per_round = {
         round_id: {
             "score": round_score(tools, round_id),
             "sub_scores": {"1.2_工具选择": round_score(tools, round_id)},
             "evidence": ["score_expected_tools.json"],
         }
-        for round_id in sorted(tools["per_round"])
+        for round_id in sorted(tools.get("per_round", {}))
     }
     planning_partial = {
         "capability": "任务规划",
@@ -121,7 +80,7 @@ def materialize(evidence_root: Path, scores_dir: Path | None) -> dict:
 
     overrides = {
         "mechanized_replacements": {
-            "指令遵循": instruction_score,
+            "遵循": following_score,
             "任务规划.1.2_工具选择": planning_partial,
         }
     }
@@ -131,8 +90,8 @@ def materialize(evidence_root: Path, scores_dir: Path | None) -> dict:
 
     if scores_dir:
         scores_dir.mkdir(parents=True, exist_ok=True)
-        (scores_dir / "指令遵循.score.json").write_text(
-            json.dumps(instruction_score, ensure_ascii=False, indent=2), encoding="utf-8"
+        (scores_dir / "遵循.score.json").write_text(
+            json.dumps(following_score, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         (scores_dir / "任务规划.mechanized.json").write_text(
             json.dumps(planning_partial, ensure_ascii=False, indent=2), encoding="utf-8"

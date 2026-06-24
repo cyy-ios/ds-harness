@@ -372,6 +372,18 @@ def collect_evidence(
     return step_dir
 
 
+
+def _materialize_mechanized_scores(evidence_dir: Path) -> None:
+    script = Path(__file__).resolve().parent / "materialize_mechanized_scores.py"
+    if not script.exists():
+        return
+    try:
+        cp = subprocess.run([sys.executable, str(script), str(evidence_dir)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+        if cp.returncode != 0:
+            print(f"warning: materialize mechanized scores failed: {cp.stderr[:300]}")
+    except Exception as exc:
+        print(f"warning: materialize mechanized scores failed: {exc}")
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run Claude Code CLI itself against DeepSeek V4 via Anthropic-compatible API.",
@@ -465,6 +477,7 @@ def main() -> None:
         }, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    _materialize_mechanized_scores(out)
 
 
 if __name__ == "__main__":

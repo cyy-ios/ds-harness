@@ -998,11 +998,11 @@ def main():
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8",
     )
 
-    # ---- 机械化评分：cosplay + concise + 单次指令 + 工具选择 ----
+    # ---- 机械化评分：cosplay + concise + 遵循四器 + 工具选择 ----
     _run_mechanized_scorer("score_cosplay.py", out)
     _run_mechanized_scorer("score_concise.py", out)
-    _run_mechanized_scorer("score_instructions.py", out)
     _run_mechanized_scorer("score_expected_tools.py", out)
+    _run_mechanized_scorer("score_following.py", out)
     _materialize_mechanized_replacements(out)
 
     print(f"证据已输出到 {out}")
