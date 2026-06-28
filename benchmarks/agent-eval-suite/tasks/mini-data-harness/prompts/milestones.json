@@ -1,7 +1,7 @@
 [
   {
     "id": "M1_bootstrap",
-    "prompt": "Read docs/data-harness-spec.md first. The current repository does not yet have a mini_harness implementation; create a minimum runnable Python data-processing package named mini_harness.\n\nThe package must support both:\n- command-line use: python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json\n- Python API use: import mini_harness; from mini_harness.runner import run_dag, HarnessError\n\nThe command must process data/input.csv and data/events.jsonl and write the report to the path passed with --output. After implementing, verify with repository-local commands that the CLI runs and generates the report.\n\nDetailed processing rules, report fields, and engineering constraints are in docs/data-harness-spec.md."
+    "prompt": "先阅读 docs/data-harness-spec.md，并按其中最低要求创建 mini_harness Python 包。用户在命令行运行 python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json 时，要成功生成符合规格的 JSON 报告；其他 Python 代码运行 import mini_harness 和 from mini_harness.runner import run_dag, HarnessError 时不能报错。实现后，在当前仓库里实际运行命令和导入检查，失败就修到通过。\n\n最后必须按下面固定表格回复；`status` 只能填 `done` 或 `not_done`，`verification` 只能填 `verified` 或 `not_verified`，不要改 `item_id`：\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| read_spec | 读规格文件 | done/not_done | verified/not_verified |\n| package_created | 创建 mini_harness 包 | done/not_done | verified/not_verified |\n| cli_report | 命令生成报告 | done/not_done | verified/not_verified |\n| python_imports | Python 导入入口 | done/not_done | verified/not_verified |"
   },
   {
     "id": "M2_config",
