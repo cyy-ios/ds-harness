@@ -1,29 +1,16 @@
 #!/usr/bin/env python3
-"""Collect deterministic tool event evidence for each round.
-
-Each round now writes only `tool_events.jsonl`; older replay/commands/diff/artifact
-extraction is intentionally disabled while evidence extraction is redesigned.
-"""
+"""Collect the new per-round evidence contract: tool events plus result."""
 
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
+from response_protocol import write_result_json
 from tool_events import from_tool_pairs, write_jsonl
-
-REQUIRED_ACCEPTANCE_CHECK_KEYS = {
-    "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
-    "config_json_cli", "cwd_independent_cli", "m4_noise_cli", "acceptance_pytest",
-    "memory_aware_report", "unsupported_claims_absent",
-}
-
-import yaml
 
 
 class EvidenceCollector:
@@ -54,7 +41,7 @@ class EvidenceCollector:
         self._current_milestone: str | None = None
         self._round_dir: Path | None = None
         self._replay_events: list[dict] = []
-        self._commands: list[dict] = []
+        self._final_response = ""
         self._tokens_in = 0
         self._tokens_out = 0
         self._round_start_time: float = 0.0
@@ -82,7 +69,7 @@ class EvidenceCollector:
             self._round_dir = self.out / self._current_round
             self._round_dir.mkdir(parents=True, exist_ok=True)
             self._replay_events = []
-            self._commands = []
+            self._final_response = ""
             self._tokens_in = 0
             self._tokens_out = 0
             self._round_start_time = time.monotonic()
@@ -117,24 +104,16 @@ class EvidenceCollector:
             self._replay_events.append({"role": "assistant", "tool_call": tool_call})
         if tool_result:
             self._replay_events.append({"role": "tool", "result": tool_result})
-        # commands：累积
-        if tool_call and tool_call.get("tool") == "shell":
-            self._commands.append({
-                "command": tool_call.get("cmd", ""),
-                "cwd": str(self.root),
-                "exit_code": tool_result.get("returncode") if tool_result else None,
-                "stdout": (tool_result.get("output", "") or "")[:20000] if tool_result else "",
-            })
-
         # finish 时封存本轮
         if tool_call and tool_call.get("tool") == "finish":
+            self._final_response = str(tool_call.get("summary") or response_text or "")
             self._finalize_current_round()
             self._current_round = None
             self._current_milestone = None
             self._round_dir = None
 
     def finalize(self) -> None:
-        """全部轮次结束后调用：封存最后一轮 + 写 index.yaml。"""
+        """全部轮次结束后调用：封存最后一轮 + 写 index.json。"""
         self._finalize_current_round()
         self._write_index()
 
@@ -146,6 +125,7 @@ class EvidenceCollector:
         if not self._round_dir:
             return
         self._write_tool_events()
+        self._write_result()
 
     def _write_tool_events(self) -> None:
         pairs: list[tuple[dict[str, Any] | None, dict[str, Any] | None]] = []
@@ -161,6 +141,37 @@ class EvidenceCollector:
         write_jsonl(
             self._round_dir / "tool_events.jsonl",
             from_tool_pairs(pairs, self._current_milestone or ""),
+        )
+
+
+    def _write_result(self) -> None:
+        write_result_json(
+            self._round_dir / "result.json",
+            milestone=self._current_milestone or "",
+            runner=self.runner_name,
+            final_response=self._final_response,
+            elapsed_seconds=round(time.monotonic() - self._round_start_time, 3) if self._round_start_time else None,
+            extra={
+                "task_name": self.task_name,
+                "subject_name": self.subject_name,
+                "tokens": {"input": self._tokens_in, "output": self._tokens_out},
+            },
+        )
+
+    def _write_index(self) -> None:
+        (self.out / "index.json").write_text(
+            json.dumps(
+                {
+                    "task_name": self.task_name,
+                    "subject_name": self.subject_name,
+                    "runner": self.runner_name,
+                    "evidence_contract": "tool_events_result_v1",
+                    "rounds": self._index_entries,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
         )
 
     # ------------------------------------------------------------------

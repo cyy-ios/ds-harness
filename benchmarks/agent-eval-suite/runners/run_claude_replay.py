@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from response_protocol import write_result_json
 from tool_events import from_claude_events, write_jsonl
 from run_codex_replay import (
     _milestone_index,
@@ -105,83 +106,6 @@ def _tool_input_for_replay(name: str, tool_input: Any) -> dict[str, Any]:
     return tool_input
 
 
-def build_replay_jsonl(events: list[dict[str, Any]], ms_id: str) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-    tool_names: dict[str, str] = {}
-    step = 0
-    for ev in events:
-        ev_type = ev.get("type")
-        if ev_type == "assistant":
-            message = ev.get("message", {})
-            if not isinstance(message, dict):
-                continue
-            for block in message.get("content", []) or []:
-                if not isinstance(block, dict):
-                    continue
-                if block.get("type") == "text":
-                    text = block.get("text", "")
-                    if text:
-                        records.append({
-                            "milestone": ms_id,
-                            "step": step,
-                            "assistant_text": text,
-                            "event_type": "agent_message",
-                        })
-                        step += 1
-                elif block.get("type") == "tool_use":
-                    tool_id = str(block.get("id", ""))
-                    name = str(block.get("name", ""))
-                    tool_names[tool_id] = name
-                    records.append({
-                        "milestone": ms_id,
-                        "step": step,
-                        "tool": _tool_item_type(name),
-                        "tool_input": _tool_input_for_replay(name, block.get("input")),
-                        "event_type": "tool_call",
-                        "event_id": tool_id,
-                    })
-                    step += 1
-        elif ev_type == "user":
-            message = ev.get("message", {})
-            if not isinstance(message, dict):
-                continue
-            for block in message.get("content", []) or []:
-                if not isinstance(block, dict) or block.get("type") != "tool_result":
-                    continue
-                tool_id = str(block.get("tool_use_id", ""))
-                name = tool_names.get(tool_id, "")
-                result = ev.get("tool_use_result")
-                output = block.get("content", "")
-                if isinstance(result, dict):
-                    stdout = result.get("stdout", "")
-                    stderr = result.get("stderr", "")
-                    shell_output = "\n".join(str(part) for part in [stdout, stderr] if part)
-                    if shell_output:
-                        output = shell_output
-                    elif not output:
-                        output = json.dumps(result, ensure_ascii=False)
-                records.append({
-                    "milestone": ms_id,
-                    "step": step,
-                    "tool": _tool_item_type(name),
-                    "tool_output": _normalize_tool_output(name, output),
-                    "tool_error": bool(block.get("is_error")),
-                    "event_type": "tool_result",
-                    "event_id": tool_id,
-                })
-                step += 1
-        elif ev_type == "result":
-            records.append({
-                "milestone": ms_id,
-                "step": step,
-                "event_type": "turn.completed",
-                "usage": ev.get("usage"),
-                "stop_reason": ev.get("stop_reason"),
-            })
-            step += 1
-    return records
-
-
 def extract_response_text(events: list[dict[str, Any]]) -> str:
     result_text = ""
     texts: list[str] = []
@@ -197,92 +121,6 @@ def extract_response_text(events: list[dict[str, Any]]) -> str:
             if isinstance(block, dict) and block.get("type") == "text" and block.get("text"):
                 texts.append(str(block["text"]))
     return result_text or "\n".join(texts)
-
-
-def extract_command_log(records: list[dict[str, Any]]) -> str:
-    lines: list[str] = []
-    for record in records:
-        if record.get("event_type") == "tool_call" and record.get("tool") == "shell":
-            inp = record.get("tool_input", {})
-            command = inp.get("command", "") if isinstance(inp, dict) else ""
-            lines.append(f"$ {command}")
-        elif record.get("event_type") == "tool_result" and record.get("tool") == "shell":
-            lines.append(str(record.get("tool_output", "")))
-            lines.append(f"[error: {record.get('tool_error')}]")
-            lines.append("")
-    return "\n".join(lines)
-
-
-def extract_usage_tokens(events: list[dict[str, Any]]) -> tuple[int, int]:
-    input_tokens = 0
-    output_tokens = 0
-    for ev in events:
-        usage = ev.get("usage")
-        if isinstance(usage, dict):
-            input_tokens += int(usage.get("input_tokens", 0) or 0)
-            output_tokens += int(usage.get("output_tokens", 0) or 0)
-        message = ev.get("message")
-        if isinstance(message, dict):
-            usage = message.get("usage")
-            if isinstance(usage, dict):
-                input_tokens += int(usage.get("input_tokens", 0) or 0)
-                output_tokens += int(usage.get("output_tokens", 0) or 0)
-    return input_tokens, output_tokens
-
-
-def run_claude(
-    prompt: str,
-    *,
-    cwd: Path,
-    session_id: str | None,
-    extra_context: str = "",
-    model: str,
-    timeout: int,
-) -> tuple[list[dict[str, Any]], str | None, subprocess.CompletedProcess[str]]:
-    full_prompt = f"{extra_context}\n\n---\n\n{prompt}" if extra_context else prompt
-    claude_bin = shutil.which("claude.cmd") or shutil.which("claude") or "claude"
-    cmd = [
-        claude_bin,
-        "-p",
-        "--output-format",
-        "stream-json",
-        "--verbose",
-        "--model",
-        model,
-        "--permission-mode",
-        "bypassPermissions",
-        "--allowedTools",
-        CLAUDE_ALLOWED_TOOLS,
-    ]
-    if session_id:
-        cmd.extend(["--resume", session_id])
-
-    env = os.environ.copy()
-    api_key = resolve_deepseek_api_key()
-    env.update({
-        "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
-        "ANTHROPIC_AUTH_TOKEN": api_key,
-        "ANTHROPIC_MODEL": model,
-        "ANTHROPIC_DEFAULT_OPUS_MODEL": model,
-        "ANTHROPIC_DEFAULT_SONNET_MODEL": model,
-        "ANTHROPIC_DEFAULT_HAIKU_MODEL": model,
-        "CLAUDE_CODE_SUBAGENT_MODEL": model,
-        "CLAUDE_CODE_EFFORT_LEVEL": "max",
-    })
-
-    result = subprocess.run(
-        cmd,
-        input=full_prompt,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=timeout,
-        cwd=cwd,
-        env=env,
-    )
-    events = parse_jsonl(result.stdout) or parse_jsonl(result.stderr)
-    return events, extract_session_id(events) or session_id, result
 
 
 def inject_claude_rules(root: Path) -> None:
@@ -312,6 +150,14 @@ def collect_evidence(
     step_dir = evidence_root / ms_id / "step_01"
     step_dir.mkdir(parents=True, exist_ok=True)
     write_jsonl(step_dir / "tool_events.jsonl", from_claude_events(events, ms_id))
+    write_result_json(
+        step_dir / "result.json",
+        milestone=ms_id,
+        runner="claude_cli",
+        final_response=extract_response_text(events),
+        elapsed_seconds=elapsed,
+        extra={"compact_meta": compact_meta or {}},
+    )
     return step_dir
 
 

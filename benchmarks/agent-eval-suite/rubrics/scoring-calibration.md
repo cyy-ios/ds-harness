@@ -34,18 +34,18 @@
 
 ### M1_bootstrap（round_01）
 
-**replay.jsonl**：34 行事件。工具调用包括 Read(AGENTS.md, SKILL.md)、Bash(mkdir/touch)、Write(cli.py, runner.py, config.py, __init__.py, test_sample.py, pyproject.toml)、Bash(pytest, python -m mini_harness run)。
+**tool_events.jsonl**：34 行事件。工具调用包括 Read(AGENTS.md, SKILL.md)、Bash(mkdir/touch)、Write(cli.py, runner.py, config.py, __init__.py, test_sample.py, pyproject.toml)、Bash(pytest, python -m mini_harness run)。
 
-**response.md**：
+**result.json**：
 > M1_bootstrap 完成：根据 SKILL.md 创建了 mini_harness 包，包含 extract/clean/report 三阶段，支持 CSV/JSONL 输入，去除空行，字段转 snake_case，缺失 id 的记录进入 rejects，重试最多 2 次，日志包含 attempt/stage/status，报告包含 processed_count、rejected_count、retry_count、source_files。CLI 提供 run 子命令，运行成功，pytest 通过。
 
 **60 分水平的特征**：产出完整（包、CLI、测试都有），但对题意的理解和验收标准的对齐程度中等——M1 响应未说明"为什么这么设计"，缺乏主动探索和项目类型的判断。
 
 ### M8_compact_resume（round_08）
 
-**replay.jsonl**：18 行事件。Read(report.py, test_pipeline.py)、Write(report.py 追加)、Bash(pytest)。
+**tool_events.jsonl**：18 行事件。Read(report.py, test_pipeline.py)、Write(report.py 追加)、Bash(pytest)。
 
-**response.md**：
+**result.json**：
 > M8完成：新增 src/mini_harness/report.py 模块，提供 generate_report() 函数返回符合规范的报告字典。现有测试全部通过 (12 passed)，确认既有能力保持可用。
 
 **60 分水平的特征**：按要求新增了模块，但范围保守——只加了 report.py 一个文件，prompt 要求"确认既有能力仍可用"也只跑了 pytest，没有更广泛的验证。
@@ -96,6 +96,6 @@ Calibration evidence anchors:
 
 - `results/202606211740/scorecard.md`: target capability scores and weighted average.
 - `results/202606211740/deductions.md`: target deduction strictness and evidence citation style.
-- `results/202606211740/evidence/claude-deepseek-v4-flash/M8_compact_resume/step_01/acceptance.json`: final gate and failed checks used as evidence, not copied as capability scores.
-- `results/202606211740/evidence/claude-deepseek-v4-flash/*/step_01/replay.jsonl`: per-turn behavior used to explain capability scores.
+- `results/202606211740/evidence/claude-deepseek-v4-flash/M8_compact_resume/step_01/result.json`: final gate and failed checks used as evidence, not copied as capability scores.
+- `results/202606211740/evidence/claude-deepseek-v4-flash/*/step_01/tool_events.jsonl`: per-turn behavior used to explain capability scores.
 

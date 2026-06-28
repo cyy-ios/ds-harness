@@ -20,71 +20,71 @@ def load_checklist() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _read_tree(root: Path, *, text_extensions: tuple[str, ...] | None = None) -> tuple[str, str]:
-    """返回目录内路径清单和文本内容；用于 diff 不可靠时的快照兜底。"""
-    if not root.is_dir():
-        return "", ""
-    paths: list[str] = []
-    contents: list[str] = []
-    for fp in sorted(p for p in root.rglob("*") if p.is_file()):
-        rel = fp.relative_to(root).as_posix()
-        if "__pycache__" in rel or rel.endswith(".pyc"):
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    if not path.exists():
+        return records
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
             continue
-        paths.append(rel)
-        if text_extensions is None or fp.suffix.lower() in text_extensions:
-            try:
-                contents.append(f"\n--- {rel} ---\n" + fp.read_text(encoding="utf-8", errors="replace"))
-            except OSError:
-                pass
-    return "\n".join(paths), "\n".join(contents)
+        if isinstance(value, dict):
+            records.append(value)
+    return records
 
 
-def load_evidence(evidence_root: Path, milestone: str) -> dict[str, str]:
-    """加载一个 milestone 的全部 evidence 文本。"""
+def _json_text(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def load_evidence(evidence_root: Path, milestone: str) -> dict[str, Any]:
+    """加载一个 milestone 的新证据：tool_events.jsonl + result.json。"""
     step = evidence_root / milestone / "step_01"
-    result = {"_step_dir": str(step)}
-    for fname in ["replay.jsonl", "commands.log", "diff.patch", "response.md", "acceptance.json", "file_tree.txt"]:
-        fp = step / fname
-        if fp.exists():
-            result[fname] = fp.read_text(encoding="utf-8", errors="replace")
-        else:
-            result[fname] = ""
-    snap_paths, snap_text = _read_tree(step / "source_snapshot", text_extensions=(".py", ".md", ".json", ".yaml", ".yml", ".toml", ".txt"))
-    _, snap_py_text = _read_tree(step / "source_snapshot", text_extensions=(".py",))
-    artifact_paths, artifact_text = _read_tree(step / "artifact", text_extensions=(".md", ".json", ".txt", ".log"))
-    result["snapshot_paths"] = snap_paths + "\n" + artifact_paths
-    result["snapshot_text"] = snap_text + "\n" + artifact_text
-    result["snapshot_py_text"] = snap_py_text
-    return result
+    if not step.exists() and milestone.startswith("M"):
+        step = evidence_root / milestone
+    tool_events = _read_jsonl(step / "tool_events.jsonl")
+    result_path = step / "result.json"
+    result = json.loads(result_path.read_text(encoding="utf-8")) if result_path.exists() else {}
+
+    all_text = "\n".join([_json_text(event) for event in tool_events] + [_json_text(result)])
+    command_events = [
+        event for event in tool_events
+        if str(event.get("tool", "")).lower() in {"shell", "bash", "execute_command", "command_execution"}
+    ]
+    command_text = "\n".join(_json_text(event) for event in command_events)
+    write_events = [
+        event for event in tool_events
+        if str(event.get("tool", "")).lower() in {"write", "edit", "file_write", "file_edit", "apply_patch"}
+    ]
+    changed_text = "\n".join(_json_text(event) for event in write_events) or all_text
+    final_response = str(result.get("final_response", ""))
+    protocol_text = _json_text(result.get("response_protocol", {}))
+    return {
+        "_step_dir": str(step),
+        "tool_events": tool_events,
+        "result": result,
+        "tool_events_text": all_text,
+        "command_text": command_text,
+        "changed_text": changed_text,
+        "final_response": final_response,
+        "result_text": _json_text(result),
+        "response_text": final_response + "\n" + protocol_text,
+    }
 
 
-def check_acceptance_passed(evidence: dict, key: str) -> bool:
-    try:
-        acc = json.loads(evidence["acceptance.json"])
-        # checks live inside parsed (stdout from score_mini_data_harness.py)
-        checks = acc.get("parsed", {}).get("checks", {})
-        if not checks:
-            checks = acc.get("checks", {})
-        if key not in checks:
-            return None
-        return checks.get(key, {}).get("passed", False)
-    except (json.JSONDecodeError, KeyError):
-        return False
+def check_acceptance_passed(evidence: dict, key: str) -> bool | None:
+    checks = evidence.get("result", {}).get("checks", {})
+    if key not in checks:
+        return None
+    item = checks.get(key)
+    if isinstance(item, dict):
+        return bool(item.get("passed"))
+    return bool(item)
 
 
 def _extract_py_hunks(diff_text: str) -> str:
-    """从 git diff 中仅提取 *.py 文件的变更块。"""
-    lines = diff_text.split("\n")
-    result = []
-    in_py_file = False
-    for line in lines:
-        if line.startswith("diff --git ") or line.startswith("--- a/") or line.startswith("+++ b/"):
-            in_py_file = line.endswith(".py") or ".py " in line
-            if in_py_file:
-                result.append(line)
-        elif in_py_file:
-            result.append(line)
-    return "\n".join(result)
+    return diff_text
 
 
 def apply_check(inst: dict, evidence: dict) -> dict:
@@ -99,41 +99,37 @@ def apply_check(inst: dict, evidence: dict) -> dict:
         return {"passed": passed, "detail": f"acceptance.{key}={passed}"}
 
     if method == "replay_path_contains":
-        text = _norm_path(evidence["replay.jsonl"])
+        text = _norm_path(evidence["tool_events_text"])
         matched = bool(re.search(pattern, text, re.I))
         passed = not matched if negated else matched
-        return {"passed": passed, "detail": f"replay matched={matched}"}
+        return {"passed": passed, "detail": f"tool_events matched={matched}"}
 
     if method == "replay_has_tool_type":
-        text = evidence["replay.jsonl"]
+        text = evidence["tool_events_text"]
         matched = bool(re.search(pattern, text, re.I))
         passed = not matched if negated else matched
-        return {"passed": passed, "detail": f"replay tool matched={matched}"}
+        return {"passed": passed, "detail": f"tool_events tool matched={matched}"}
 
 
     if method == "activity_contains":
-        text = _norm_path(evidence["replay.jsonl"] + "\n" + evidence["commands.log"])
+        text = _norm_path(evidence["tool_events_text"] + "\n" + evidence["command_text"])
         matched = bool(re.search(pattern, text, re.I))
         passed = not matched if negated else matched
         return {"passed": passed, "detail": f"activity matched={matched}"}
 
     if method == "commands_contains":
-        text = evidence["commands.log"]
+        text = evidence["command_text"]
         if not text.strip():
             # 空日志：正面指令 → 未执行（fail）；禁止指令 → 不可能违规（pass）
-            return {"passed": negated, "detail": "commands.log empty"}
+            return {"passed": negated, "detail": "command tool events empty"}
         matched = bool(re.search(pattern, text, re.I))
         passed = not matched if negated else matched
-        return {"passed": passed, "detail": f"commands matched={matched}"}
+        return {"passed": passed, "detail": f"command events matched={matched}"}
 
 
     if method == "changed_path_contains":
         text = _norm_path("\n".join([
-            evidence.get("diff.patch", ""),
-            evidence.get("file_tree.txt", ""),
-            evidence.get("snapshot_paths", ""),
-            evidence.get("replay.jsonl", ""),
-            evidence.get("commands.log", ""),
+            evidence.get("changed_text", ""),
         ]))
         matched = bool(re.search(pattern, text, re.I | re.M))
         passed = not matched if negated else matched
@@ -141,46 +137,45 @@ def apply_check(inst: dict, evidence: dict) -> dict:
 
 
     if method == "changed_py_content_contains":
-        py_text = _extract_py_hunks(evidence.get("diff.patch", "")) + "\n" + evidence.get("snapshot_py_text", "")
+        py_text = _extract_py_hunks(evidence.get("changed_text", "")) + "\n" + ""
         py_text = _norm_path(py_text)
         if not py_text.strip():
-            return {"passed": True if negated else False, "detail": "no py diff or snapshot content"}
+            return {"passed": True if negated else False, "detail": "changed tool events empty"}
         matched = bool(re.search(pattern, py_text, re.I | re.S))
         passed = not matched if negated else matched
         return {"passed": passed, "detail": f"changed_py_content matched={matched}"}
 
     if method == "changed_content_contains":
         text = _norm_path("\n".join([
-            evidence.get("diff.patch", ""),
-            evidence.get("snapshot_text", ""),
+            evidence.get("changed_text", ""),
         ]))
         if not text.strip() or text.strip() == "(no changes)":
-            return {"passed": True if negated else False, "detail": "no diff or snapshot content"}
+            return {"passed": True if negated else False, "detail": "changed tool events empty"}
         matched = bool(re.search(pattern, text, re.I | re.S))
         passed = not matched if negated else matched
         return {"passed": passed, "detail": f"changed_content matched={matched}"}
 
     if method == "diff_path_contains":
-        text = _norm_path(evidence["diff.patch"])
+        text = _norm_path(evidence["changed_text"])
         if text in ("", "(no changes)"):
-            return {"passed": True if negated else False, "detail": "diff empty or no changes"}
+            return {"passed": True if negated else False, "detail": "changed tool events empty"}
         matched = bool(re.search(pattern, text, re.I | re.M))
         passed = not matched if negated else matched
         return {"passed": passed, "detail": f"diff_path matched={matched}"}
 
     if method == "diff_content_contains":
-        text = _norm_path(evidence["diff.patch"])
+        text = _norm_path(evidence["changed_text"])
         if text in ("", "(no changes)"):
-            return {"passed": True if negated else False, "detail": "diff empty or no changes"}
+            return {"passed": True if negated else False, "detail": "changed tool events empty"}
         matched = bool(re.search(pattern, text, re.I))
         passed = not matched if negated else matched
         return {"passed": passed, "detail": f"diff_content matched={matched}"}
 
     if method == "diff_py_content_contains":
         """只检查 diff 中 *.py 文件的变更内容，排除 JSON/报告/配置文件。"""
-        text = evidence["diff.patch"]
+        text = evidence["changed_text"]
         if text in ("", "(no changes)"):
-            return {"passed": False, "detail": "diff empty or no changes"}
+            return {"passed": False, "detail": "changed tool events empty"}
         # 提取仅 *.py 文件的 diff hunks
         py_text = _extract_py_hunks(text)
         if not py_text.strip():
@@ -192,13 +187,13 @@ def apply_check(inst: dict, evidence: dict) -> dict:
 
 
     if method == "response_contains":
-        text = evidence["response.md"]
+        text = evidence["response_text"]
         matched = bool(re.search(pattern, text, re.I | re.S))
         passed = not matched if negated else matched
         return {"passed": passed, "detail": f"response matched={matched}"}
 
     if method == "response_not_contains":
-        text = evidence["response.md"]
+        text = evidence["response_text"]
         if not text.strip():
             return {"passed": True, "detail": "response empty — vacuously true"}
         matched = bool(re.search(pattern, text, re.I))

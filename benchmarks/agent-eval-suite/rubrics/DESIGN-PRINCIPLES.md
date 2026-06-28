@@ -4,9 +4,9 @@
 
 ## 1. 定锚点
 
-打开 evidence 目录，列出该能力能用的证据文件。每条规则必须锚到 replay.jsonl / commands.log / diff.patch / acceptance.json 中可数的值。
+打开 evidence 目录，列出该能力能用的证据文件。每条规则必须锚到 tool_events.jsonl / tool_events.jsonl / tool_events.jsonl / result.json 中可数的值。
 
-禁止锚到 response.md 的"理解""意图""体现""判断"等主观表述。response.md 仅用于真实性核对和指令格式检查。
+禁止锚到 result.json 的"理解""意图""体现""判断"等主观表述。result.json 仅用于真实性核对和指令格式检查。
 
 写完问：这个判断查的是哪个文件的哪个字段？
 

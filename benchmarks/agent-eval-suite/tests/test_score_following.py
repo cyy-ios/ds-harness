@@ -21,12 +21,8 @@ def _write_text(path: Path, text: str) -> None:
 def test_score_following_uses_task_authored_checklist(tmp_path):
     root = tmp_path / "evidence"
     step = root / "M1_bootstrap" / "step_01"
-    _write_json(step / "prompt.json", {"id": "M1_bootstrap", "prompt": "M1"})
-    _write_text(step / "replay.jsonl", "skills/data-harness/SKILL.md\n")
-    _write_text(step / "commands.log", "[]")
-    _write_text(step / "diff.patch", "(no changes)")
-    _write_text(step / "response.md", "done")
-    _write_json(step / "acceptance.json", {})
+    _write_text(step / "tool_events.jsonl", json.dumps({"kind": "tool_call", "tool": "read", "arguments": {"path": "skills/data-harness/SKILL.md"}}, ensure_ascii=False) + "\n")
+    _write_json(step / "result.json", {"final_response": "done", "response_protocol": {}})
     _write_json(root / "score_cosplay.json", {"per_round": {"M1_bootstrap": {"score": 100}}})
     _write_json(root / "score_concise.json", {"per_round": {"M1_bootstrap": {"score": 100}}})
 
@@ -42,12 +38,8 @@ def test_score_following_uses_task_authored_checklist(tmp_path):
 def test_score_following_uses_cosplay_and_concise_as_persistent_rule_facts(tmp_path):
     root = tmp_path / "evidence"
     step = root / "M2_config" / "step_01"
-    _write_json(step / "prompt.json", {"id": "M2_config", "prompt": "status"})
-    _write_text(step / "replay.jsonl", "")
-    _write_text(step / "commands.log", "[]")
-    _write_text(step / "diff.patch", "(no changes)")
-    _write_text(step / "response.md", "long")
-    _write_json(step / "acceptance.json", {})
+    _write_text(step / "tool_events.jsonl", "")
+    _write_json(step / "result.json", {"final_response": "long", "response_protocol": {}})
     _write_json(root / "score_cosplay.json", {"per_round": {"M2_config": {"score": 0}}})
     _write_json(root / "score_concise.json", {"per_round": {"M2_config": {"score": 50}}})
 

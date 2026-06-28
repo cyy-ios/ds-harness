@@ -8,7 +8,7 @@
 
 #### 1.1 首轮探索深度（100分）
 
-证据：首轮的 `replay.jsonl`（tool call 类型及路径）。
+证据：首轮的 `tool_events.jsonl`（tool call 类型及路径）。
 
 三个检查项：
 
@@ -43,7 +43,7 @@
 
 #### 2.1 环节追踪（25分）
 
-证据：当前轮的 `replay.jsonl` + `diff.patch`，前序轮的 `diff.patch` + `artifact/`，当前轮及前序轮的 `prompt.json`。
+证据：当前轮的 `tool_events.jsonl` + `tool_events.jsonl`，前序轮的 `tool_events.jsonl` + `result.json`，当前轮及前序轮的 `result.json`。
 
 **轮次类型判断**（先判断当前轮与前序轮的话题关系，决定哪些检查项适用）：
 
@@ -54,7 +54,7 @@
 
 **三个检查项**（不适用则标 N/A，归一化时剔除）：
 
-- [ ] **产物接续**：当前轮 replay 引用了前序轮产出的文件路径（前序轮 diff 中新增/修改的文件，或 artifact/ 中的产物文件）
+- [ ] **产物接续**：当前轮 replay 引用了前序轮产出的文件路径（前序轮 diff 中新增/修改的文件，或 result.json 中的产物文件）
 - [ ] **无冗余回退**：未撤销/覆盖前序轮的有效变更；未重复探索前序轮已充分探索过的区域（同目录 Glob/Grep 后无新增信息又 Glob）
 - [ ] **操作递进**：当前轮操作的文件/目录与前序轮属于同一任务链（路径前缀在同一棵子树下）
 
@@ -69,7 +69,7 @@ N = 适用检查项数量。首轮 N/A（无前序轮）。非首轮逐轮评分
 
 #### 2.2 主/支线识别（25分）
 
-证据：所有轮的 `prompt.json` + `replay.jsonl`。
+证据：所有轮的 `result.json` + `tool_events.jsonl`。
 
 **轮次分类**：对比每轮 prompt 与首轮 prompt 的关键词重合度。
 
@@ -91,7 +91,7 @@ N = 适用检查项数量。首轮 N/A（无前序轮）。非首轮逐轮评分
 
 #### 2.3 废弃方向识别（20分）
 
-证据：所有轮的 `replay.jsonl`（Read tool_result 内容 + 后续操作路径）+ `diff.patch` + `prompt.json`。
+证据：所有轮的 `tool_events.jsonl`（Read tool_result 内容 + 后续操作路径）+ `tool_events.jsonl` + `result.json`。
 
 **触发条件**：replay 中已读文件包含"旧版""已废弃""草稿""[legacy]""[deprecated]"等标记，或 prompt 告知方向变更。不触发 → 本轮 N/A。
 
@@ -112,7 +112,7 @@ N = 适用检查项数量。触发后逐轮评分（仅触发轮），取非 N/A
 
 #### 2.4 完成/研究中区分（15分）
 
-证据：所有轮的 `replay.jsonl`（Read tool_result 内容）+ `diff.patch`。
+证据：所有轮的 `tool_events.jsonl`（Read tool_result 内容）+ `tool_events.jsonl`。
 
 **触发条件**：replay 读到含"完成""已确定""最终""研究中""草稿""待定"标记的文档内容。不触发 → 本轮 N/A。
 
@@ -131,14 +131,14 @@ N = 适用检查项数量。触发后逐轮评分（仅触发轮），取非 N/A
 
 #### 2.5 无关任务隔离（15分）
 
-证据：所有轮的 `prompt.json` + `replay.jsonl` + `diff.patch`。
+证据：所有轮的 `result.json` + `tool_events.jsonl` + `tool_events.jsonl`。
 
 **触发条件**：prompt 关键词与首轮 prompt 重合度 <50%。不触发 → 本轮 N/A。
 
 **两个检查项**：
 
-- [ ] **diff 无污染**：偏离轮的 `diff.patch` 未修改主线模块文件路径（路径前缀与首轮操作路径同子树）
-- [ ] **后续无残留**：后续轮 `replay.jsonl` 未引用偏离轮产出的文件路径
+- [ ] **diff 无污染**：偏离轮的 `tool_events.jsonl` 未修改主线模块文件路径（路径前缀与首轮操作路径同子树）
+- [ ] **后续无残留**：后续轮 `tool_events.jsonl` 未引用偏离轮产出的文件路径
 
 | 达成数 | 分数 |
 |--------|------|

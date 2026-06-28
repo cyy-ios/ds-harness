@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract deterministic replay metadata for agent-reviewed scoring."""
+"""Extract deterministic tool-event metadata for agent-reviewed scoring."""
 from __future__ import annotations
 
 import argparse
@@ -29,14 +29,13 @@ def collect(paths: list[Path]) -> dict[str, Any]:
             metadata["records"] += 1
             if not isinstance(record, dict):
                 continue
-            tool_call = record.get("tool_call")
-            if isinstance(tool_call, dict):
+            if record.get("kind") == "tool_call":
                 metadata["assistant_tool_calls"] += 1
-                tool = str(tool_call.get("tool", "unknown"))
+                tool = str(record.get("tool", "unknown"))
                 metadata["tool_counts"][tool] = metadata["tool_counts"].get(tool, 0) + 1
                 if tool == "finish":
                     metadata["finish_count"] += 1
-            if "result" in record:
+            if record.get("kind") == "tool_result":
                 metadata["tool_results"] += 1
     return metadata
 

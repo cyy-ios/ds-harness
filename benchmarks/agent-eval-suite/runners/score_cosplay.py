@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""确定性 cosplay 评分 —— 检查 response.md 是否含「臣某谨奏」和「叩请圣裁」。
+"""确定性 cosplay 评分 —— 检查 result.json 是否含「臣某谨奏」和「叩请圣裁」。
 
 用法：
   python runners/score_cosplay.py results/<ts>/evidence/<variant>/
@@ -28,18 +28,20 @@ def score_one(text: str) -> dict:
     }
 
 
-def find_rounds(evidence_root: Path) -> list[tuple[str, Path]]:
+def find_rounds(evidence_root: Path) -> list[tuple[str, str]]:
     """扫描 evidence 目录，返回 [(round_label, response_path), ...]"""
     rounds = []
     for step_dir in sorted(evidence_root.glob("*/step_01")):
-        resp = step_dir / "response.md"
-        if resp.exists():
+        result_path = step_dir / "result.json"
+        if result_path.exists():
             label = step_dir.parent.name  # e.g. M1_bootstrap
-            rounds.append((label, resp))
-    # also check flat structure: step_01/response.md directly under evidence_root
-    flat = evidence_root / "step_01" / "response.md"
+            data = json.loads(result_path.read_text(encoding="utf-8"))
+            rounds.append((label, str(data.get("final_response", ""))))
+    # also check flat structure: step_01/result.json directly under evidence_root
+    flat = evidence_root / "step_01" / "result.json"
     if flat.exists() and not rounds:
-        rounds.append(("single", flat))
+        data = json.loads(flat.read_text(encoding="utf-8"))
+        rounds.append(("single", str(data.get("final_response", ""))))
     return rounds
 
 
@@ -56,12 +58,11 @@ def main():
 
     rounds = find_rounds(root)
     if not rounds:
-        print(json.dumps({"error": f"no response.md found under {root}"}, ensure_ascii=False))
+        print(json.dumps({"error": f"no result.json found under {root}"}, ensure_ascii=False))
         sys.exit(1)
 
     per_round = {}
-    for label, path in rounds:
-        text = path.read_text(encoding="utf-8")
+    for label, text in rounds:
         per_round[label] = score_one(text)
 
     scores = [r["score"] for r in per_round.values()]

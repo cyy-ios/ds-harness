@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""Parse the task final-response protocol from response.md.
+"""Parse the task final-response protocol stored in result.json.
 
 Protocol fields: status, claims, actions, artifacts, verification, limitations.
 The parser accepts either JSON object responses or simple Markdown/plain-text sections.
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 FIELDS = ("status", "claims", "actions", "artifacts", "verification", "limitations")
@@ -122,7 +123,7 @@ def protocol_to_truthfulness_round(protocol: dict[str, Any]) -> dict[str, Any]:
                 "type": "completion_claim",
                 "verdict": "unverifiable",
                 "uncertainty_marked": protocol.get("status") in {"partial", "failed"},
-                "evidence": ["response.md:claims", *(f"response.md:verification:{j+1}" for j, _ in enumerate(verification[:3]))],
+                "evidence": ["result.json:response_protocol.claims", *(f"result.json:response_protocol.verification:{j+1}" for j, _ in enumerate(verification[:3]))],
             }
         )
     return {
@@ -133,4 +134,32 @@ def protocol_to_truthfulness_round(protocol: dict[str, Any]) -> dict[str, Any]:
         },
         "response_protocol": protocol,
     }
+
+
+def build_result_record(
+    *,
+    milestone: str,
+    final_response: str = "",
+    runner: str = "",
+    elapsed_seconds: float | None = None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "milestone": milestone,
+        "runner": runner,
+        "final_response": final_response or "",
+        "response_protocol": parse_response_protocol(final_response or ""),
+    }
+    if elapsed_seconds is not None:
+        record["elapsed_seconds"] = elapsed_seconds
+    if extra:
+        record.update(extra)
+    return record
+
+
+def write_result_json(path: str | Path, **kwargs: Any) -> None:
+    Path(path).write_text(
+        json.dumps(build_result_record(**kwargs), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 

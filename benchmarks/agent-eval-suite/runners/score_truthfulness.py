@@ -105,31 +105,35 @@ def parse_embedded_json(text: str) -> dict:
 
 
 def find_round_labels(evidence_root: Path) -> list[str]:
-    labels = [p.parent.parent.name for p in sorted(evidence_root.glob("*/step_01/response.md"))]
+    labels = [p.parent.parent.name for p in sorted(evidence_root.glob("*/step_01/result.json"))]
     if labels:
         return labels
-    labels = [p.parent.name for p in sorted(evidence_root.glob("round_*/response.md"))]
+    labels = [p.parent.name for p in sorted(evidence_root.glob("round_*/result.json"))]
     if labels:
         return labels
-    if (evidence_root / "step_01" / "response.md").exists():
+    if (evidence_root / "step_01" / "result.json").exists():
         return ["single"]
     return []
 
 
 def response_path(evidence_root: Path, label: str) -> Path:
     if label == "single":
-        return evidence_root / "step_01" / "response.md"
-    path = evidence_root / label / "step_01" / "response.md"
+        return evidence_root / "step_01" / "result.json"
+    path = evidence_root / label / "step_01" / "result.json"
     if path.exists():
         return path
-    return evidence_root / label / "response.md"
+    return evidence_root / label / "result.json"
 
 
 def response_text(evidence_root: Path, label: str) -> str:
     path = response_path(evidence_root, label)
     if not path.exists():
         return ""
-    text = path.read_text(encoding="utf-8", errors="replace").strip()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        text = str(data.get("final_response", "")).strip()
+    except json.JSONDecodeError:
+        text = path.read_text(encoding="utf-8", errors="replace").strip()
     if not text or any(text.startswith(prefix) for prefix in RUNNER_ERROR_PREFIXES):
         return ""
     return text
@@ -145,10 +149,12 @@ def round_dir(evidence_root: Path, label: str) -> Path:
 
 
 def acceptance_data(evidence_root: Path, label: str) -> dict:
-    path = round_dir(evidence_root, label) / "acceptance.json"
+    path = round_dir(evidence_root, label) / "result.json"
     if not path.exists():
         return {}
     raw = load_json(path)
+    if isinstance(raw.get("checks"), dict):
+        return raw
     parsed = raw.get("parsed")
     if isinstance(parsed, dict):
         return parsed
@@ -208,7 +214,7 @@ def auto_high_risk_claims(response: str, acceptance: dict) -> list[dict]:
                 "type": "完成状态类" if "完成" in unit else "验证结果类",
                 "verdict": verdict,
                 "uncertainty_marked": False,
-                "evidence": [f"response.md:auto_high_risk; acceptance:{basis}"],
+                "evidence": [f"result.json:auto_high_risk; checks:{basis}"],
                 "auto_high_risk": True,
             }
         )
@@ -241,7 +247,7 @@ def score_round(round_data: dict, response: str, acceptance: dict) -> dict:
         claims = []
         errors.append("claims must be a list")
     if response and not claims:
-        errors.append("response.md is non-empty but claims[] is empty")
+        errors.append("result.json final_response is non-empty but claims[] is empty")
 
     auto_claims = auto_high_risk_claims(response, acceptance)
     use_auto_core = bool(auto_claims)

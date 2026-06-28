@@ -1,112 +1,69 @@
 #!/usr/bin/env python3
-"""证据完整性 + 内容质量检查。每次跑完测试后执行。"""
-import json, sys
+"""Check the new evidence contract: each round has tool_events.jsonl and result.json."""
+from __future__ import annotations
+
+import json
+import sys
 from pathlib import Path
+
+
+def _round_dirs(root: Path) -> list[Path]:
+    nested = sorted(root.glob("*/step_01"))
+    if nested:
+        return nested
+    return sorted(d for d in root.glob("round_*") if d.is_dir())
+
 
 def check_evidence(evidence_dir: str) -> tuple[int, int]:
     root = Path(evidence_dir)
     if not root.exists():
-        print(f"❌ 证据目录不存在: {root}")
+        print(f"missing evidence dir: {root}")
         return 0, 1
 
-    rounds = sorted([d for d in root.iterdir() if d.is_dir() and d.name.startswith("round_")])
+    rounds = _round_dirs(root)
     if not rounds:
-        print("❌ 没有找到任何轮次目录")
+        print("no round directories found")
         return 0, 1
 
-    passed, failed = 0, 0
-
+    passed = failed = 0
     for rd in rounds:
-        issues = []
-
-        # 1. 必选文件存在 + 非空
-        for f in ["prompt.json", "response.md", "replay.jsonl", "commands.log",
-                   "diff.patch", "acceptance.json", "cost.json"]:
-            fp = rd / f
-            if not fp.exists():
-                issues.append(f"缺 {f}")
-            elif fp.stat().st_size < 5:
-                issues.append(f"{f} 近乎空")
-
-        # 2. 必选目录
-        for d in ["source_snapshot", "artifact", "analyzer_output"]:
-            dp = rd / d
-            if not dp.exists():
-                issues.append(f"缺 {d}/")
-            elif d == "analyzer_output" and not (dp / "analyzer.json").exists():
-                issues.append(f"缺 analyzer_output/analyzer.json")
-
-        # 3. response.md 内容质量
-        resp = rd / "response.md"
-        if resp.exists():
-            text = resp.read_text(encoding="utf-8")
-            # 不应是原始 tool_call JSON（裸模型 finish 之前）
-            if text.strip().startswith('{"tool":') and '"tool": "finish"' not in text:
-                issues.append("response.md 是非 finish 的 tool_call JSON")
-            # 不应是纯空白
-            if len(text.strip()) < 10:
-                issues.append("response.md 近乎空")
-            # 不应是乱码（Python 代码混入）
-            if text.strip().startswith("                                            "):
-                issues.append("response.md 疑似代码片段混入")
-
-        # 4. replay.jsonl 应有 finish
-        replay = rd / "replay.jsonl"
-        if replay.exists():
-            has_finish = False
-            for line in replay.read_text(encoding="utf-8").splitlines():
+        issues: list[str] = []
+        tool_events = rd / "tool_events.jsonl"
+        result = rd / "result.json"
+        if not tool_events.exists():
+            issues.append("missing tool_events.jsonl")
+        else:
+            for line_no, line in enumerate(tool_events.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
                 try:
-                    ev = json.loads(line)
-                    tc = ev.get("tool_call", {})
-                    if isinstance(tc, dict) and tc.get("tool") == "finish":
-                        has_finish = True
-                        break
+                    rec = json.loads(line)
                 except json.JSONDecodeError:
-                    continue
-            if not has_finish:
-                issues.append("replay.jsonl 无 finish 事件")
-
-        # 5. acceptance.json 应有 gate_passed
-        acc = rd / "acceptance.json"
-        if acc.exists():
+                    issues.append(f"tool_events.jsonl invalid json line {line_no}")
+                    break
+                if rec.get("kind") not in {"tool_call", "tool_result"}:
+                    issues.append(f"tool_events.jsonl invalid kind line {line_no}")
+                    break
+        if not result.exists():
+            issues.append("missing result.json")
+        else:
             try:
-                data = json.loads(acc.read_text(encoding="utf-8"))
-                inner = data.get("output") or data.get("stdout") or "{}"
-                if isinstance(inner, str):
-                    # acceptance scorer 输出的 JSON 可能含无效转义，用字符串匹配兜底
-                    if '"gate_passed": true' in inner or '"gate_passed": false' in inner:
-                        pass  # gate_passed 存在
-                    else:
-                        issues.append("acceptance.json 无 gate_passed 字段")
-                elif isinstance(inner, dict) and "gate_passed" not in inner:
-                    issues.append("acceptance.json 无 gate_passed 字段")
-            except (json.JSONDecodeError, KeyError):
-                # 无法解析时用字符串匹配兜底
-                raw = acc.read_text(encoding="utf-8")
-                if '"gate_passed"' not in raw:
-                    issues.append("acceptance.json 格式异常且无 gate_passed")
-
-        # 6. diff.patch 不应为空
-        diff = rd / "diff.patch"
-        if diff.exists():
-            text = diff.read_text(encoding="utf-8")
-            if text.strip() == "(no changes)" or len(text.strip()) < 20:
-                issues.append("diff.patch 为空")
-
+                data = json.loads(result.read_text(encoding="utf-8"))
+                if "response_protocol" not in data:
+                    issues.append("result.json missing response_protocol")
+            except json.JSONDecodeError:
+                issues.append("result.json invalid json")
         if issues:
-            print(f"❌ {rd.name}: {'; '.join(issues)}")
+            print(f"FAIL {rd}: {'; '.join(issues)}")
             failed += 1
         else:
-            print(f"✅ {rd.name}")
+            print(f"OK {rd}")
             passed += 1
-
-    print(f"\n通过 {passed}/{passed+failed}")
+    print(f"\npassed {passed}/{passed + failed}")
     return passed, failed
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print(f"用法: python {sys.argv[0]} <evidence_dir>")
+        print(f"usage: python {sys.argv[0]} <evidence_dir>")
         sys.exit(1)
     _, failed = check_evidence(sys.argv[1])
     sys.exit(0 if failed == 0 else 1)

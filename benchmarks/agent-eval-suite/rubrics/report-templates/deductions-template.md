@@ -41,9 +41,9 @@ round_{NN}  得分 {分数}
 | round | `round_NN` 格式，禁止聚合 | `round_01` |
 | item | `capability-scoring.md` 中的子项编号 | `1.1_信息真实性` |
 | amount | 5-100，步长 5 | `50` |
-| reason | ≤20 字事实 + 证据坐标 | `声称 CLI 已验证但 replay.jsonl:L45 无对应操作` |
+| reason | ≤20 字事实 + 证据坐标 | `声称 CLI 已验证但 tool_events.jsonl:L45 无对应操作` |
 
-证据坐标格式：`文件名:行号或关键字段`，如 `replay.jsonl:L45`、`acceptance.json:cli_end_to_end`、`diff.patch:无新增 __main__.py`。
+证据坐标格式：`文件名:行号或关键字段`，如 `tool_events.jsonl:L45`、`result.json:cli_end_to_end`、`tool_events.jsonl:无新增 __main__.py`。
 
 **禁止**：
 - 聚合多轮为一条（如"R1-R5 各扣 X"）——每轮一条
@@ -51,5 +51,5 @@ round_{NN}  得分 {分数}
 - 原因分析、改进建议、评价性语言
 - 不含证据坐标的 reason
 
-示例（对）：`round_04  1.1_信息真实性  20  声称测试通过，acceptance.json:score=20`
+示例（对）：`round_04  1.1_信息真实性  20  声称测试通过，result.json:score=20`
 示例（错）：`agent 在 M4 中应该在修复后重新运行测试确认通过`

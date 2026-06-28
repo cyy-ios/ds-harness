@@ -24,7 +24,7 @@ def load_tool_checklist() -> dict:
 
 
 def extract_tools_used(replay_text: str) -> set[str]:
-    """从 replay.jsonl 提取所有被调用的工具名。"""
+    """从 tool_events.jsonl 提取所有被调用的工具名。"""
     tools = set()
     for line in replay_text.splitlines():
         try:
@@ -90,7 +90,7 @@ def main():
 
     rounds = []
     for step_dir in sorted(root.glob("*/step_01")):
-        replay = step_dir / "replay.jsonl"
+        replay = step_dir / "tool_events.jsonl"
         if replay.exists():
             label = step_dir.parent.name
             text = replay.read_text(encoding="utf-8", errors="replace")
@@ -98,7 +98,7 @@ def main():
             rounds.append((label, text, expected))
 
     if not rounds:
-        print(json.dumps({"error": f"no replay.jsonl found under {root}"}, ensure_ascii=False))
+        print(json.dumps({"error": f"no tool_events.jsonl found under {root}"}, ensure_ascii=False))
         sys.exit(1)
 
     per_round = {}

@@ -13,7 +13,7 @@ Codex CLI replay runner —— 用 Codex CLI 跑 M1-M8，收集证据。
   - M1-M7 通过 `codex exec resume` 维持连续 session
   - M8 起新 session，注入 compact-summary.md 替代完整历史
   - M5 在 subdir/workbench 执行
-  - 每个 M 后自动 git diff + acceptance 检查
+  - 每个 M 后只落新证据：tool_events.jsonl + result.json
 """
 
 from __future__ import annotations
@@ -28,13 +28,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from response_protocol import write_result_json
 from tool_events import from_codex_events, write_jsonl
-
-REQUIRED_ACCEPTANCE_CHECK_KEYS = {
-    "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
-    "config_json_cli", "cwd_independent_cli", "m4_noise_cli", "acceptance_pytest",
-    "memory_aware_report", "unsupported_claims_absent",
-}
 
 
 CODEX_FINAL_RESPONSE_PROTOCOL = """
@@ -206,102 +201,6 @@ def extract_session_id(events: list[dict]) -> str | None:
     return None
 
 
-def build_replay_jsonl(events: list[dict], ms_id: str) -> list[dict]:
-    """将 codex 事件转为标准 replay 记录。
-
-    Codex --json 事件格式：
-      {"type":"item.started","item":{"id":"...","type":"command_execution","command":"..."}}
-      {"type":"item.completed","item":{"id":"...","type":"command_execution",...,"aggregated_output":"...","exit_code":0}}
-      {"type":"item.completed","item":{"id":"...","type":"agent_message","text":"..."}}
-    """
-    records = []
-    step = 0
-
-    for ev in events:
-        t = ev.get("type", "")
-        item = ev.get("item", {}) if isinstance(ev.get("item"), dict) else {}
-        item_type = item.get("type", "")
-
-        # item.started —— tool call 开始
-        if t == "item.started":
-            name = item_type
-            inp = {}
-            if item_type == "command_execution":
-                inp = {"command": item.get("command", "")}
-            elif item_type in ("file_write", "file_edit"):
-                inp = {"path": item.get("path", ""), "content_length": len(str(item.get("content", "")))}
-            records.append({
-                "milestone": ms_id,
-                "step": step,
-                "tool": name,
-                "tool_input": inp,
-                "event_type": "tool_call",
-                "event_id": item.get("id", ev.get("id", "")),
-            })
-            step += 1
-
-        # item.completed —— 可能是 tool result 或 agent message
-        elif t == "item.completed":
-            if item_type == "agent_message":
-                records.append({
-                    "milestone": ms_id,
-                    "step": step,
-                    "assistant_text": item.get("text", ""),
-                    "event_type": "agent_message",
-                })
-                step += 1
-            else:
-                name = item_type
-                output = item.get("aggregated_output", "") or item.get("text", "")
-                error = (item.get("status") == "failed" or item.get("exit_code", 0) != 0)
-                records.append({
-                    "milestone": ms_id,
-                    "step": step,
-                    "tool": name,
-                    "tool_output": _normalize_tool_output(name, output),
-                    "tool_error": bool(error),
-                    "event_type": "tool_result",
-                    "event_id": item.get("id", ev.get("id", "")),
-                })
-                step += 1
-
-        # agent.message —— 旧格式兼容
-        elif t == "agent.message":
-            for block in _unwrap_content(ev.get("content", [])):
-                if block.get("type") == "text":
-                    records.append({
-                        "milestone": ms_id,
-                        "step": step,
-                        "assistant_text": block.get("text", ""),
-                        "event_type": t,
-                    })
-                    step += 1
-
-        # compaction 事件
-        elif t in _COMPACTION_EVENT_TYPES:
-            records.append({
-                "milestone": ms_id,
-                "step": step,
-                "event_type": "compaction",
-                "raw_type": t,
-                "compaction_message": _extract_compact_summary(ev),
-                "compaction_payload": ev.get("payload"),
-            })
-
-        # session 级事件
-        elif t in ("session.status_idle", "session.status_terminated",
-                   "turn.completed", "thread.started"):
-            records.append({
-                "milestone": ms_id,
-                "step": step,
-                "event_type": t,
-                "usage": ev.get("usage"),
-                "stop_reason": ev.get("stop_reason"),
-            })
-
-    return records
-
-
 def _unwrap_content(content: Any) -> list[dict]:
     """统一处理 content: str | list[dict] | None。"""
     if isinstance(content, str):
@@ -339,25 +238,6 @@ def extract_response_text(events: list[dict]) -> str:
                 if block.get("type") == "text":
                     texts.append(block.get("text", ""))
     return "\n".join(texts)
-
-
-def extract_command_log(events: list[dict]) -> str:
-    """提取 shell 命令执行记录。"""
-    lines = []
-    for record in build_replay_jsonl(events, ""):
-        if record.get("event_type") == "tool_call":
-            tool = record.get("tool", "")
-            inp = record.get("tool_input", {})
-            if tool in ("bash", "shell", "execute_command", "command_execution"):
-                cmd = inp.get("command", "") or inp.get("cmd", "") or json.dumps(inp)
-                lines.append(f"$ {cmd}")
-        elif record.get("event_type") == "tool_result":
-            tool = record.get("tool", "")
-            if tool in ("bash", "shell", "execute_command", "command_execution"):
-                lines.append(record.get("tool_output", ""))
-                lines.append(f"[error: {record.get('tool_error')}]")
-                lines.append("")
-    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -583,6 +463,18 @@ def collect_evidence(
     step_dir = evidence_root / ms_id / f"step_{step_num:02d}"
     step_dir.mkdir(parents=True, exist_ok=True)
     write_jsonl(step_dir / "tool_events.jsonl", from_codex_events(events, ms_id))
+    write_result_json(
+        step_dir / "result.json",
+        milestone=ms_id,
+        runner="codex_cli",
+        final_response=extract_response_text(events),
+        elapsed_seconds=elapsed,
+        extra={
+            "step": step_num,
+            "compact_trigger": compact_trigger,
+            "post_compact_milestones": post_compact_milestones or [],
+        },
+    )
     return step_dir
 
 def _milestone_index(ms_id: str) -> int:

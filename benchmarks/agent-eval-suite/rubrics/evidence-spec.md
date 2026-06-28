@@ -2,59 +2,27 @@
 
 Evidence is scoring input, not the final report.
 
-## Bare model runner
+## Contract
+
+New runs collect only the new evidence contract:
 
 ```text
 evidence/<variant>/
-  index.yaml
-  fixture_files/
-  round_01/
-    prompt.json
-    active_instructions.json
-    tool_policy_events.json
-    response.md
-    replay.jsonl
-    commands.log
-    diff.patch
-    source_snapshot/
-    artifact/
-    acceptance.json
-    analyzer_output/
-    cost.json
+  index.json or run_summary.json
+  <milestone>/step_01/
+    tool_events.jsonl
+    result.json
 ```
 
-## Codex runner
-
-```text
-evidence/<variant>/
-  run_summary.json
-  fixture_files/
-  M1_bootstrap/step_01/
-    prompt.json
-    active_instructions.json
-    tool_policy_events.json
-    response.md
-    replay.jsonl
-    commands.log        # may be absent for some Codex evidence; use replay.jsonl instead
-    diff.patch
-    source_snapshot/
-    artifact/
-    acceptance.json
-    analyzer_output/
-    cost.json
-```
+Flat bare-run rounds may use `round_01/` instead of `<milestone>/step_01/`, but the file set is the same.
 
 ## File semantics
 
-- `commands.log` is a JSON array of command records, not plain text. Each item may include `command`, `cwd`, `exit_code`, and `stdout`.
-- `acceptance.json` is usually a wrapper: `{ran, returncode, output}`. The evaluator JSON is inside `output` as text and may be preceded by noisy logs. Parse the first valid JSON object inside `output`; if parsing fails, treat it as an evidence gap and inspect replay/diff/source snapshots.
-- `response.md` is the runner-captured final assistant summary. For bare API runs, it may contain runner errors such as `invalid json`; in that case inspect `replay.jsonl` for the raw assistant output and repair events.
-- Runner-specific prompts may require the final response captured as `response.md` to contain the final-response protocol fields: `status`, `claims`, `actions`, `artifacts`, `verification`, and `limitations`. For bare DeepSeek this means `finish.summary`; for Claude Code/Codex this means the final assistant message. These fields are the primary claim boundary for truthfulness checks; do not infer extra success claims from surrounding prose unless they are explicit.
-- `diff.patch` can be empty when no file changed in that round; do not infer success or failure from diff alone.
-- `active_instructions.json` and `tool_policy_events.json` are lightweight context snapshots for `遵循` scoring. They reference raw files such as `prompt.json`/`replay.jsonl`; they must not duplicate full prompt, response, replay, or diff contents.
-
-Scoring agents must support both directory shapes and must start from `scoring-output.md`.
+- `tool_events.jsonl` is the only per-round tool/action evidence. Each line is a JSON object with `kind` (`tool_call` or `tool_result`), `tool`, `call_id`, `arguments` or `output`, and optional timing/error fields.
+- `result.json` is the only per-round result evidence. It contains `milestone`, `runner`, `final_response`, and parsed `response_protocol` fields: `status`, `claims`, `actions`, `artifacts`, `verification`, and `limitations`.
+- Do not write any other per-round raw evidence files in new runs.
+- If a future scorer needs more evidence, add it explicitly to this contract instead of reviving legacy files implicitly.
 
 ## Generated scoring intermediates
 
-`truthfulness_claims.json` is not raw evidence. The scoring agent may write it under `scores/<variant>/truthfulness_claims.json`; if absent, `score_truthfulness.py` derives first-pass claims from the `response.md` final-response protocol and still checks raw evidence/acceptance contradictions.
+Scoring scripts may write derived files such as `instruction_checklist_results.json`, `score_expected_tools.json`, `score_concise.json`, `score_cosplay.json`, `truthfulness_claims.json`, and `mechanized-overrides.json`. These are not raw evidence.
