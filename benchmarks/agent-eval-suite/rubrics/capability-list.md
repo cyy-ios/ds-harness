@@ -108,22 +108,22 @@
   - `cosplay`：用 `score_cosplay.json` / `score_cosplay.py` 逐轮判定，不由评分 agent 重判。
   - `concise`：用 `score_concise.json` / `score_concise.py` 逐轮判定，不由评分 agent 重判。
   - 全局禁止项：从 `active_instructions.json` 指向的规则内容抽取；用 `replay.jsonl`、`commands.log`、`diff.patch`、`response.md` 判定是否触犯。
-  - 多轮/上下文压缩后仍必须生效：用 `conversation_state.json:context_events` 标记压缩边界，用压缩后各轮 response/tool/diff 继续判定规则是否漂移。
+  - 多轮/上下文压缩后仍必须生效：用 `prompt.json:context_events` 标记压缩边界，用压缩后各轮 response/tool/diff 继续判定规则是否漂移。
   - 规则来源只作为证据入口；本项重点不是“是否能复述规则”，而是行为和输出是否持续符合规则。
 
   #### 1.2 持久流程遵循
   测用户或任务在会话早期建立的流程是否持续被执行。
 
-  - 流程定义来自 `prompt.json`、`active_instructions.json`、`conversation_state.json.active_flow_requirements`。
+  - 流程定义来自 `prompt.json`、`active_instructions.json`、`prompt.json`。
   - 判定流程步骤是否覆盖完整、顺序是否正确、当前轮入口是否接在已有流程状态之后。
   - “跳过前置步骤”只是流程覆盖/入口错误的一种；不要单独作为主项。
   - 中间产物要求用 `artifact/`、`diff.patch`、`response.md` 判定；验证/复跑要求用 `commands.log`、`replay.jsonl` 判定。
-  - 多轮/上下文压缩后，用 `conversation_state.json` 的上一轮状态和 `context_events` 判定流程是否丢失或从错误节点重启。
+  - 多轮/上下文压缩后，用 `prompt.json` 的上一轮状态和 `context_events` 判定流程是否丢失或从错误节点重启。
 
   #### 1.3 局部持久约束遵循
   测当前主题/任务链内临时建立的范围、口径、方向、风格或产物约束是否持续有效；用户切换任务链、撤销或覆盖后不再计入。
 
-  - 约束来自本轮及历史 `prompt.json`，沉淀到 `conversation_state.json.active_local_constraints`。
+  - 约束来自本轮及历史 `prompt.json`，沉淀到 `prompt.json`。
   - 范围约束用 `diff.patch`、`commands.log`、`replay.jsonl` 判定是否越界。
   - 口径/方向约束用后续 `prompt.json`、`response.md`、`replay.jsonl` 判定是否擅自改口径、切方案、把支线污染主线。
   - 产物/格式延续约束用 `artifact/`、`diff.patch`、`response.md` 判定是否漂移。

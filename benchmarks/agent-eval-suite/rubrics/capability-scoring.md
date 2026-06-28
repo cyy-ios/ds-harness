@@ -369,37 +369,27 @@
 
 ### 强制机械化路径
 
-遵循禁止评分 agent 直接估分。必须先生成结构化中间产物，再由脚本固定扣分和聚合。
+遵循禁止评分 agent 直接估分。遵循能力只使用任务作者维护的检查点，不再从 prompt 正则抽取 requirements。
 
-1. 要求抽取器：`extract_requirements.py` → `requirements.json`
-   - 输入：`prompt.json`、`active_instructions.json`、`conversation_state.json`。
-   - 输出本轮生效要求；不判断行为。
-   - 字段：`requirement_id`、`sub_item`、`scope`、`type`、`text`、`source`、`severity`、`evidence`。
-   - `sub_item` 只能是 `持久规则遵循 | 持久流程遵循 | 局部持久约束遵循 | Prompt遵循 | 单步流程遵循`。
-   - `scope` 只能是 `current_turn | persistent | local_persistent`。
-   - `type` 只能是 `must_do | must_not_do | sequence | permission | output_format | scope_limit | confirmation | stop_condition`。
+1. 检查点来源：`benchmarks/agent-eval-suite/tasks/<task>/instruction-checklist.json`
+   - 任务设计阶段写明每个 milestone 的 positive/negative/core/aux 检查点。
+   - 检查点可引用 replay、commands、diff、source_snapshot、artifact、acceptance、response 等 evidence。
+   - 新任务必须同步提供自己的 checklist；不要依赖通用 prompt 正则。
 
-2. 行为事实抽取器：`extract_behavior_facts.py` → `behavior_facts.json`
-   - 输入：`replay.jsonl`、`commands.log`、`diff.patch`、`artifact/`、`response.md`。
-   - 只抽事实，不评分。
-   - 字段：`tool_calls`、`commands`、`edited_files`、`artifacts`、`final_response`、`final_claims`、`operation_order`、`failed_steps`、`post_failure_actions`。
+2. 检查执行器：`validate_checklist.py`
+   - 输入：evidence root + task-authored checklist。
+   - 输出：每个 milestone/check 的 passed/failed/unknown、core_score、anomalies。
 
-3. 规则匹配器：`match_violations.py` → `violations.json`
-   - 输入：`requirements.json` + `behavior_facts.json`。
-   - 输出每条要求的 `satisfied | violated | missing | insufficient_evidence`。
-   - 字段：`requirement_id`、`sub_item`、`verdict`、`severity`、`evidence`、`reason`。
-
-4. 固定扣分器：`score_following.py` → `遵循.score.json`
-   - 输入：`violations.json`，可读取 `score_cosplay.json`、`score_concise.json` 作为持久规则事实。
-   - 输出每轮五个子项分、扣分、证据缺口、总分；禁止手填或手改。
+3. 固定评分器：`score_following.py` → `遵循.score.json`
+   - `Prompt遵循` 来自 checklist core checks。
+   - `持久规则遵循` 只读取 `score_cosplay.json`、`score_concise.json` 等专用机械化分数。
+   - 不使用通用 prompt 正则抽取链；只使用任务检查点和专用机械化分数。
 
 ### 子项证据和判定
 
-- `持久规则遵循`：以 `score_cosplay.json`、`score_concise.json` 为基准；全局禁止项从规则内容抽取。`conversation_state.json:context_events` 出现压缩后，后续轮仍必须继续满足这些规则。
-- `持久流程遵循`：用 `conversation_state.json.active_flow_requirements`、`replay.jsonl`、`commands.log`、`artifact/` 判定流程步骤覆盖、顺序、入口和压缩后延续。
-- `局部持久约束遵循`：用 `conversation_state.json.active_local_constraints`、`diff.patch`、`replay.jsonl`、`response.md` 判定范围、口径、方向、产物格式是否在当前任务链内持续有效。
-- `Prompt遵循`：用当前 `prompt.json` 与实际 response/tool/diff/artifact 判定本轮正向要求、禁止项、范围、工具限制、输出要求。
-- `单步流程遵循`：用当前 `prompt.json` 的顺序、确认点、验证点、停止条件，与 `operation_order`、`commands`、失败后的继续行为匹配。
+- `持久规则遵循`：以 `score_cosplay.json`、`score_concise.json` 为基准；其他持久规则需要新增专用机械化检查。
+- `Prompt遵循`：以 `instruction-checklist.json` 的 core checks 为基准。
+- `持久流程遵循`、`局部持久约束遵循`、`单步流程遵循`：不再由通用正则推断；如任务需要，必须显式写入 checklist 检查点或新增专用脚本。
 
 ### 扣分口径
 

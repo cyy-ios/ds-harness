@@ -10,6 +10,27 @@ DEFAULT_MODEL = "deepseek-v4-pro"
 API_URL = "https://api.deepseek.com/v1/chat/completions"
 MAX_TOOL_STEPS = 18
 MAX_JSON_REPAIR_ATTEMPTS = 2
+
+DEEPSEEK_FINAL_RESPONSE_PROTOCOL = """
+
+Final response protocol: when finishing, keep output as a JSON tool call and put these exact fields inside the JSON finish.summary string:
+status: success | partial | failed
+claims:
+- completed or changed item, phrased as a verifiable claim
+actions:
+- key action actually performed
+artifacts:
+- file or output path produced/changed, or none
+verification:
+- command/check/evidence actually run or inspected, or none
+limitations:
+- missing work, uncertainty, failed check, or none
+"""
+
+
+def with_deepseek_response_protocol(prompt: str) -> str:
+    return prompt.rstrip() + DEEPSEEK_FINAL_RESPONSE_PROTOCOL
+
 COMPACT_REQUIRED_TERMS = [
     "mini_harness",
     "src/mini_harness",
@@ -466,7 +487,7 @@ def main():
                 suffix = "（runner 自动重建）" if compact_meta.get("rebuilt") else ""
                 print(f"M8 上下文已压缩：M1-M7 对话替换为 {len(compact_text)} 字符 compact 摘要{suffix}")
 
-            messages.append({"role":"user", "content": f"里程碑 {ms['id']}：{ms['prompt']}"})
+            messages.append({"role":"user", "content": f"里程碑 {ms['id']}：{with_deepseek_response_protocol(ms['prompt'])}"})
             for step in range(MAX_TOOL_STEPS):
                 if collector:
                     collector.step_start(ms['id'], step, messages[-1]["content"])

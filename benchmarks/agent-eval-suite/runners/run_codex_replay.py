@@ -28,13 +28,34 @@ import time
 from pathlib import Path
 from typing import Any
 
-from evidence_context import ConversationState, write_context_evidence
+from tool_events import from_codex_events, write_jsonl
 
 REQUIRED_ACCEPTANCE_CHECK_KEYS = {
     "package_main_exists", "runner_exports", "public_pytest", "cli_end_to_end",
     "config_json_cli", "cwd_independent_cli", "m4_noise_cli", "acceptance_pytest",
     "memory_aware_report", "unsupported_claims_absent",
 }
+
+
+CODEX_FINAL_RESPONSE_PROTOCOL = """
+
+Final response protocol: end your final assistant reply with these exact fields so the evaluator can verify claims without guessing:
+status: success | partial | failed
+claims:
+- completed or changed item, phrased as a verifiable claim
+actions:
+- key action actually performed
+artifacts:
+- file or output path produced/changed, or none
+verification:
+- command/check/evidence actually run or inspected, or none
+limitations:
+- missing work, uncertainty, failed check, or none
+"""
+
+
+def with_codex_response_protocol(prompt: str) -> str:
+    return prompt.rstrip() + CODEX_FINAL_RESPONSE_PROTOCOL
 
 # ---------------------------------------------------------------------------
 # Codex JSONL 解析 —— 映射 codex exec --json 的事件到标准证据格式
@@ -555,164 +576,14 @@ def collect_evidence(
     elapsed: float = 0.0,
     compact_trigger: dict | None = None,
     post_compact_milestones: list[str] | None = None,
-    conversation_state: ConversationState | None = None,
     instruction_sources: list[dict[str, str]] | None = None,
     tool_policy: dict[str, Any] | None = None,
 ) -> Path:
-    """为一个 milestone 收集全部 10 类证据。"""
+    """Collect only deterministic tool event evidence for one milestone."""
     step_dir = evidence_root / ms_id / f"step_{step_num:02d}"
     step_dir.mkdir(parents=True, exist_ok=True)
-
-    # replay.jsonl —— 标准化 tool call 序列
-    replay_records = build_replay_jsonl(events, ms_id)
-    replay_path = step_dir / "replay.jsonl"
-    replay_path.write_text(
-        "\n".join(json.dumps(r, ensure_ascii=False) for r in replay_records),
-        encoding="utf-8",
-    )
-
-    # response.md —— 最终响应
-    response_path = step_dir / "response.md"
-    response_path.write_text(
-        extract_response_text(events), encoding="utf-8",
-    )
-
-    # prompt.json —— 该 milestone 的 prompt
-    (step_dir / "prompt.json").write_text(
-        json.dumps({"id": ms_id, "prompt": ms_prompt}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    write_context_evidence(
-        step_dir,
-        runner="codex_cli",
-        milestone=ms_id,
-        prompt=ms_prompt,
-        repo_root=repo_root,
-        state=conversation_state or ConversationState(),
-        instruction_sources=instruction_sources,
-        tool_policy=tool_policy,
-    )
-
-    # commands.log —— shell 命令执行记录
-    (step_dir / "commands.log").write_text(
-        extract_command_log(events), encoding="utf-8",
-    )
-
-    # diff.patch —— 该 milestone 对 repo 的变更（先 add -A 纳入新文件）
-    subprocess.run(
-        ["git", "add", "-A"],
-        capture_output=True, cwd=repo_root, timeout=30,
-    )
-    diff = subprocess.run(
-        ["git", "diff", "--cached", "HEAD", "--stat"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=repo_root, timeout=30,
-    )
-    full_diff = subprocess.run(
-        ["git", "diff", "--cached", "HEAD", "-p"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=repo_root, timeout=30,
-    )
-    (step_dir / "diff.patch").write_text(
-        full_diff.stdout or diff.stdout or "(no changes)", encoding="utf-8",
-    )
-
-    # acceptance.json —— 公开验收检查
-    round_id = f"round_{_milestone_index(ms_id):02d}"
-    acceptance = _run_acceptance(repo_root, round_id=round_id, milestone=ms_id)
-    (step_dir / "acceptance.json").write_text(
-        json.dumps(acceptance, ensure_ascii=False, indent=2), encoding="utf-8",
-    )
-
-    # compact_trigger.json —— compaction 触发信息
-    trigger_info = compact_trigger or {"triggered": False}
-    if post_compact_milestones:
-        trigger_info["post_compact_milestones"] = post_compact_milestones
-    (step_dir / "compact_trigger.json").write_text(
-        json.dumps(trigger_info, ensure_ascii=False, indent=2), encoding="utf-8",
-    )
-
-    # artifact/ —— 产物快照
-    artifact_src = repo_root / "reports"
-    artifact_dst = step_dir / "artifact"
-    if artifact_dst.exists():
-        shutil.rmtree(artifact_dst)
-    if artifact_src.exists():
-        shutil.copytree(artifact_src, artifact_dst)
-    else:
-        artifact_dst.mkdir(exist_ok=True)
-
-    # source_snapshot —— 源码快照
-    snap_dst = step_dir / "source_snapshot"
-    if snap_dst.exists():
-        shutil.rmtree(snap_dst)
-    snap_dst.mkdir()
-    for sub in ["src", "tests", "skills"]:
-        sub_dir = repo_root / sub
-        if sub_dir.is_dir():
-            shutil.copytree(sub_dir, snap_dst / sub, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-
-    # cost.json —— 本轮 token / 耗时 / tool step 统计
-    tokens_in, tokens_out = _extract_usage_tokens(events)
-    tool_steps = len([r for r in replay_records if r.get("event_type") == "tool_call"])
-    (step_dir / "cost.json").write_text(
-        json.dumps({
-            "elapsed_sec": round(elapsed, 2),
-            "input_tokens": tokens_in,
-            "output_tokens": tokens_out,
-            "total_tokens": tokens_in + tokens_out,
-            "tool_steps": tool_steps,
-        }, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    # analyzer_output/analyzer.json —— 结构化分析信号
-    _run_analyzer(step_dir)
-
+    write_jsonl(step_dir / "tool_events.jsonl", from_codex_events(events, ms_id))
     return step_dir
-
-
-def _run_analyzer(step_dir: Path) -> None:
-    """运行 analyze_replay.py，产出 analyzer_output/analyzer.json。"""
-    out_dir = step_dir / "analyzer_output"
-    out_dir.mkdir(exist_ok=True)
-    analyzer = Path(__file__).resolve().parent / "analyze_replay.py"
-    if not analyzer.exists():
-        (out_dir / "analyzer.json").write_text(
-            json.dumps({"ran": False, "error": "analyze_replay.py not found"}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        return
-
-    replay_path = step_dir / "replay.jsonl"
-    response_path = step_dir / "response.md"
-    paths = []
-    if replay_path.exists():
-        paths.append(str(replay_path))
-    if response_path.exists():
-        paths.append(str(response_path))
-
-    if not paths:
-        (out_dir / "analyzer.json").write_text(
-            json.dumps({"ran": False, "error": "no replay or response to analyze"}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        return
-
-    try:
-        cp = subprocess.run(
-            [sys.executable, str(analyzer)] + paths,
-            capture_output=True, text=True, timeout=30,
-        )
-        (out_dir / "analyzer.json").write_text(
-            cp.stdout if cp.returncode == 0
-            else json.dumps({"ran": False, "returncode": cp.returncode, "stderr": cp.stderr[:2000]}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-    except Exception as e:
-        (out_dir / "analyzer.json").write_text(
-            json.dumps({"ran": False, "error": str(e)}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
 
 def _milestone_index(ms_id: str) -> int:
     prefixes = ["M1_", "M2_", "M3_", "M4_", "M5_", "M6_", "M7_", "M8_"]
@@ -720,70 +591,6 @@ def _milestone_index(ms_id: str) -> int:
         if ms_id.startswith(prefix):
             return idx
     return 0
-
-
-def _run_acceptance(repo_root: Path, *, round_id: str | None = None, milestone: str | None = None) -> dict:
-    """运行 score_mini_data_harness.py。"""
-    script = Path(__file__).parent / "score_mini_data_harness.py"
-    if not script.exists():
-        return {"error": "score_mini_data_harness.py not found", "path": str(script)}
-
-    cmd = [sys.executable, str(script), str(repo_root)]
-    if round_id:
-        cmd += ["--round", round_id]
-    if milestone:
-        cmd += ["--milestone", milestone]
-
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True, text=True, timeout=120,
-            cwd=repo_root,
-            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
-        )
-        output = (result.stdout or "") + (result.stderr or "")
-        acceptance = {
-            "ran": True,
-            "returncode": result.returncode,
-            "cmd": cmd,
-            "output": output,
-        }
-        try:
-            parsed = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            parsed = None
-        if isinstance(parsed, dict):
-            checks = parsed.get("checks", {})
-            missing = sorted(REQUIRED_ACCEPTANCE_CHECK_KEYS - set(checks)) if isinstance(checks, dict) else sorted(REQUIRED_ACCEPTANCE_CHECK_KEYS)
-            if missing:
-                acceptance["schema_error"] = f"missing acceptance checks: {missing}"
-                acceptance["missing_check_keys"] = missing
-            acceptance["parsed"] = parsed
-            for key in [
-                "score",
-                "max_score",
-                "round",
-                "milestone",
-                "stage",
-                "gate_scope",
-                "gate_passed",
-                "final_gate_applicable",
-                "final_gate_passed",
-            ]:
-                if key in parsed:
-                    acceptance[key] = parsed[key]
-        return acceptance
-    except subprocess.TimeoutExpired:
-        return {"error": "acceptance check timed out", "cmd": cmd}
-    except Exception as e:
-        return {"error": str(e), "cmd": cmd}
-
-
-# ---------------------------------------------------------------------------
-# 主流程
-# ---------------------------------------------------------------------------
-
-
 
 
 def reject_benchmark_results_path(path: Path) -> None:
@@ -863,9 +670,7 @@ def main():
     compact_triggered = False
     compact_triggered_at: str | None = None
     post_compact_milestones: list[str] = []
-    conversation_state = ConversationState()
-
-    # 初始化 git repo + 初始快照，使 diff.patch 能捕获每轮变更
+    # 初始化 git repo，保留 fixture 连续运行所需状态
     git_dir = root / ".git"
     if not git_dir.exists():
         subprocess.run(["git", "-C", str(root), "init"], capture_output=True, timeout=10)
@@ -880,6 +685,8 @@ def main():
     for i, ms in enumerate(milestones):
         ms_id = ms["id"]
         prompt = ms["prompt"]
+        if args.variant in ("unoptimized", "optimized", "native"):
+            prompt = with_codex_response_protocol(prompt)
         actual_idx = start_idx + i
         compact_meta: dict[str, Any] | None = None
 
@@ -954,7 +761,6 @@ def main():
                                     elapsed=elapsed,
                                     compact_trigger=step_compact,
                                     post_compact_milestones=list(post_compact_milestones),
-                                    conversation_state=conversation_state,
                                     instruction_sources=[
                                         {"kind": "runner_config", "path": args.instructions_file}
                                     ] if instructions_path.exists() else [],
@@ -994,60 +800,7 @@ def main():
         "milestones_completed": len(results),
         "results": results,
     }
-    (out / "run_summary.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8",
-    )
-
-    # ---- 机械化评分：cosplay + concise + 遵循四器 + 工具选择 ----
-    _run_mechanized_scorer("score_cosplay.py", out)
-    _run_mechanized_scorer("score_concise.py", out)
-    _run_mechanized_scorer("score_expected_tools.py", out)
-    _run_mechanized_scorer("score_following.py", out)
-    _materialize_mechanized_replacements(out)
-
     print(f"证据已输出到 {out}")
-
-
-def _materialize_mechanized_replacements(evidence_root: Path) -> None:
-    script = Path(__file__).resolve().parent / "materialize_mechanized_scores.py"
-    if not script.exists():
-        print("  跳过 mechanized-overrides：脚本不存在")
-        return
-    try:
-        cp = subprocess.run(
-            [sys.executable, str(script), str(evidence_root)],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
-        )
-        if cp.returncode == 0:
-            print("  机械化替代: mechanized-overrides.json")
-        else:
-            print(f"  警告: mechanized-overrides 返回非零 exit code {cp.returncode}: {cp.stderr[:200]}")
-    except Exception as e:
-        print(f"  警告: mechanized-overrides 执行失败: {e}")
-
-
-def _run_mechanized_scorer(script_name: str, evidence_root: Path) -> None:
-    """Run a mechanized scoring script and write its output to evidence root."""
-    script = Path(__file__).resolve().parent / script_name
-    if not script.exists():
-        print(f"  跳过 {script_name}：脚本不存在")
-        return
-    try:
-        cp = subprocess.run(
-            [sys.executable, str(script), str(evidence_root), "--per-round"],
-            capture_output=True, text=True, timeout=30,
-        )
-        if cp.returncode == 0:
-            data = json.loads(cp.stdout)
-            out_name = script_name.replace(".py", ".json")
-            (evidence_root / out_name).write_text(
-                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8",
-            )
-            print(f"  机械化评分: {out_name} (overall={data.get('overall')})")
-        else:
-            print(f"  警告: {script_name} 返回非零 exit code {cp.returncode}: {cp.stderr[:200]}")
-    except Exception as e:
-        print(f"  警告: {script_name} 执行失败: {e}")
 
 
 if __name__ == "__main__":

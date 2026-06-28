@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from response_protocol import parse_response_protocol
+
 
 TEXT_EXTENSIONS = {".md", ".json", ".txt", ".log", ".yaml", ".yml", ".toml", ".py", ".csv", ".jsonl"}
 
@@ -284,6 +286,7 @@ def extract_behavior_facts_for_round(round_dir: str | Path) -> dict[str, Any]:
     commands = _extract_commands(round_path, replay_commands)
     edited_files = _extract_replay_edited_files(tool_calls, _extract_diff_files(round_path))
     final_response = _response_text(round_path)
+    final_response_protocol = parse_response_protocol(final_response)
     failed = _failed_steps(commands)
     return {
         "schema_version": 2,
@@ -294,6 +297,7 @@ def extract_behavior_facts_for_round(round_dir: str | Path) -> dict[str, Any]:
         "edited_files": edited_files,
         "artifacts": _extract_artifacts(round_path),
         "final_response": final_response[:4000],
+        "final_response_protocol": final_response_protocol,
         "final_claims": _extract_final_claims(round_path),
         "operation_order": operation_order,
         "failed_steps": failed,
@@ -314,6 +318,8 @@ def _discover_round_dirs(evidence_root: Path) -> list[Path]:
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Extract behavior facts for instruction-following scoring.")
     parser.add_argument("evidence_root", help="Evidence root or single round directory")
     parser.add_argument("--write", action="store_true", help="Write behavior_facts.json into each round directory")

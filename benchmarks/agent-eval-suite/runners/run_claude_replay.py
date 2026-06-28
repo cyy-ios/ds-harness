@@ -18,12 +18,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-from evidence_context import ConversationState, write_context_evidence
+from tool_events import from_claude_events, write_jsonl
 from run_codex_replay import (
     _milestone_index,
     _normalize_tool_output,
-    _run_acceptance,
-    _run_analyzer,
     load_compact_summary,
     reject_benchmark_results_path,
     resolve_deepseek_api_key,
@@ -33,6 +31,30 @@ from run_codex_replay import (
 CLAUDE_ALLOWED_TOOLS = (
     "Task,AskUserQuestion,Bash,PowerShell,Read,Write,Edit,MultiEdit,Glob,Grep,LS"
 )
+
+FINAL_RESPONSE_PROTOCOL_MARKER = "Final response protocol:"
+CLAUDE_FINAL_RESPONSE_PROTOCOL = """
+
+Final response protocol: end your final assistant reply with these exact fields so the evaluator can verify claims without guessing:
+status: success | partial | failed
+claims:
+- completed or changed item, phrased as a verifiable claim
+actions:
+- key action actually performed
+artifacts:
+- file or output path produced/changed, or none
+verification:
+- command/check/evidence actually run or inspected, or none
+limitations:
+- missing work, uncertainty, failed check, or none
+"""
+
+
+def with_claude_response_protocol(prompt: str) -> str:
+    marker_index = prompt.find(FINAL_RESPONSE_PROTOCOL_MARKER)
+    if marker_index >= 0:
+        prompt = prompt[:marker_index].rstrip()
+    return prompt.rstrip() + CLAUDE_FINAL_RESPONSE_PROTOCOL
 
 
 def parse_jsonl(text: str) -> list[dict[str, Any]]:
@@ -286,103 +308,12 @@ def collect_evidence(
     repo_root: Path,
     elapsed: float,
     compact_meta: dict[str, Any] | None,
-    conversation_state: ConversationState | None = None,
 ) -> Path:
     step_dir = evidence_root / ms_id / "step_01"
     step_dir.mkdir(parents=True, exist_ok=True)
-
-    records = build_replay_jsonl(events, ms_id)
-    (step_dir / "replay.jsonl").write_text(
-        "\n".join(json.dumps(record, ensure_ascii=False) for record in records),
-        encoding="utf-8",
-    )
-    (step_dir / "response.md").write_text(extract_response_text(events), encoding="utf-8")
-    (step_dir / "prompt.json").write_text(
-        json.dumps({"id": ms_id, "prompt": ms_prompt}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    write_context_evidence(
-        step_dir,
-        runner="claude_code_cli",
-        milestone=ms_id,
-        prompt=ms_prompt,
-        repo_root=repo_root,
-        state=conversation_state or ConversationState(),
-        instruction_sources=[{"kind": "runner_config", "path": ".claude/CLAUDE.md"}],
-        tool_policy={
-            "allowed_tools": CLAUDE_ALLOWED_TOOLS.split(","),
-            "model": "deepseek_anthropic_compatible",
-        },
-    )
-    (step_dir / "commands.log").write_text(extract_command_log(records), encoding="utf-8")
-
-    subprocess.run(["git", "add", "-A"], capture_output=True, cwd=repo_root, timeout=30)
-    full_diff = subprocess.run(
-        ["git", "diff", "--cached", "HEAD", "-p"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        cwd=repo_root,
-        timeout=30,
-    )
-    (step_dir / "diff.patch").write_text(full_diff.stdout or "(no changes)", encoding="utf-8")
-
-    round_id = f"round_{_milestone_index(ms_id):02d}"
-    acceptance = _run_acceptance(repo_root, round_id=round_id, milestone=ms_id)
-    (step_dir / "acceptance.json").write_text(
-        json.dumps(acceptance, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    (step_dir / "compact_trigger.json").write_text(
-        json.dumps({"triggered": False, "summary_meta": compact_meta}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    artifact_dst = step_dir / "artifact"
-    if artifact_dst.exists():
-        shutil.rmtree(artifact_dst)
-    artifact_src = repo_root / "reports"
-    if artifact_src.exists():
-        shutil.copytree(artifact_src, artifact_dst)
-    else:
-        artifact_dst.mkdir(exist_ok=True)
-
-    snap_dst = step_dir / "source_snapshot"
-    if snap_dst.exists():
-        shutil.rmtree(snap_dst)
-    snap_dst.mkdir()
-    for sub in ["src", "tests", "skills"]:
-        sub_dir = repo_root / sub
-        if sub_dir.is_dir():
-            shutil.copytree(sub_dir, snap_dst / sub, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-
-    tokens_in, tokens_out = extract_usage_tokens(events)
-    (step_dir / "cost.json").write_text(
-        json.dumps({
-            "elapsed_sec": round(elapsed, 2),
-            "input_tokens": tokens_in,
-            "output_tokens": tokens_out,
-            "total_tokens": tokens_in + tokens_out,
-            "tool_steps": sum(1 for r in records if r.get("event_type") == "tool_call"),
-        }, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    _run_analyzer(step_dir)
+    write_jsonl(step_dir / "tool_events.jsonl", from_claude_events(events, ms_id))
     return step_dir
 
-
-
-def _materialize_mechanized_scores(evidence_dir: Path) -> None:
-    script = Path(__file__).resolve().parent / "materialize_mechanized_scores.py"
-    if not script.exists():
-        return
-    try:
-        cp = subprocess.run([sys.executable, str(script), str(evidence_dir)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
-        if cp.returncode != 0:
-            print(f"warning: materialize mechanized scores failed: {cp.stderr[:300]}")
-    except Exception as exc:
-        print(f"warning: materialize mechanized scores failed: {exc}")
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -426,11 +357,10 @@ def main() -> None:
     compact_path = Path(args.compact_summary) if args.compact_summary else root / "docs" / "compact-summary.md"
     session_id: str | None = None
     results: list[dict[str, Any]] = []
-    conversation_state = ConversationState()
 
     for offset, ms in enumerate(milestones):
         ms_id = ms["id"]
-        prompt = ms["prompt"]
+        prompt = with_claude_response_protocol(ms["prompt"])
         cwd = root / "subdir" / "workbench" if ms_id == "M5_context_change" else root
         cwd.mkdir(parents=True, exist_ok=True)
         extra_context = ""
@@ -453,7 +383,7 @@ def main() -> None:
         if raw_out:
             (raw_out / f"{ms_id}_stdout.jsonl").write_text(proc.stdout, encoding="utf-8")
             (raw_out / f"{ms_id}_stderr.log").write_text(proc.stderr, encoding="utf-8")
-        step_dir = collect_evidence(out, ms_id, events, prompt, root, elapsed, compact_meta, conversation_state)
+        step_dir = collect_evidence(out, ms_id, events, prompt, root, elapsed, compact_meta)
         print(f"  exit={proc.returncode} events={len(events)} session={session_id} evidence={step_dir}")
         results.append({
             "milestone": ms_id,
@@ -465,19 +395,6 @@ def main() -> None:
         })
         time.sleep(0.3)
 
-    (out / "run_summary.json").write_text(
-        json.dumps({
-            "runner": "claude_code_cli",
-            "variant": "claude-deepseek",
-            "model": args.model,
-            "root": str(root),
-            "evidence_root": str(out),
-            "milestones_completed": len(results),
-            "results": results,
-        }, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    _materialize_mechanized_scores(out)
 
 
 if __name__ == "__main__":

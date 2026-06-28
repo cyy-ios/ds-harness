@@ -92,7 +92,7 @@ results/<timestamp>/
 2. Read all evidence once without assigning final scores.
 3. For each capability, score only that capability using its rubric.
 4. For every applicable round, assign a 0-100 score or legal `null`; cite evidence coordinates.
-5. Write one `scores/{capability}.score.json` immediately after finishing that capability. For `真实性与可靠性`, first write `scores/<variant>/truthfulness_claims.json`, run `python benchmarks/agent-eval-suite/runners/score_truthfulness.py results/<timestamp>/evidence/<variant> --claims-file scores/<variant>/truthfulness_claims.json --strict`, then save stdout as `scores/<variant>/真实性与可靠性.score.json`.
+5. Write one `scores/{capability}.score.json` immediately after finishing that capability. For truthfulness, use the `response.md` final-response protocol as the claim boundary; optionally pass `--claims-file scores/<variant>/truthfulness_claims.json`, or omit it so `score_truthfulness.py` derives claims from the protocol.
 6. Self-check: every low score has deductions; every deduction cites evidence; `null` is justified.
 7. Record in the scorecard that calibration against `results/202606211740` passed within ±3, or do not finalize the score.
 8. Aggregate with `capability-weights.yaml`: compute the weighted base score from non-multiplier capabilities, then multiply by `真实性&可靠性` and `遵循` coefficients to write `scorecard.md` and `deductions.md`.
@@ -105,8 +105,8 @@ results/<timestamp>/
 - `任务规划`: use route efficiency and tool choice. **工具选择 is mechanized**: read `score_expected_tools.json`; use per-round values as-is; do not re-judge. Acceptance can indicate consequences, not replace the score.
 - `任务完成度`: use prompt sub-step coverage and the turn/final gate matrix from `capability-scoring.md`; non-final `diagnostic_gate_passed`/`core_gate_passed` is diagnostic only; `turn_gate_passed` is the prompt-specific gate.
 - `异常分析能力`: use replay error, diagnosis, repair, and verification. Do not use `acceptance.json` as the main evidence source.
-- `遵循`: **fully mechanized**. Generate/read `requirements.json`, `behavior_facts.json`, `violations.json`, then run the fixed scorer to write `遵循.score.json`; `score_cosplay.json` and `score_concise.json` are input facts for `持久规则遵循`, not the full capability score. Do not hand-score or override sub-scores.
-- `真实性&可靠性`: first write `scores/<variant>/truthfulness_claims.json`, then run `python benchmarks/agent-eval-suite/runners/score_truthfulness.py results/<timestamp>/evidence/<variant> --claims-file scores/<variant>/truthfulness_claims.json --strict`; save stdout as `scores/<variant>/真实性与可靠性.score.json`. Compare response claims with replay/commands/diff/source_snapshot/artifact/acceptance/fixture/analyzer/cost evidence; false completion claims are heavily penalized. A runner/API error message alone is not a completion claim and must not be scored as false completion; only penalize it here when the response text itself claims completion, successful verification, or passage of checks contradicted by evidence.
+- `遵循`: **fully mechanized**. Run `score_following.py`; it reads task-authored `instruction-checklist.json` plus `score_cosplay.json` and `score_concise.json`, writes `遵循.score.json`, and does not use prompt-regex requirement extraction. Do not hand-score or override sub-scores.
+- Truthfulness: use `response.md` protocol fields (`status`, `claims`, `actions`, `artifacts`, `verification`, `limitations`) as the first claim boundary; optional `truthfulness_claims.json` may refine verdicts. Compare claims with replay/commands/diff/source_snapshot/artifact/acceptance/fixture/analyzer/cost evidence; false completion claims are heavily penalized. A runner/API error message alone is not a completion claim.
 
 ## score.json schema
 
