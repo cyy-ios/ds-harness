@@ -123,19 +123,80 @@ def extract_response_text(events: list[dict[str, Any]]) -> str:
     return result_text or "\n".join(texts)
 
 
+def run_claude(
+    prompt: str,
+    *,
+    cwd: Path,
+    session_id: str | None,
+    extra_context: str = "",
+    model: str,
+    timeout: int,
+) -> tuple[list[dict[str, Any]], str | None, subprocess.CompletedProcess[str]]:
+    full_prompt = f"{extra_context}\n\n---\n\n{prompt}" if extra_context else prompt
+    claude_bin = shutil.which("claude.cmd") or shutil.which("claude") or "claude"
+    cmd = [
+        claude_bin,
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        model,
+        "--permission-mode",
+        "bypassPermissions",
+        "--allowedTools",
+        CLAUDE_ALLOWED_TOOLS,
+    ]
+    if session_id:
+        cmd.extend(["--resume", session_id])
+
+    env = os.environ.copy()
+    api_key = resolve_deepseek_api_key()
+    env.update({
+        "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+        "ANTHROPIC_AUTH_TOKEN": api_key,
+        "ANTHROPIC_MODEL": model,
+        "ANTHROPIC_DEFAULT_OPUS_MODEL": model,
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": model,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": model,
+        "CLAUDE_CODE_SUBAGENT_MODEL": model,
+        "CLAUDE_CODE_EFFORT_LEVEL": "max",
+    })
+
+    result = subprocess.run(
+        cmd,
+        input=full_prompt,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout,
+        cwd=cwd,
+        env=env,
+    )
+    events = parse_jsonl(result.stdout) or parse_jsonl(result.stderr)
+    return events, extract_session_id(events) or session_id, result
+
+
 def inject_claude_rules(root: Path) -> None:
-    source = Path(__file__).resolve().parents[1] / "persistent-rules.example.md"
-    if not source.exists():
-        raise SystemExit(f"Missing persistent rules: {source}")
+    suite_root = Path(__file__).resolve().parents[1]
+    sources = [
+        suite_root / "tasks" / "mini-data-harness" / "instructions" / "repository-rules.md",
+        suite_root / "persistent-rules.example.md",
+    ]
+    missing = [str(source) for source in sources if not source.exists()]
+    if missing:
+        raise SystemExit(f"Missing instruction sources: {missing}")
+    injected = "\n\n".join(source.read_text(encoding="utf-8").strip() for source in sources)
     claude_dir = root / ".claude"
     claude_dir.mkdir(exist_ok=True)
     target = claude_dir / "CLAUDE.md"
     if target.exists() and not (claude_dir / "CLAUDE.md.bak").exists():
         shutil.copy2(target, claude_dir / "CLAUDE.md.bak")
         existing = target.read_text(encoding="utf-8")
-        target.write_text(existing.rstrip() + "\n\n" + source.read_text(encoding="utf-8"), encoding="utf-8")
+        target.write_text(existing.rstrip() + "\n\n" + injected + "\n", encoding="utf-8")
     elif not target.exists():
-        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        target.write_text(injected + "\n", encoding="utf-8")
 
 
 def collect_evidence(

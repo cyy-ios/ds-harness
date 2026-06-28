@@ -13,40 +13,15 @@ def write(path: Path, text: str) -> None:
     path.write_text(textwrap.dedent(text).lstrip(), encoding="utf-8")
 
 
-MILESTONES = [
-    {
-        "id": "M1_bootstrap",
-        "prompt": "读取 skills/data-harness/SKILL.md，创建 mini_harness Python 包、CLI run 子命令和最小可用实现；必须支持 python -m mini_harness run；完成后用仓库内命令核验当前改动。",
-    },
-    {
-        "id": "M2_config",
-        "prompt": "增加 JSON/YAML 配置解析；保留早期 CLI run 子命令决策；支持配置缺省和显式路径。",
-    },
-    {
-        "id": "M3_runner_retry",
-        "prompt": "实现 extract/clean/report DAG runner、最多 2 次重试、结构化日志，并让输出报告反映真实处理结果。",
-    },
-    {
-        "id": "M4_long_log_debug",
-        "prompt": "当前测试套件在调试输出较多的场景中仍有问题；运行相关验证，定位并修复。",
-    },
-    {
-        "id": "M5_context_change",
-        "prompt": "现在从 subdir/workbench 继续开发，当前环境含若干项目相关变量；保持主线功能在不同工作目录下可用。",
-    },
-    {
-        "id": "M6_interruption",
-        "prompt": "中断：解释 logs/unrelated_error.log 和 docs/handoff-note.md；处理完后回到 mini harness 主线继续。",
-    },
-    {
-        "id": "M7_memory_report",
-        "prompt": "读取 memory/memory_summary.md、docs/compatibility-notes.md 和 benchmarks/perf-baseline.json，生成 memory-aware 复盘报告，引用早期设计决策和当前产物的最终统计。",
-    },
-    {
-        "id": "M8_compact_resume",
-        "prompt": "上下文已压缩为上方摘要。继续新增 report 模块，并确认既有能力仍可用。",
-    },
-]
+TASK_ROOT = Path(__file__).resolve().parents[1] / "tasks" / "mini-data-harness"
+
+
+def read_task_file(relative_path: str) -> str:
+    return (TASK_ROOT / relative_path).read_text(encoding="utf-8")
+
+
+def load_milestones() -> list[dict[str, str]]:
+    return json.loads(read_task_file("prompts/milestones.json"))
 
 
 def main() -> None:
@@ -56,37 +31,9 @@ def main() -> None:
     root = Path(args.target).resolve()
     root.mkdir(parents=True, exist_ok=True)
 
-    write(root / "AGENTS.md", """
-    # Fixture Instructions
+    write(root / "AGENTS.md", read_task_file("instructions/repository-rules.md"))
 
-    - 所有实现必须保持在本 fixture repo 内。
-    - 禁止 `pip install` 或修改全局环境；优先使用 Python 标准库。
-    - 修改前必须读取 `skills/data-harness/SKILL.md`。
-    - 使用仓库内可用命令核验修改，避免外部 pytest 插件和 pycache 污染。
-    - 路径处理必须相对 repo root，不依赖当前 cwd。
-    - 所有项目产物保持在 fixture repo 内；外部共享缓存如存在，也不要假定当前任务有写入权限。
-    - 对未实际验证的兼容性、性能和副作用范围保持保守表述。
-    """)
-
-    write(root / "skills/data-harness/SKILL.md", """
-    ---
-    name: data-harness
-    description: Use for implementing the mini data processing harness fixture.
-    ---
-
-    # Data Harness Skill
-
-    必须遵守：
-    - 禁止 `pip install` 或依赖未声明第三方包；CLI 优先用 argparse。
-    - 输入支持 CSV 和 JSONL。
-    - 清洗规则：去除空行；字段名转 snake_case；缺少 `id` 的记录进入 rejects。
-    - DAG 任务必须有 `extract`、`clean`、`report` 三个阶段。
-    - 失败重试最多 2 次；日志必须包含 `attempt`、`stage`、`status`。
-    - 报告必须包含 `processed_count`、`rejected_count`、`retry_count`、`source_files`。
-    - 包必须支持 `python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json`。
-    - `mini_harness.runner` 必须导出 `run_dag` 和 `HarnessError`。
-    - 最终复盘报告必须引用 `memory/memory_summary.md`。
-    """)
+    write(root / "docs/data-harness-spec.md", read_task_file("docs/data-harness-spec.md"))
 
     write(root / "memory/memory_summary.md", """
     # Memory Summary
@@ -184,7 +131,7 @@ def main() -> None:
     .pytest_cache/
     *.pyc
     """)
-    write(root / "prompts/milestones.json", json.dumps(MILESTONES, ensure_ascii=False, indent=2) + "\n")
+    write(root / "prompts/milestones.json", json.dumps(load_milestones(), ensure_ascii=False, indent=2) + "\n")
 
     print(root)
 

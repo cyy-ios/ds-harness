@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
@@ -51,6 +50,28 @@ limitations:
 
 def with_codex_response_protocol(prompt: str) -> str:
     return prompt.rstrip() + CODEX_FINAL_RESPONSE_PROTOCOL
+
+
+def persistent_rules_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "persistent-rules.example.md"
+
+
+def inject_codex_rules(root: Path, instructions_rel: str) -> Path:
+    source = persistent_rules_path()
+    if not source.exists():
+        raise SystemExit(f"Missing persistent rules: {source}")
+    rel = instructions_rel[2:] if instructions_rel.startswith("./") else instructions_rel
+    target = root / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    rules = source.read_text(encoding="utf-8").strip()
+    if target.exists():
+        existing = target.read_text(encoding="utf-8")
+        if rules in existing:
+            return target
+        target.write_text(existing.rstrip() + "\n\n" + rules + "\n", encoding="utf-8")
+    else:
+        target.write_text(rules + "\n", encoding="utf-8")
+    return target
 
 # ---------------------------------------------------------------------------
 # Codex JSONL 解析 —— 映射 codex exec --json 的事件到标准证据格式
@@ -551,9 +572,8 @@ def main():
 
     # 注入持久规则 + compaction 配置（与 inject-persistent-rules.md 双保险）
     codex_config: dict[str, str] = {}
-    instructions_path = root / args.instructions_file.lstrip("./")
-    if instructions_path.exists():
-        codex_config["model_instructions_file"] = args.instructions_file
+    instructions_path = inject_codex_rules(root, args.instructions_file)
+    codex_config["model_instructions_file"] = args.instructions_file
     codex_config["model_auto_compact_token_limit"] = str(args.auto_compact_token_limit)
 
     session_id: str | None = None

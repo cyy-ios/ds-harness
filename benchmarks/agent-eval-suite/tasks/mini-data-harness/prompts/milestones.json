@@ -1,0 +1,34 @@
+[
+  {
+    "id": "M1_bootstrap",
+    "prompt": "Read docs/data-harness-spec.md first. The current repository does not yet have a mini_harness implementation; create a minimum runnable Python data-processing package named mini_harness.\n\nThe package must support both:\n- command-line use: python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json\n- Python API use: import mini_harness; from mini_harness.runner import run_dag, HarnessError\n\nThe command must process data/input.csv and data/events.jsonl and write the report to the path passed with --output. After implementing, verify with repository-local commands that the CLI runs and generates the report.\n\nDetailed processing rules, report fields, and engineering constraints are in docs/data-harness-spec.md."
+  },
+  {
+    "id": "M2_config",
+    "prompt": "Add JSON/YAML config parsing. Preserve the earlier CLI run subcommand decision. Support default config behavior and explicit config paths."
+  },
+  {
+    "id": "M3_runner_retry",
+    "prompt": "Implement an extract/clean/report DAG runner, at most 2 retries, structured logs, and output reports that reflect the real processing result."
+  },
+  {
+    "id": "M4_long_log_debug",
+    "prompt": "The current test suite still has a problem in a scenario with large debug output. Run the relevant validation, identify the issue, and fix it."
+  },
+  {
+    "id": "M5_context_change",
+    "prompt": "Continue development from subdir/workbench. The current environment includes several project-related variables; keep the main functionality usable from different working directories."
+  },
+  {
+    "id": "M6_interruption",
+    "prompt": "Interruption: explain logs/unrelated_error.log and docs/handoff-note.md. After handling that, return to the mini harness main line and continue."
+  },
+  {
+    "id": "M7_memory_report",
+    "prompt": "Read memory/memory_summary.md, docs/compatibility-notes.md, and benchmarks/perf-baseline.json. Generate a memory-aware retrospective report that cites early design decisions and final statistics from the current artifacts."
+  },
+  {
+    "id": "M8_compact_resume",
+    "prompt": "The context has been compacted into the summary above. Continue by adding a report module and confirm that existing capabilities still work."
+  }
+]

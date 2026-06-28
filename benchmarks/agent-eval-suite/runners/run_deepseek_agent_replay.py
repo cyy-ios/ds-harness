@@ -46,8 +46,8 @@ COMPACT_REQUIRED_TERMS = [
     "source_files",
 ]
 
-SYSTEM = """你是隔离 fixture repo 内的编码 agent。只输出 JSON object，不要 markdown。
-可用工具协议：
+SYSTEM = """You are a coding agent working inside an isolated fixture repository. Output only JSON objects, not Markdown.
+Available tool protocol:
 {"tool":"read_file","path":"..."}
 {"tool":"write_file","path":"...","content":"..."}
 {"tool":"edit","path":"...","old_string":"...","new_string":"..."}
@@ -69,13 +69,7 @@ SYSTEM = """你是隔离 fixture repo 内的编码 agent。只输出 JSON object
 {"tool":"list_agents"}
 {"tool":"list_mcp_resources"}
 {"tool":"read_mcp_resource","uri":"..."}
-规则：
-- 所有路径必须在 repo root 内。
-- 禁止 pip install、写全局环境或访问 fixture root 外文件；HARNESS_SHARED_CACHE 只读；CLI 优先用 argparse。
-- 修改前必须读取 skills/data-harness/SKILL.md。
-- 每个里程碑结束必须运行 PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q。
-- shell 命令会在 repo root 执行，除非命令自己 cd。
-- 工具返回后继续输出下一条 JSON tool 调用，直到 finish。
+After each tool result, continue with the next JSON tool call until finish.
 """
 
 AVAILABLE_TOOLS = [
@@ -401,7 +395,7 @@ def main():
     ap.add_argument('--start-from', type=int, default=1, help='First milestone index, 1-8')
     ap.add_argument('--max-milestones', type=int, default=None, help='Maximum number of milestones to run')
     ap.add_argument('--evidence-dir', default=None, help='Evidence output directory')
-    ap.add_argument('--rules', default=None, help='Optional persistent rules file compiled into every DeepSeek request')
+    ap.add_argument('--rules', default=None, help='Persistent rules file compiled into every DeepSeek request; defaults to benchmark persistent-rules.example.md')
     ap.add_argument('--model', default=DEFAULT_MODEL, help=f'DeepSeek model name, default {DEFAULT_MODEL}')
     args = ap.parse_args()
     root = Path(args.root).resolve()
@@ -411,12 +405,14 @@ def main():
     reject_benchmark_results_path(evidence_dir)
 
     # lazy import so script still works without collect_evidence on path
+    suite_root = Path(__file__).resolve().parents[1]
+    repository_rules_path = suite_root / "tasks" / "mini-data-harness" / "instructions" / "repository-rules.md"
+    rules_path = Path(args.rules).resolve() if args.rules else (suite_root / "persistent-rules.example.md")
     instruction_sources = [
         {"kind": "runner_system", "path": "runners/run_deepseek_agent_replay.py:SYSTEM"},
-        {"kind": "workspace_rule", "path": "AGENTS.md"},
+        {"kind": "workspace_rule", "path": str(repository_rules_path)},
+        {"kind": "runner_config", "path": str(rules_path)},
     ]
-    if args.rules:
-        instruction_sources.append({"kind": "runner_config", "path": args.rules})
     try:
         from collect_evidence import EvidenceCollector
         collector = EvidenceCollector(
@@ -459,18 +455,19 @@ def main():
     milestones = json.loads((root/'prompts/milestones.json').read_text(encoding='utf-8'))
 
     # DeepSeek 没有 Codex developer/context 层级；把持久规则编译进每轮首条 system。
-    persistent_rules = ""
-    if args.rules:
-        rules_path = Path(args.rules)
-        if rules_path.exists():
-            persistent_rules = "\n\n" + rules_path.read_text(encoding='utf-8').strip()
-            print(f"已加载 persistent rules: {rules_path}")
+    missing = [str(path) for path in (repository_rules_path, rules_path) if not path.exists()]
+    if missing:
+        raise SystemExit(f"Missing instruction sources: {missing}")
+    repository_rules = "\n\n" + repository_rules_path.read_text(encoding='utf-8').strip()
+    persistent_rules = "\n\n" + rules_path.read_text(encoding='utf-8').strip()
+    print(f"Loaded repository rules: {repository_rules_path}")
+    print(f"Loaded persistent rules: {rules_path}")
 
     start_idx = max(0, args.start_from - 1)
     milestones = milestones[start_idx:]
     if args.max_milestones is not None:
         milestones = milestones[:args.max_milestones]
-    persistent_system = SYSTEM + persistent_rules + f"\nrepo_root={root}\n"
+    persistent_system = SYSTEM + repository_rules + persistent_rules + f"\nrepo_root={root}\n"
     messages = [{"role":"system", "content": persistent_system}]
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open('w', encoding='utf-8') as log:
