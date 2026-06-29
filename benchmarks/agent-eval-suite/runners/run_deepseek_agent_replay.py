@@ -29,7 +29,7 @@ limitations:
 
 
 def with_deepseek_response_protocol(prompt: str) -> str:
-    return prompt.rstrip() + DEEPSEEK_FINAL_RESPONSE_PROTOCOL
+    return prompt
 
 COMPACT_REQUIRED_TERMS = [
     "mini_harness",

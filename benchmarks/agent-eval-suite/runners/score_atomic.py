@@ -43,7 +43,7 @@ def score_following(rules: dict[str, Any], checks: dict[str, bool]) -> dict[str,
     return {"score": weighted_average(weighted), "items": rows}
 
 
-def quality_item_score(state: dict[str, Any], scores: dict[str, int]) -> tuple[float, str]:
+def self_check_item_score(state: dict[str, Any], scores: dict[str, int]) -> tuple[float, str]:
     if not state.get("verification_action"):
         return float(scores.get("no_verification_action", 0)), "no_verification_action"
     if not state.get("verification_result"):
@@ -53,7 +53,7 @@ def quality_item_score(state: dict[str, Any], scores: dict[str, int]) -> tuple[f
     return float(scores.get("verification_passed_effect_failed", 50)), "verification_passed_effect_failed"
 
 
-def score_quality(rules: dict[str, Any], states: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def score_self_check(rules: dict[str, Any], states: dict[str, dict[str, Any]]) -> dict[str, Any]:
     rows = []
     weighted = []
     default_weight = float(rules.get("default_weight", 1))
@@ -62,7 +62,7 @@ def score_quality(rules: dict[str, Any], states: dict[str, dict[str, Any]]) -> d
         item_id = item["item_id"]
         weight = float(item.get("weight", default_weight))
         state = states.get(item_id, {})
-        score, reason = quality_item_score(state, scores)
+        score, reason = self_check_item_score(state, scores)
         rows.append({"item_id": item_id, "score": score, "weight": weight, "reason": reason, "state": state})
         weighted.append((score, weight))
     return {"score": weighted_average(weighted), "items": rows}
@@ -168,7 +168,7 @@ def main() -> None:
         "milestone": rules.get("milestone"),
         "scores": {
             "following": score_following(rules.get("following", {}), checks),
-            "quality": score_quality(rules.get("quality", {}), states),
+            "self_check": score_self_check(rules.get("self_check", {}), states),
             "truthfulness": score_truthfulness(rules.get("truthfulness", {}), states),
         },
         "source_check_summary": {

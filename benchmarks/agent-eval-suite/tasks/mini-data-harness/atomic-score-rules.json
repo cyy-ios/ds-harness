@@ -13,8 +13,8 @@
       {"id": "rule_local_validation", "weight": 1}
     ]
   },
-  "quality": {
-    "description": "自检/质检能力按 item 计分后加权平均。",
+  "self_check": {
+    "description": "自检能力按 item 计分后加权平均。",
     "default_weight": 1,
     "items": [
       {"item_id": "read_spec", "weight": 1},

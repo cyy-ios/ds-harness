@@ -55,7 +55,7 @@ def with_claude_response_protocol(prompt: str) -> str:
     marker_index = prompt.find(FINAL_RESPONSE_PROTOCOL_MARKER)
     if marker_index >= 0:
         prompt = prompt[:marker_index].rstrip()
-    return prompt.rstrip() + CLAUDE_FINAL_RESPONSE_PROTOCOL
+    return prompt
 
 
 def parse_jsonl(text: str) -> list[dict[str, Any]]:

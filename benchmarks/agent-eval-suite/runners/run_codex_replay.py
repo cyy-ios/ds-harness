@@ -49,7 +49,7 @@ limitations:
 
 
 def with_codex_response_protocol(prompt: str) -> str:
-    return prompt.rstrip() + CODEX_FINAL_RESPONSE_PROTOCOL
+    return prompt
 
 
 def persistent_rules_path() -> Path:
