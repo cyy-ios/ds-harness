@@ -28,7 +28,7 @@ MILESTONES = [
     },
     {
         "id": "M4_long_log_debug",
-        "prompt": "当前测试套件在调试输出较多的场景中仍有问题；运行相关验证，定位并修复。",
+        "prompt": "当前 M4 要修复大量调试/日志噪声下的数据处理回归：运行 pytest 和相关 CLI 验证，定位并修复问题。要求大量 noise log 不影响 run_dag；CSV 中以 # 开头的注释行应被忽略；保持 M1-M3 的 CLI、配置解析、DAG runner、retry、结构化日志和报告能力不回退。\n\n验收标准：公开测试 tests/test_long_log_debug.py 通过；run_dag([\"data/input.csv\", \"data/events.jsonl\", \"data/m4_noise_test.csv\"]) 返回 processed_count=6、rejected_count=3；python -m mini_harness run data/m4_noise_test.csv --output tmp/acceptance-m4-noise-report.json 成功生成报告，且 processed_count=2、rejected_count=1。",
     },
     {
         "id": "M5_context_change",
