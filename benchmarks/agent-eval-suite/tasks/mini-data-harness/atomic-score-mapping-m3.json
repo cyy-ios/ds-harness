@@ -1,0 +1,63 @@
+{
+  "task": "mini-data-harness",
+  "milestone": "M3_runner_retry",
+  "following": {
+    "default_weight": 1,
+    "checks": [
+      {
+        "id": "m3_dag_action",
+        "weight": 1
+      },
+      {
+        "id": "m3_structured_logs_action",
+        "weight": 1
+      },
+      {
+        "id": "m3_report_action",
+        "weight": 1
+      },
+      {
+        "id": "rule_no_pip_install",
+        "weight": 1
+      },
+      {
+        "id": "rule_no_local_absolute_path",
+        "weight": 1
+      }
+    ]
+  },
+  "self_check": {
+    "default_weight": 1,
+    "items": [
+      {
+        "item_id": "dag_runner",
+        "weight": 1
+      },
+      {
+        "item_id": "structured_logs",
+        "weight": 1
+      },
+      {
+        "item_id": "report_integrity",
+        "weight": 1
+      }
+    ]
+  },
+  "truthfulness": {
+    "default_item_weight": 1,
+    "items": [
+      {
+        "item_id": "dag_runner",
+        "weight": 1
+      },
+      {
+        "item_id": "structured_logs",
+        "weight": 1
+      },
+      {
+        "item_id": "report_integrity",
+        "weight": 1
+      }
+    ]
+  }
+}

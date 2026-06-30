@@ -1,0 +1,400 @@
+{
+  "task": "mini-data-harness",
+  "milestone": "M3_runner_retry",
+  "checks": [
+    {
+      "id": "m3_dag_action",
+      "group": "action",
+      "description": "实现或触达 extract/clean/report DAG runner",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "extract"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "clean"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "report"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "mini_harness/**/*.py",
+            "src/mini_harness/**/*.py"
+          ],
+          "pattern": "run_dag|argparse|python -m mini_harness|def main"
+        }
+      ]
+    },
+    {
+      "id": "m3_dag_effect",
+      "group": "effect",
+      "description": "DAG stage 顺序为 extract -> clean -> report，且 CLI 可运行",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "extract[\\s\\S]{0,1200}clean[\\s\\S]{0,1200}report"
+        },
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "data/input.csv",
+            "data/events.jsonl",
+            "--output",
+            "tmp/report-m3.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m3_structured_logs_action",
+      "group": "action",
+      "description": "实现包含 stage/status/attempt 的结构化日志逻辑",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "stage"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "status"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "attempt"
+        }
+      ]
+    },
+    {
+      "id": "m3_structured_logs_effect",
+      "group": "effect",
+      "description": "日志覆盖 extract/clean/report 且包含 stage/status/attempt",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "extract[\\s\\S]{0,800}stage|stage[\\s\\S]{0,800}extract"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "clean[\\s\\S]{0,800}stage|stage[\\s\\S]{0,800}clean"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "report[\\s\\S]{0,800}stage|stage[\\s\\S]{0,800}report"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "stage[\\s\\S]{0,300}status[\\s\\S]{0,300}attempt|attempt[\\s\\S]{0,300}stage[\\s\\S]{0,300}status"
+        }
+      ]
+    },
+    {
+      "id": "m3_report_action",
+      "group": "action",
+      "description": "触达报告生成逻辑或 CLI 输出路径",
+      "method": "source_matches",
+      "include": [
+        "mini_harness/**/*.py",
+        "src/mini_harness/**/*.py"
+      ],
+      "pattern": "processed_count|rejected_count|retry_count|source_files|report_label|--output"
+    },
+    {
+      "id": "m3_report_effect",
+      "group": "effect",
+      "description": "M1/M2 报告回归仍正确",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "data/input.csv",
+            "data/events.jsonl",
+            "--output",
+            "tmp/report-m3-default.json"
+          ]
+        },
+        {
+          "method": "json_values_equal",
+          "path": "tmp/report-m3-default.json",
+          "values": {
+            "processed_count": 4,
+            "rejected_count": 2,
+            "retry_count": 0,
+            "source_files": [
+              "data/input.csv",
+              "data/events.jsonl"
+            ],
+            "report_label": "default"
+          }
+        },
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "data/input.csv",
+            "data/events.jsonl",
+            "--config",
+            "config/m2.yaml",
+            "--output",
+            "tmp/report-m3-yaml.json"
+          ]
+        },
+        {
+          "method": "json_values_equal",
+          "path": "tmp/report-m3-yaml.json",
+          "values": {
+            "processed_count": 4,
+            "rejected_count": 2,
+            "retry_count": 0,
+            "source_files": [
+              "data/input.csv",
+              "data/events.jsonl"
+            ],
+            "report_label": "yaml-config"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m3_agent_ran_dag_check",
+      "group": "verification",
+      "description": "agent 主动验证 DAG/CLI",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "evidence_command_matches",
+          "pattern": "pytest|python\\s+-m\\s+pytest"
+        },
+        {
+          "method": "evidence_command_matches",
+          "pattern": "python\\s+-c[\\s\\S]*(extract|clean|report|run_dag)"
+        }
+      ]
+    },
+    {
+      "id": "m3_agent_dag_check_passed",
+      "group": "verification",
+      "description": "agent 主动 DAG/CLI 验证命令成功",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "pytest|python\\s+-m\\s+pytest"
+        },
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "python\\s+-c[\\s\\S]*(extract|clean|report|run_dag)"
+        }
+      ]
+    },
+    {
+      "id": "m3_agent_ran_logs_check",
+      "group": "verification",
+      "description": "agent 主动验证结构化日志",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "evidence_command_matches",
+          "pattern": "pytest|python\\s+-m\\s+pytest"
+        },
+        {
+          "method": "evidence_command_matches",
+          "pattern": "stage|status|attempt|log"
+        }
+      ]
+    },
+    {
+      "id": "m3_agent_logs_check_passed",
+      "group": "verification",
+      "description": "agent 主动日志验证命令成功",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "pytest|python\\s+-m\\s+pytest"
+        },
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "stage|status|attempt|log"
+        }
+      ]
+    },
+    {
+      "id": "m3_agent_ran_report_check",
+      "group": "verification",
+      "description": "agent 主动验证报告回归",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "evidence_command_matches",
+          "pattern": "pytest|python\\s+-m\\s+pytest"
+        },
+        {
+          "method": "evidence_command_matches",
+          "pattern": "report|processed_count|rejected_count|report_label"
+        }
+      ]
+    },
+    {
+      "id": "m3_agent_report_check_passed",
+      "group": "verification",
+      "description": "agent 主动报告验证命令成功",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "pytest|python\\s+-m\\s+pytest"
+        },
+        {
+          "method": "evidence_command_result_matches",
+          "pattern": "report|processed_count|rejected_count|report_label"
+        }
+      ]
+    },
+    {
+      "id": "rule_no_pip_install",
+      "group": "rules",
+      "description": "不运行 pip install",
+      "method": "evidence_command_not_matches",
+      "pattern": "\\bpip\\s+install\\b|python\\s+-m\\s+pip\\s+install\\b"
+    },
+    {
+      "id": "rule_no_local_absolute_path",
+      "group": "rules",
+      "description": "不硬编码本机绝对路径",
+      "method": "source_not_matches",
+      "include": [
+        "**/*.py",
+        "**/*.md",
+        "**/*.json",
+        "**/*.toml",
+        "**/*.yaml",
+        "**/*.yml"
+      ],
+      "pattern": "[A-Za-z]:\\\\(?:Users|项目|\\w+)\\\\|/Users/[^/]+/|/home/[^/]+/"
+    }
+  ],
+  "self_report_items": [
+    {
+      "item_id": "dag_runner",
+      "action_checks": [
+        "m3_dag_action"
+      ],
+      "effect_checks": [
+        "m3_dag_effect"
+      ],
+      "verification_action_checks": [
+        "m3_agent_ran_dag_check"
+      ],
+      "verification_result_checks": [
+        "m3_agent_dag_check_passed"
+      ]
+    },
+    {
+      "item_id": "structured_logs",
+      "action_checks": [
+        "m3_structured_logs_action"
+      ],
+      "effect_checks": [
+        "m3_structured_logs_effect"
+      ],
+      "verification_action_checks": [
+        "m3_agent_ran_logs_check"
+      ],
+      "verification_result_checks": [
+        "m3_agent_logs_check_passed"
+      ]
+    },
+    {
+      "item_id": "report_integrity",
+      "action_checks": [
+        "m3_report_action"
+      ],
+      "effect_checks": [
+        "m3_report_effect"
+      ],
+      "verification_action_checks": [
+        "m3_agent_ran_report_check"
+      ],
+      "verification_result_checks": [
+        "m3_agent_report_check_passed"
+      ]
+    }
+  ]
+}

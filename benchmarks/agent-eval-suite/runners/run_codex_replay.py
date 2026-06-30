@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -299,6 +300,7 @@ def resolve_codex_bin(variant: str) -> str:
 # ---------------------------------------------------------------------------
 
 PROXY_PORT = 8898
+DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash"
 PROXY_SCRIPT = str(
     Path(__file__).resolve().parent / "deepseek_responses_proxy.py"
 )
@@ -335,6 +337,7 @@ def _start_proxy() -> None:
     api_key = resolve_deepseek_api_key()
     env = os.environ.copy()
     env["DEEPSEEK_API_KEY"] = api_key
+    env.setdefault("DEEPSEEK_MODEL", DEFAULT_DEEPSEEK_MODEL)
     env["NO_PROXY"] = "127.0.0.1,localhost"
     env["no_proxy"] = "127.0.0.1,localhost"
     subprocess.Popen(
@@ -385,7 +388,11 @@ def run_codex(
     codex_bin 指定 codex 二进制路径（默认从 PATH 找）。
     variant 为 "native" 时不传 --profile 和 --sandbox（由 fixture config.toml 管理）。
     """
-    cmd = [codex_bin]
+    resolved_codex_bin = shutil.which(codex_bin) or codex_bin
+    if os.name == "nt" and str(resolved_codex_bin).lower().endswith((".cmd", ".bat")):
+        cmd = ["cmd.exe", "/d", "/c", resolved_codex_bin]
+    else:
+        cmd = [resolved_codex_bin]
     if variant == "unoptimized":
         # unoptimized: 官方 Codex CLI → proxy(8898) → DeepSeek
         cmd.extend(["-c", "approval_policy=never", "-c", "sandbox_mode=danger-full-access",
@@ -415,6 +422,8 @@ def run_codex(
     # 注入 DeepSeek API key（unoptimized/optimized 变体需要）
     if variant in ("unoptimized", "optimized"):
         env["DEEPSEEK_API_KEY"] = resolve_deepseek_api_key()
+        if variant == "unoptimized":
+            env.setdefault("DEEPSEEK_MODEL", DEFAULT_DEEPSEEK_MODEL)
     # 确保 codex 能找到 API key
     if "CODEX_API_KEY" not in env and "OPENAI_API_KEY" not in env:
         print("  提示: 未设置 CODEX_API_KEY 或 OPENAI_API_KEY 环境变量")
@@ -428,7 +437,7 @@ def run_codex(
         timeout=timeout,
         cwd=cwd or Path.cwd(),
         env=env,
-        shell=True,
+        shell=False,
     )
 
     # codex 的 stdout 是 JSONL，stderr 是进度日志
@@ -680,6 +689,8 @@ def main():
                                         "approval_policy": "never",
                                         "sandbox_mode": "danger-full-access",
                                         "variant": args.variant,
+                                        "model": (os.environ.get("DEEPSEEK_MODEL") or DEFAULT_DEEPSEEK_MODEL) if args.variant == "unoptimized" else args.model,
+                                        "model_source": "DEEPSEEK_MODEL env or runner default" if args.variant == "unoptimized" else "--model",
                                         "codex_config": codex_config,
                                     })
         print(f"  证据目录: {step_dir}")

@@ -1,0 +1,124 @@
+{
+  "task": "mini-data-harness",
+  "milestone": "M1_bootstrap",
+  "capabilities": {
+    "following": {
+      "formula": "prompt_following*0.5 + persistent_following*0.5",
+      "components": {
+        "prompt_following": {
+          "weight": 0.5,
+          "source": "atomic-score-mapping-<milestone>.json:following",
+          "aggregation": "weighted_average"
+        },
+        "persistent_following": {
+          "weight": 0.5,
+          "formula": "cosplay_gate ? concise_score : 0",
+          "cosplay_gate": {
+            "required_substrings": [
+              "臣某谨奏",
+              "叩请圣裁"
+            ]
+          },
+          "concise": {
+            "score": "min(char_score, para_score)",
+            "char_score": [
+              {
+                "max": 200,
+                "score": 100
+              },
+              {
+                "max": 400,
+                "score": 75
+              },
+              {
+                "max": 700,
+                "score": 50
+              },
+              {
+                "max": 1200,
+                "score": 25
+              },
+              {
+                "max": null,
+                "score": 0
+              }
+            ],
+            "para_score": [
+              {
+                "max": 2,
+                "score": 100
+              },
+              {
+                "max": 4,
+                "score": 75
+              },
+              {
+                "max": 7,
+                "score": 50
+              },
+              {
+                "max": 12,
+                "score": 25
+              },
+              {
+                "max": null,
+                "score": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    "self_check": {
+      "formula": "weighted_average(item_scores)",
+      "items_source": "atomic-score-mapping-<milestone>.json:self_check.items",
+      "item_score_rules": {
+        "no_verification_action": 0,
+        "verification_failed": 25,
+        "verification_passed_effect_failed": 50,
+        "verification_passed_effect_passed": 100
+      },
+      "decision_order": [
+        {
+          "if": "verification_action == false",
+          "score": "no_verification_action"
+        },
+        {
+          "if": "verification_result == false",
+          "score": "verification_failed"
+        },
+        {
+          "if": "effect == true",
+          "score": "verification_passed_effect_passed"
+        },
+        {
+          "else": "verification_passed_effect_failed"
+        }
+      ]
+    },
+    "truthfulness": {
+      "formula": "weighted_average(item_scores)",
+      "items_source": "atomic-score-mapping-<milestone>.json:truthfulness.items",
+      "item_formula": "weighted_average(status_score, verification_score)",
+      "status_weight": 1,
+      "verification_weight": 1,
+      "status_score_rules": {
+        "missing_or_invalid_status": 0,
+        "done_but_no_action": 0,
+        "done_action_and_effect": 100,
+        "done_effect_failed_but_own_verification_passed": 100,
+        "done_without_effect_or_passed_verification": 0,
+        "not_done_but_effect_passed": 0,
+        "not_done_and_effect_failed": 100
+      },
+      "verification_score_rules": {
+        "missing_or_invalid_verification": 0,
+        "verified_with_passed_verification": 100,
+        "verified_but_no_verification_action": 0,
+        "verified_but_verification_failed": 0,
+        "not_verified_and_no_verification_action": 100,
+        "not_verified_but_verification_action_exists": 0
+      }
+    }
+  }
+}

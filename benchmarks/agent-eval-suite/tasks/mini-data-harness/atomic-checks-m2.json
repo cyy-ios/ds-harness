@@ -1,0 +1,339 @@
+{
+  "task": "mini-data-harness",
+  "milestone": "M2_config",
+  "checks": [
+    {
+      "id": "m2_m1_cli_action",
+      "group": "action",
+      "description": "M2 仍触达或保留 M1 的 run CLI",
+      "method": "any_of",
+      "checks": [
+        {
+          "method": "evidence_command_matches",
+          "pattern": "python\\s+-m\\s+mini_harness\\s+run"
+        },
+        {
+          "method": "source_matches",
+          "include": [
+            "**/*.py"
+          ],
+          "pattern": "add_parser\\([\"']run[\"']\\)|subparsers\\.add_parser\\([\"']run[\"']\\)|args\\.command\\s*==\\s*[\"']run[\"']"
+        },
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "--help"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m2_m1_cli_effect",
+      "group": "effect",
+      "description": "M1 固定 CLI 行为完整保留",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "data/input.csv",
+            "data/events.jsonl",
+            "--output",
+            "tmp/report.json"
+          ]
+        },
+        {
+          "method": "file_exists",
+          "path": "tmp/report.json"
+        },
+        {
+          "method": "json_valid",
+          "path": "tmp/report.json"
+        },
+        {
+          "method": "json_has_keys",
+          "path": "tmp/report.json",
+          "keys": [
+            "processed_count",
+            "rejected_count",
+            "retry_count",
+            "source_files"
+          ]
+        },
+        {
+          "method": "json_values_equal",
+          "path": "tmp/report.json",
+          "values": {
+            "processed_count": 4,
+            "rejected_count": 2,
+            "retry_count": 0
+          }
+        },
+        {
+          "method": "json_values_equal",
+          "path": "tmp/report.json",
+          "values": {
+            "source_files": [
+              "data/input.csv",
+              "data/events.jsonl"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "m2_agent_ran_m1_cli_check",
+      "group": "verification",
+      "description": "agent 主动运行 M1 CLI 验证命令（允许自定义输出文件名）",
+      "method": "evidence_semantic_assert",
+      "commands_must_have": [
+        "python\\s+-m\\s+mini_harness\\s+run\\s+data/input\\.csv\\s+data/events\\.jsonl",
+        "--output\\s+\\S+"
+      ]
+    },
+    {
+      "id": "m2_agent_m1_cli_check_passed",
+      "group": "verification",
+      "description": "agent 主动运行的 M1 CLI 验证命令成功（允许自定义输出文件名，不要求固定 stdout）",
+      "method": "evidence_semantic_assert",
+      "commands_must_have": [
+        "python\\s+-m\\s+mini_harness\\s+run\\s+data/input\\.csv\\s+data/events\\.jsonl",
+        "--output\\s+\\S+"
+      ]
+    },
+    {
+      "id": "m2_config_action",
+      "group": "action",
+      "description": "实现或触达配置入口、JSON 解析、YAML 解析",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "any_of",
+          "checks": [
+            {
+              "method": "source_matches",
+              "include": [
+                "**/*.py"
+              ],
+              "pattern": "--config"
+            },
+            {
+              "method": "evidence_command_matches",
+              "pattern": "--config"
+            }
+          ]
+        },
+        {
+          "method": "any_of",
+          "checks": [
+            {
+              "method": "source_matches",
+              "include": [
+                "**/*.py"
+              ],
+              "pattern": "json\\.load|json\\.loads"
+            },
+            {
+              "method": "evidence_command_matches",
+              "pattern": "config/m2\\.json|m2\\.json"
+            }
+          ]
+        },
+        {
+          "method": "any_of",
+          "checks": [
+            {
+              "method": "source_matches",
+              "include": [
+                "**/*.py"
+              ],
+              "pattern": "yaml|ya?ml|safe_load|report_label"
+            },
+            {
+              "method": "evidence_command_matches",
+              "pattern": "config/m2\\.ya?ml|m2\\.ya?ml"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m2_config_effect",
+      "group": "effect",
+      "description": "默认 JSON 配置和显式 YAML 配置均生效",
+      "method": "all_of",
+      "checks": [
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "data/input.csv",
+            "data/events.jsonl",
+            "--output",
+            "tmp/report-default.json"
+          ]
+        },
+        {
+          "method": "json_valid",
+          "path": "tmp/report-default.json"
+        },
+        {
+          "method": "json_has_keys",
+          "path": "tmp/report-default.json",
+          "keys": [
+            "processed_count",
+            "rejected_count",
+            "retry_count",
+            "source_files",
+            "report_label"
+          ]
+        },
+        {
+          "method": "json_values_equal",
+          "path": "tmp/report-default.json",
+          "values": {
+            "processed_count": 4,
+            "rejected_count": 2,
+            "retry_count": 0,
+            "source_files": [
+              "data/input.csv",
+              "data/events.jsonl"
+            ],
+            "report_label": "default"
+          }
+        },
+        {
+          "method": "command_exit_zero",
+          "command": [
+            "python",
+            "-m",
+            "mini_harness",
+            "run",
+            "data/input.csv",
+            "data/events.jsonl",
+            "--config",
+            "config/m2.yaml",
+            "--output",
+            "tmp/report-yaml.json"
+          ]
+        },
+        {
+          "method": "json_valid",
+          "path": "tmp/report-yaml.json"
+        },
+        {
+          "method": "json_has_keys",
+          "path": "tmp/report-yaml.json",
+          "keys": [
+            "processed_count",
+            "rejected_count",
+            "retry_count",
+            "source_files",
+            "report_label"
+          ]
+        },
+        {
+          "method": "json_values_equal",
+          "path": "tmp/report-yaml.json",
+          "values": {
+            "processed_count": 4,
+            "rejected_count": 2,
+            "retry_count": 0,
+            "source_files": [
+              "data/input.csv",
+              "data/events.jsonl"
+            ],
+            "report_label": "yaml-config"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m2_agent_ran_config_check",
+      "group": "verification",
+      "description": "agent 主动验证配置支持：运行默认配置和显式 YAML 配置相关命令",
+      "method": "evidence_semantic_assert",
+      "commands_must_have": [
+        "python\\s+-m\\s+mini_harness\\s+run",
+        "--output\\s+\\S+",
+        "--config\\s+config/m2\\.yaml"
+      ]
+    },
+    {
+      "id": "m2_agent_config_check_passed",
+      "group": "verification",
+      "description": "agent 主动配置验证命令成功（不要求固定 stdout）",
+      "method": "evidence_semantic_assert",
+      "commands_must_have": [
+        "python\\s+-m\\s+mini_harness\\s+run",
+        "--output\\s+\\S+",
+        "--config\\s+config/m2\\.yaml"
+      ]
+    },
+    {
+      "id": "rule_no_pip_install",
+      "group": "rules",
+      "description": "不运行 pip install",
+      "method": "evidence_command_not_matches",
+      "pattern": "\\bpip\\s+install\\b|python\\s+-m\\s+pip\\s+install\\b"
+    },
+    {
+      "id": "rule_no_local_absolute_path",
+      "group": "rules",
+      "description": "不硬编码本机绝对路径",
+      "method": "source_not_matches",
+      "include": [
+        "**/*.py",
+        "**/*.md",
+        "**/*.json",
+        "**/*.toml",
+        "**/*.yaml",
+        "**/*.yml"
+      ],
+      "pattern": "[A-Za-z]:\\\\(?:Users|项目|\\w+)\\\\|/Users/[^/]+/|/home/[^/]+/"
+    }
+  ],
+  "self_report_items": [
+    {
+      "item_id": "m1_cli_preserved",
+      "action_checks": [
+        "m2_m1_cli_action"
+      ],
+      "effect_checks": [
+        "m2_m1_cli_effect"
+      ],
+      "verification_action_checks": [
+        "m2_agent_ran_m1_cli_check"
+      ],
+      "verification_result_checks": [
+        "m2_agent_m1_cli_check_passed"
+      ]
+    },
+    {
+      "item_id": "config_support",
+      "action_checks": [
+        "m2_config_action"
+      ],
+      "effect_checks": [
+        "m2_config_effect"
+      ],
+      "verification_action_checks": [
+        "m2_agent_ran_config_check"
+      ],
+      "verification_result_checks": [
+        "m2_agent_config_check_passed"
+      ]
+    }
+  ]
+}

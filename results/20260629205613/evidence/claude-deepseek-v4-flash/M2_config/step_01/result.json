@@ -1,0 +1,24 @@
+{
+  "milestone": "M2_config",
+  "runner": "claude_cli",
+  "final_response": "全部验证通过。\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| m1_cli_preserved | M1 CLI 保留 | done | verified |\n| config_support | 配置文件支持 | done | verified |\n\nM1 命令仍生成合法报告（含新增 `report_label`）。`--config config/m2.yaml` 正确读取 YAML 并输出 `report_label: \"yaml-config\"`。import 链全部正常。\n\n叩请圣裁",
+  "response_protocol": {
+    "status": "",
+    "claims": [],
+    "actions": [],
+    "artifacts": [],
+    "verification": [],
+    "limitations": [],
+    "protocol_valid": false,
+    "protocol_errors": [
+      "status must be success, partial, or failed",
+      "claims must contain at least one item; use 'none' when intentionally empty",
+      "actions must contain at least one item; use 'none' when intentionally empty",
+      "artifacts must contain at least one item; use 'none' when intentionally empty",
+      "verification must contain at least one item; use 'none' when intentionally empty",
+      "limitations must contain at least one item; use 'none' when intentionally empty"
+    ]
+  },
+  "elapsed_seconds": 67.98310790001415,
+  "compact_meta": {}
+}

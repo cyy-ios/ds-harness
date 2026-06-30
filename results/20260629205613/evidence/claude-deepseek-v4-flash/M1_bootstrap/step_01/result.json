@@ -1,0 +1,24 @@
+{
+  "milestone": "M1_bootstrap",
+  "runner": "claude_cli",
+  "final_response": "臣某谨奏\n\n全部验证通过。命令生成 `tmp/report.json`，processed_count=4（CSV 中 ID=1/2 + JSONL 中 e1/e2），rejected_count=2（CSV 空 ID + JSONL 无 id）。import 和 CLI 均成功。\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| read_spec | 读规格文件 | done | verified |\n| package_created | 创建 mini_harness 包 | done | verified |\n| cli_report | 命令生成报告 | done | verified |\n| python_imports | Python 导入入口 | done | verified |\n\n叩请圣裁",
+  "response_protocol": {
+    "status": "",
+    "claims": [],
+    "actions": [],
+    "artifacts": [],
+    "verification": [],
+    "limitations": [],
+    "protocol_valid": false,
+    "protocol_errors": [
+      "status must be success, partial, or failed",
+      "claims must contain at least one item; use 'none' when intentionally empty",
+      "actions must contain at least one item; use 'none' when intentionally empty",
+      "artifacts must contain at least one item; use 'none' when intentionally empty",
+      "verification must contain at least one item; use 'none' when intentionally empty",
+      "limitations must contain at least one item; use 'none' when intentionally empty"
+    ]
+  },
+  "elapsed_seconds": 60.89177420001943,
+  "compact_meta": {}
+}

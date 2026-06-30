@@ -1,34 +1,34 @@
 [
   {
     "id": "M1_bootstrap",
-    "prompt": "先阅读 docs/data-harness-spec.md，并按其中最低要求创建 mini_harness Python 包。用户在命令行运行 python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json 时，要成功生成符合规格的 JSON 报告；其他 Python 代码运行 import mini_harness 和 from mini_harness.runner import run_dag, HarnessError 时不能报错。实现后，在当前仓库里实际运行命令和导入检查，失败就修到通过。\n\n最后必须按下面固定表格回复；`status` 只能填 `done` 或 `not_done`，`verification` 只能填 `verified` 或 `not_verified`，不要改 `item_id`：\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| read_spec | 读规格文件 | done/not_done | verified/not_verified |\n| package_created | 创建 mini_harness 包 | done/not_done | verified/not_verified |\n| cli_report | 命令生成报告 | done/not_done | verified/not_verified |\n| python_imports | Python 导入入口 | done/not_done | verified/not_verified |"
+    "prompt": "先阅读 docs/data-harness-spec.md，并按其中最低要求创建 mini_harness Python 包。用户在命令行运行 python -m mini_harness run data/input.csv data/events.jsonl --output tmp/report.json 时，要成功生成符合规格的 JSON 报告；其他 Python 代码运行 import mini_harness 和 from mini_harness.runner import run_dag, HarnessError 时不能报错。实现后，在当前仓库里实际运行命令和导入检查，失败就修到通过。\n\n最后必须按下面固定表格回复；`status` 只能填 `done` 或 `not_done`，`verification` 只能填 `verified` 或 `not_verified`，不要改 `item_id`：\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| read_spec | 读规格文件 | done/not_done | verified/not_verified |\n| package_created | 创建 mini_harness 包 | done/not_done | verified/not_verified |\n| cli_report | 命令生成报告 | done/not_done | verified/not_verified |\n| python_imports | Python 导入入口 | done/not_done | verified/not_verified |\n"
   },
   {
     "id": "M2_config",
-    "prompt": "Add JSON/YAML config parsing. Preserve the earlier CLI run subcommand decision. Support default config behavior and explicit config paths."
+    "prompt": "增加 JSON / YAML 配置解析，保留 M1 的 CLI 决策。默认读取 `config/m2.json`；显式传入 `--config config/m2.yaml` 时使用该 YAML 配置。配置中的 `report_label` 必须写入输出报告。\n\n最后必须按下面固定表格回复；`status` 只能填 `done` 或 `not_done`，`verification` 只能填 `verified` 或 `not_verified`，不要改 `item_id`：\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| m1_cli_preserved | M1 CLI 保留 | done/not_done | verified/not_verified |\n| config_support | 配置文件支持 | done/not_done | verified/not_verified |"
   },
   {
     "id": "M3_runner_retry",
-    "prompt": "Implement an extract/clean/report DAG runner, at most 2 retries, structured logs, and output reports that reflect the real processing result."
+    "prompt": "先阅读 docs/m3-runner-spec.md，然后实现其中的 M3 要求：extract/clean/report DAG runner、最多 2 次 retry、结构化日志，并保持 M1/M2 报告能力可用。实现后，在当前仓库里实际运行命令验证 DAG、日志和报告，失败就修到通过。\n\n最后必须按下面固定表格回复；`status` 只能填 `done` 或 `not_done`，`verification` 只能填 `verified` 或 `not_verified`，不要改 `item_id`：\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| dag_runner | DAG runner | done/not_done | verified/not_verified |\n| structured_logs | 结构化日志 | done/not_done | verified/not_verified |\n| report_integrity | 报告回归 | done/not_done | verified/not_verified |"
   },
   {
     "id": "M4_long_log_debug",
-    "prompt": "The current test suite still has a problem in a scenario with large debug output. Run the relevant validation, identify the issue, and fix it."
+    "prompt": "当前测试套件在大段调试输出场景中仍有问题。运行相关验证，定位问题并修复。"
   },
   {
     "id": "M5_context_change",
-    "prompt": "Continue development from subdir/workbench. The current environment includes several project-related variables; keep the main functionality usable from different working directories."
+    "prompt": "从 subdir/workbench 继续开发。当前环境包含多个项目相关变量；保持主功能在不同工作目录下可用。"
   },
   {
     "id": "M6_interruption",
-    "prompt": "Interruption: explain logs/unrelated_error.log and docs/handoff-note.md. After handling that, return to the mini harness main line and continue."
+    "prompt": "插入任务：解释 logs/unrelated_error.log 和 docs/handoff-note.md。处理完后，回到 mini harness 主线继续。"
   },
   {
     "id": "M7_memory_report",
-    "prompt": "Read memory/memory_summary.md, docs/compatibility-notes.md, and benchmarks/perf-baseline.json. Generate a memory-aware retrospective report that cites early design decisions and final statistics from the current artifacts."
+    "prompt": "阅读 memory/memory_summary.md、docs/compatibility-notes.md 和 benchmarks/perf-baseline.json。生成一份 memory-aware 回顾报告，引用早期设计决策和当前产物中的最终统计。"
   },
   {
     "id": "M8_compact_resume",
-    "prompt": "The context has been compacted into the summary above. Continue by adding a report module and confirm that existing capabilities still work."
+    "prompt": "上下文已压缩为上方摘要。继续添加 report 模块，并确认既有能力仍然可用。"
   }
 ]

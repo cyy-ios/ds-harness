@@ -53,9 +53,9 @@ def load_evidence(evidence_root: Path | None, milestone: str) -> dict[str, Any]:
     all_text = "\n".join([json_text(e) for e in events] + [json_text(result)])
     command_events = [
         e for e in events
-        if str(e.get("tool", "")).lower() in {"shell", "bash", "execute_command", "command_execution"}
+        if e.get("kind") == "tool_call" and str(e.get("tool", "")).lower() in {"shell", "bash", "execute_command", "command_execution"}
     ]
-    commands = "\n".join(json_text(e) for e in command_events)
+    commands = "\n".join(command_text(e) for e in command_events)
     return {"events": events, "result": result, "all": norm_path_text(all_text), "commands": norm_path_text(commands), "paths": norm_path_text(all_text), "response": response}
 
 
@@ -149,6 +149,22 @@ def check_one(check: dict[str, Any], root: Path, evidence: dict[str, Any]) -> di
     method = check["method"]
     pattern = check.get("pattern", "")
 
+    if method in {"any_of", "all_of"}:
+        children = check.get("checks", [])
+        results = [check_one(child, root, evidence) for child in children]
+        passed_values = [result.get("passed") for result in results]
+        if method == "any_of":
+            passed = any(value is True for value in passed_values)
+        else:
+            passed = bool(results) and all(value is True for value in passed_values)
+        return {
+            "passed": passed,
+            "detail": f"{method}={passed}; children=" + json_text([
+                {"id": child.get("id"), "method": child.get("method"), "passed": result.get("passed"), "detail": result.get("detail")}
+                for child, result in zip(children, results)
+            ]),
+        }
+
     if method == "evidence_path_contains":
         matched = bool(re.search(pattern, evidence["paths"], re.I | re.M))
         return {"passed": matched, "detail": f"matched={matched}"}
@@ -174,6 +190,70 @@ def check_one(check: dict[str, Any], root: Path, evidence: dict[str, Any]) -> di
                     passed_calls.append(call_id)
                     break
         return {"passed": bool(passed_calls), "detail": f"matched_calls={matched_calls}; passed_calls={passed_calls}"}
+
+
+
+    if method == "evidence_semantic_assert":
+        text_all = evidence.get("all", "")
+        command_text_all = evidence.get("commands", "")
+        successful_outputs = []
+        for event in evidence.get("events", []):
+            if event.get("kind") == "tool_result" and result_passed(event):
+                successful_outputs.append(json_text(event.get("output", "")))
+        success_text = norm_path_text("\n".join(successful_outputs))
+        missing = []
+        for pat in check.get("must_have", []):
+            if not re.search(pat, text_all, re.I | re.S):
+                missing.append(pat)
+        missing_commands = []
+        for pat in check.get("commands_must_have", []):
+            if not re.search(pat, command_text_all, re.I | re.S):
+                missing_commands.append(pat)
+        missing_success = []
+        for pat in check.get("successful_output_must_have", []):
+            if not re.search(pat, success_text, re.I | re.S):
+                missing_success.append(pat)
+        forbidden = []
+        for pat in check.get("must_not_have", []):
+            if re.search(pat, text_all, re.I | re.S):
+                forbidden.append(pat)
+        passed = not (missing or missing_commands or missing_success or forbidden)
+        return {"passed": passed, "detail": f"missing={missing}; missing_commands={missing_commands}; missing_success={missing_success}; forbidden={forbidden}"}
+
+    if method == "evidence_command_semantic_check":
+        command_pattern = check.get("command_pattern", pattern)
+        command_not_pattern = check.get("command_not_pattern")
+        expected_output_pattern = check.get("expected_output_pattern", "")
+        lookahead = int(check.get("lookahead_results", 3))
+        matched = []
+        passed = []
+        events = evidence.get("events", [])
+        for idx, event in enumerate(events):
+            if event.get("kind") != "tool_call":
+                continue
+            if str(event.get("tool", "")).lower() not in {"shell", "bash", "execute_command", "command_execution"}:
+                continue
+            cmd_text = command_text(event)
+            if not re.search(command_pattern, cmd_text, re.I | re.S):
+                continue
+            if command_not_pattern and re.search(command_not_pattern, cmd_text, re.I | re.S):
+                continue
+            call_id = event.get("call_id")
+            matched.append(call_id)
+            related_outputs = []
+            command_passed = False
+            for j, result in enumerate(events):
+                if result.get("kind") == "tool_result" and result.get("call_id") == call_id:
+                    command_passed = result_passed(result)
+                    related_outputs.append(json_text(result.get("output", "")))
+                    for later in events[j + 1:j + 1 + lookahead * 2]:
+                        if later.get("kind") == "tool_result":
+                            related_outputs.append(json_text(later.get("output", "")))
+                    break
+            output_text = norm_path_text("\n".join(related_outputs))
+            if command_passed and (not expected_output_pattern or re.search(expected_output_pattern, output_text, re.I | re.S)):
+                passed.append(call_id)
+        return {"passed": bool(passed), "detail": f"matched_calls={matched}; passed_calls={passed}"}
 
     if method == "evidence_command_not_matches":
         matched = bool(re.search(pattern, evidence["commands"], re.I | re.S))
@@ -275,6 +355,7 @@ def main() -> None:
         "unknown": sum(1 for r in results if r["passed"] is None),
         "checks": results,
         "item_states": item_states,
+        "response": evidence.get("response", ""),
     }
     payload["ok"] = payload["failed"] == 0 and payload["unknown"] == 0
 

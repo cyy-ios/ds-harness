@@ -34,6 +34,7 @@ def main() -> None:
     write(root / "AGENTS.md", read_task_file("instructions/repository-rules.md"))
 
     write(root / "docs/data-harness-spec.md", read_task_file("docs/data-harness-spec.md"))
+    write(root / "docs/m3-runner-spec.md", read_task_file("docs/m3-runner-spec.md"))
 
     write(root / "memory/memory_summary.md", """
     # Memory Summary
@@ -97,6 +98,8 @@ def main() -> None:
     write(root / "benchmarks/perf-baseline.json", '{"dataset":"local fixture sample","rows":5,"baseline_note":"tiny sample; not a general performance benchmark"}\n')
     write(root / "data/input.csv", "ID,User Name,Score\n1,Alice,10\n,Bad,0\n2,Bob,20\n")
     write(root / "data/events.jsonl", '{"id":"e1","eventType":"click"}\n{"eventType":"missing"}\n{"id":"e2","eventType":"view"}\n')
+    write(root / "config/m2.json", '{"report_label":"default"}\n')
+    write(root / "config/m2.yaml", "report_label: yaml-config\n")
     write(root / "data/m4_noise_test.csv", "# comment header\nID,Name,Score\nc1,Charlie,30\n# inline comment\n,BadRow,0\nc2,Diana,40\n# footer comment\n")
 
     write(root / "pyproject.toml", """

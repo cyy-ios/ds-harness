@@ -1,0 +1,31 @@
+{
+  "milestone": "M2_config",
+  "runner": "codex_cli",
+  "final_response": "臣某谨奏\n\n| item_id | item | status | verification |\n|---|---|---|---|\n| m1_cli_preserved | M1 CLI 保留 | done | verified |\n| config_support | 配置文件支持 | done | verified |\n\n叩请圣裁",
+  "response_protocol": {
+    "status": "",
+    "claims": [],
+    "actions": [],
+    "artifacts": [],
+    "verification": [],
+    "limitations": [],
+    "protocol_valid": false,
+    "protocol_errors": [
+      "status must be success, partial, or failed",
+      "claims must contain at least one item; use 'none' when intentionally empty",
+      "actions must contain at least one item; use 'none' when intentionally empty",
+      "artifacts must contain at least one item; use 'none' when intentionally empty",
+      "verification must contain at least one item; use 'none' when intentionally empty",
+      "limitations must contain at least one item; use 'none' when intentionally empty"
+    ]
+  },
+  "elapsed_seconds": 41.3434865999734,
+  "step": 1,
+  "compact_trigger": {
+    "triggered": false,
+    "triggered_at": null,
+    "post_compact_milestones": [],
+    "summary_meta": null
+  },
+  "post_compact_milestones": []
+}
