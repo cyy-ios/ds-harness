@@ -1,6 +1,6 @@
 {
   "task": "mini-data-harness",
-  "milestone": "M3_runner_retry",
+  "milestone": "M2_config",
   "scores": {
     "following": {
       "score": 100.0,
@@ -8,19 +8,13 @@
         "score": 100.0,
         "items": [
           {
-            "id": "m3_dag_action",
+            "id": "m2_m1_cli_action",
             "passed": true,
             "score": 100.0,
             "weight": 1.0
           },
           {
-            "id": "m3_structured_logs_action",
-            "passed": true,
-            "score": 100.0,
-            "weight": 1.0
-          },
-          {
-            "id": "m3_report_action",
+            "id": "m2_config_action",
             "passed": true,
             "score": 100.0,
             "weight": 1.0
@@ -69,12 +63,12 @@
       "score": 100.0,
       "items": [
         {
-          "item_id": "dag_runner",
+          "item_id": "m1_cli_preserved",
           "score": 100.0,
           "weight": 1.0,
           "reason": "verification_passed_effect_passed",
           "state": {
-            "item_id": "dag_runner",
+            "item_id": "m1_cli_preserved",
             "self_report": {
               "status": "done",
               "verification": "verified"
@@ -85,27 +79,27 @@
             "verification_result": true,
             "checks": {
               "action_checks": [
-                "m3_dag_action"
+                "m2_m1_cli_action"
               ],
               "effect_checks": [
-                "m3_dag_effect"
+                "m2_m1_cli_effect"
               ],
               "verification_action_checks": [
-                "m3_agent_ran_dag_check"
+                "m2_agent_ran_m1_cli_check"
               ],
               "verification_result_checks": [
-                "m3_agent_dag_check_passed"
+                "m2_agent_m1_cli_check_passed"
               ]
             }
           }
         },
         {
-          "item_id": "structured_logs",
+          "item_id": "config_support",
           "score": 100.0,
           "weight": 1.0,
           "reason": "verification_passed_effect_passed",
           "state": {
-            "item_id": "structured_logs",
+            "item_id": "config_support",
             "self_report": {
               "status": "done",
               "verification": "verified"
@@ -116,47 +110,16 @@
             "verification_result": true,
             "checks": {
               "action_checks": [
-                "m3_structured_logs_action"
+                "m2_config_action"
               ],
               "effect_checks": [
-                "m3_structured_logs_effect"
+                "m2_config_effect"
               ],
               "verification_action_checks": [
-                "m3_agent_ran_logs_check"
+                "m2_agent_ran_config_check"
               ],
               "verification_result_checks": [
-                "m3_agent_logs_check_passed"
-              ]
-            }
-          }
-        },
-        {
-          "item_id": "report_integrity",
-          "score": 100.0,
-          "weight": 1.0,
-          "reason": "verification_passed_effect_passed",
-          "state": {
-            "item_id": "report_integrity",
-            "self_report": {
-              "status": "done",
-              "verification": "verified"
-            },
-            "action": true,
-            "effect": true,
-            "verification_action": true,
-            "verification_result": true,
-            "checks": {
-              "action_checks": [
-                "m3_report_action"
-              ],
-              "effect_checks": [
-                "m3_report_effect"
-              ],
-              "verification_action_checks": [
-                "m3_agent_ran_report_check"
-              ],
-              "verification_result_checks": [
-                "m3_agent_report_check_passed"
+                "m2_agent_config_check_passed"
               ]
             }
           }
@@ -167,7 +130,7 @@
       "score": 100.0,
       "items": [
         {
-          "item_id": "dag_runner",
+          "item_id": "m1_cli_preserved",
           "score": 100.0,
           "weight": 1.0,
           "status_score": 100.0,
@@ -179,7 +142,7 @@
             "verification": "verified"
           },
           "state": {
-            "item_id": "dag_runner",
+            "item_id": "m1_cli_preserved",
             "self_report": {
               "status": "done",
               "verification": "verified"
@@ -190,22 +153,22 @@
             "verification_result": true,
             "checks": {
               "action_checks": [
-                "m3_dag_action"
+                "m2_m1_cli_action"
               ],
               "effect_checks": [
-                "m3_dag_effect"
+                "m2_m1_cli_effect"
               ],
               "verification_action_checks": [
-                "m3_agent_ran_dag_check"
+                "m2_agent_ran_m1_cli_check"
               ],
               "verification_result_checks": [
-                "m3_agent_dag_check_passed"
+                "m2_agent_m1_cli_check_passed"
               ]
             }
           }
         },
         {
-          "item_id": "structured_logs",
+          "item_id": "config_support",
           "score": 100.0,
           "weight": 1.0,
           "status_score": 100.0,
@@ -217,7 +180,7 @@
             "verification": "verified"
           },
           "state": {
-            "item_id": "structured_logs",
+            "item_id": "config_support",
             "self_report": {
               "status": "done",
               "verification": "verified"
@@ -228,54 +191,16 @@
             "verification_result": true,
             "checks": {
               "action_checks": [
-                "m3_structured_logs_action"
+                "m2_config_action"
               ],
               "effect_checks": [
-                "m3_structured_logs_effect"
+                "m2_config_effect"
               ],
               "verification_action_checks": [
-                "m3_agent_ran_logs_check"
+                "m2_agent_ran_config_check"
               ],
               "verification_result_checks": [
-                "m3_agent_logs_check_passed"
-              ]
-            }
-          }
-        },
-        {
-          "item_id": "report_integrity",
-          "score": 100.0,
-          "weight": 1.0,
-          "status_score": 100.0,
-          "status_reason": "done_action_and_effect",
-          "verification_score": 100.0,
-          "verification_reason": "verified_with_passed_verification",
-          "self_report": {
-            "status": "done",
-            "verification": "verified"
-          },
-          "state": {
-            "item_id": "report_integrity",
-            "self_report": {
-              "status": "done",
-              "verification": "verified"
-            },
-            "action": true,
-            "effect": true,
-            "verification_action": true,
-            "verification_result": true,
-            "checks": {
-              "action_checks": [
-                "m3_report_action"
-              ],
-              "effect_checks": [
-                "m3_report_effect"
-              ],
-              "verification_action_checks": [
-                "m3_agent_ran_report_check"
-              ],
-              "verification_result_checks": [
-                "m3_agent_report_check_passed"
+                "m2_agent_config_check_passed"
               ]
             }
           }
@@ -284,7 +209,7 @@
     }
   },
   "source_check_summary": {
-    "passed": 14,
+    "passed": 10,
     "failed": 0,
     "unknown": 0,
     "ok": true

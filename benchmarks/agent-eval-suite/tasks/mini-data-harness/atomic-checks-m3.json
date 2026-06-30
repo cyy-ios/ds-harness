@@ -32,7 +32,9 @@
         {
           "method": "source_matches",
           "include": [
+            "mini_harness/*.py",
             "mini_harness/**/*.py",
+            "src/mini_harness/*.py",
             "src/mini_harness/**/*.py"
           ],
           "pattern": "run_dag|argparse|python -m mini_harness|def main"
@@ -138,7 +140,9 @@
       "description": "触达报告生成逻辑或 CLI 输出路径",
       "method": "source_matches",
       "include": [
+        "mini_harness/*.py",
         "mini_harness/**/*.py",
+        "src/mini_harness/*.py",
         "src/mini_harness/**/*.py"
       ],
       "pattern": "processed_count|rejected_count|retry_count|source_files|report_label|--output"
